@@ -21,6 +21,9 @@
         var options = select.querySelectorAll('option');
         var bestOption = null;
         var bestDate = null;
+        var exactMatch = false;
+
+        console.log('VR setDateDropdown: Looking for "' + targetDate + '" in ' + options.length + ' options');
 
         for (var i = 0; i < options.length; i++) {
             var val = options[i].value || options[i].textContent;
@@ -31,11 +34,15 @@
                 var year = parseInt(match[3], 10);
                 var dateObj = new Date(year, month - 1, day);
 
+                // Check for exact match
                 if (val.indexOf(targetDate) > -1) {
                     bestOption = options[i];
+                    exactMatch = true;
+                    console.log('VR setDateDropdown: EXACT match found: ' + val);
                     break;
                 }
 
+                // Otherwise find earliest/latest
                 if (!bestDate) {
                     bestDate = dateObj;
                     bestOption = options[i];
@@ -50,10 +57,14 @@
         }
 
         if (bestOption) {
+            console.log('VR setDateDropdown: Setting to "' + bestOption.value + '" (exact=' + exactMatch + ')');
             select.value = bestOption.value;
+            // Trigger change event
             var evt = document.createEvent('HTMLEvents');
             evt.initEvent('change', true, true);
             select.dispatchEvent(evt);
+        } else {
+            console.log('VR setDateDropdown: No matching option found!');
         }
     };
 
@@ -115,6 +126,7 @@
     VR.setupLonePageAndFetch = function(parseCallback) {
         VR.updateLoader(50, 'Väljer Lönedagar...');
 
+        // Step 1: Find and click Lönedagar radio button
         var radios = document.querySelectorAll('input[type="radio"]');
         var lonedagarRadio = null;
         for (var i = 0; i < radios.length; i++) {
@@ -144,48 +156,69 @@
             }
         }
 
-        if (lonedagarRadio && !lonedagarRadio.checked) {
+        if (lonedagarRadio) {
+            console.log('VR: Found Lönedagar radio, clicking...');
             lonedagarRadio.click();
+        } else {
+            console.log('VR: Lönedagar radio NOT found');
         }
 
+        // Step 2: Wait for page to update, then set dates
         setTimeout(function() {
             VR.updateLoader(55, 'Ställer in datum...');
 
+            // Find all select elements that contain dates
             var selects = document.querySelectorAll('select');
             var dateSelects = [];
 
+            console.log('VR: Found ' + selects.length + ' select elements');
+
             for (var i = 0; i < selects.length; i++) {
                 var options = selects[i].querySelectorAll('option');
-                for (var j = 0; j < options.length; j++) {
-                    var val = options[j].value || options[j].textContent;
+                for (var k = 0; k < options.length; k++) {
+                    var val = options[k].value || options[k].textContent;
                     if (val && val.match(/\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/)) {
                         dateSelects.push(selects[i]);
+                        console.log('VR: Found date select with ' + options.length + ' options');
                         break;
                     }
                 }
             }
 
+            console.log('VR: Found ' + dateSelects.length + ' date selects');
+
+            // Set start date (14-12-2025)
             if (dateSelects.length >= 1) {
+                console.log('VR: Setting start date to 14-12-2025');
                 VR.setDateDropdown(dateSelects[0], '14-12-2025', true);
             }
-            if (dateSelects.length >= 2) {
-                VR.setDateDropdown(dateSelects[1], '31-12-2026', false);
-            }
 
+            // Wait a bit then set end date
             setTimeout(function() {
-                VR.updateLoader(65, 'Klickar Hämta...');
-
-                var hamtaBtn = VR.findHamtaButton();
-                if (hamtaBtn) {
-                    hamtaBtn.click();
-                    VR.updateLoader(70, 'Hämtar data...');
-                    VR.waitForLoneData(parseCallback);
-                } else {
-                    VR.updateLoader(0, 'Hämta-knapp ej hittad');
-                    setTimeout(VR.hideLoader, 2000);
+                // Set end date (31-12-2026)
+                if (dateSelects.length >= 2) {
+                    console.log('VR: Setting end date to 31-12-2026');
+                    VR.setDateDropdown(dateSelects[1], '31-12-2026', false);
                 }
-            }, 400);
-        }, 300);
+
+                // Step 3: Click Hämta button
+                setTimeout(function() {
+                    VR.updateLoader(65, 'Klickar Hämta...');
+
+                    var hamtaBtn = VR.findHamtaButton();
+                    if (hamtaBtn) {
+                        console.log('VR: Clicking Hämta button');
+                        hamtaBtn.click();
+                        VR.updateLoader(70, 'Hämtar data...');
+                        VR.waitForLoneData(parseCallback);
+                    } else {
+                        console.log('VR: Hämta button NOT found');
+                        VR.updateLoader(0, 'Hämta-knapp ej hittad');
+                        setTimeout(VR.hideLoader, 2000);
+                    }
+                }, 400);
+            }, 300);
+        }, 500);
     };
 
     VR.waitForLoneData = function(parseCallback) {
