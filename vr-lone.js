@@ -514,7 +514,7 @@
 
         setTimeout(function() {
             VR.hideLoader();
-            VR.showView('Frånvaro', franvaroData.length + ' poster', viewHtml);
+            VR.showView('', '', viewHtml);
         }, 300);
     };
 
@@ -524,60 +524,100 @@
                 <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
                     <div style="font-size:80px;margin-bottom:24px">🔍</div>\
                     <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Ingen frånvaro hittades</div>\
-                    <div style="font-size:22px;color:#888">Söker: FP, FPV, VAB, Föräldraledig</div>\
+                    <div style="font-size:22px;color:#888">Söker: VAB, Föräldraledig</div>\
                 </div>';
         }
 
-        var totals = {};
+        // Get current month and previous month
+        var now = new Date();
+        var currentMonth = now.getMonth();
+        var currentYear = now.getFullYear();
+        var prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+        var monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
+                          'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
+
+        // Group by month and type
+        var prevMonthData = {};
+        var currentMonthData = {};
+
         for (var i = 0; i < franvaroData.length; i++) {
             var item = franvaroData[i];
-            if (!totals[item.typeName]) {
-                totals[item.typeName] = { count: 0, icon: item.icon, totalMinutes: 0 };
-            }
-            totals[item.typeName].count++;
+            var dateParts = item.date.match(/(\d{1,2})-(\d{2})-(\d{4})/);
+            if (dateParts) {
+                var month = parseInt(dateParts[2], 10) - 1;
+                var year = parseInt(dateParts[3], 10);
 
-            var timeMatch = item.time.match(/(\d+):(\d+)/);
-            if (timeMatch) {
-                var hours = parseInt(timeMatch[1], 10);
-                var mins = parseInt(timeMatch[2], 10);
-                totals[item.typeName].totalMinutes += hours * 60 + mins;
+                var timeMatch = item.time.match(/(\d+):(\d+)/);
+                var minutes = 0;
+                if (timeMatch) {
+                    minutes = parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10);
+                }
+
+                var targetData = null;
+                if (year === currentYear && month === currentMonth) {
+                    targetData = currentMonthData;
+                } else if (year === prevYear && month === prevMonth) {
+                    targetData = prevMonthData;
+                }
+
+                if (targetData) {
+                    if (!targetData[item.typeName]) {
+                        targetData[item.typeName] = { count: 0, minutes: 0 };
+                    }
+                    targetData[item.typeName].count++;
+                    targetData[item.typeName].minutes += minutes;
+                }
             }
         }
 
-        var html = '<div style="background:linear-gradient(135deg,#FF6B6B,#EE5A5A);border-radius:30px;padding:40px;margin-bottom:24px;text-align:center;box-shadow:0 10px 40px rgba(255,107,107,0.3)">';
-        html += '<div style="font-size:50px;margin-bottom:12px">🏠</div>';
-        html += '<div style="font-size:24px;font-weight:600;color:rgba(255,255,255,0.9)">Frånvaro</div>';
-        html += '<div style="font-size:48px;font-weight:700;color:#fff;margin:12px 0">' + franvaroData.length + ' dagar</div>';
+        // Helper to format minutes as H:MM
+        var formatTime = function(mins) {
+            var h = Math.floor(mins / 60);
+            var m = mins % 60;
+            return h + ':' + (m < 10 ? '0' : '') + m;
+        };
+
+        // Helper to build month summary
+        var buildMonthSummary = function(data) {
+            var keys = Object.keys(data);
+            if (keys.length === 0) {
+                return '<div style="font-size:14px;color:#8E8E93">Ingen frånvaro</div>';
+            }
+            var html = '';
+            for (var k = 0; k < keys.length; k++) {
+                var type = keys[k];
+                var info = data[type];
+                html += '<div style="font-size:14px;color:#333;margin-bottom:4px"><strong>' + type + '</strong>: ' + info.count + ' (' + formatTime(info.minutes) + ')</div>';
+            }
+            return html;
+        };
+
+        // Build HTML - Two month cards side by side
+        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
+
+        // Previous month card (left)
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">' + monthNames[prevMonth] + '</div>';
+        html += buildMonthSummary(prevMonthData);
         html += '</div>';
 
-        var typeKeys = Object.keys(totals);
-        if (typeKeys.length > 0) {
-            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px">';
+        // Current month card (right)
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">' + monthNames[currentMonth] + '</div>';
+        html += buildMonthSummary(currentMonthData);
+        html += '</div>';
 
-            for (var t = 0; t < typeKeys.length; t++) {
-                var typeKey = typeKeys[t];
-                var typeData = totals[typeKey];
-                var totalHrs = Math.floor(typeData.totalMinutes / 60);
-                var totalMins = typeData.totalMinutes % 60;
-                var timeStr = totalHrs + ':' + (totalMins < 10 ? '0' : '') + totalMins;
+        html += '</div>';
 
-                html += '<div style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 5px 20px rgba(0,0,0,0.08);text-align:center">';
-                html += '<div style="font-size:36px;margin-bottom:8px">' + typeData.icon + '</div>';
-                html += '<div style="font-size:16px;font-weight:600;color:#333">' + typeKey + '</div>';
-                html += '<div style="font-size:28px;font-weight:700;color:#FF6B6B;margin-top:8px">' + typeData.count + '</div>';
-                html += '<div style="font-size:13px;color:#8E8E93">(' + timeStr + ')</div>';
-                html += '</div>';
-            }
-
-            html += '</div>';
-        }
-
+        // List
         html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
 
         html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
         html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
         html += '<div style="font-size:14px;font-weight:600;color:#fff">Frånvaro-typ</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Antal</div>';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tid</div>';
         html += '</div>';
 
         for (var d = 0; d < franvaroData.length; d++) {
@@ -586,7 +626,7 @@
 
             html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
             html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
-            html += '<div style="font-size:15px;color:#333;display:flex;align-items:center;gap:8px"><span>' + row.icon + '</span> ' + row.typeName + '</div>';
+            html += '<div style="font-size:15px;color:#333">' + row.typeName + '</div>';
             html += '<div style="font-size:15px;font-weight:600;color:#FF6B6B;text-align:right">' + row.time + '</div>';
             html += '</div>';
         }
