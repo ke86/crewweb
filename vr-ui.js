@@ -200,15 +200,390 @@
         }
     };
 
-    // ===== PLACEHOLDER FUNCTIONS FOR NEW MENU ITEMS =====
+    // ===== OB FUNCTIONALITY =====
     VR.doOB = function() {
+        VR.stopTimer();
         VR.closeOverlay();
-        VR.showView('OB-tillägg', 'Kommer snart...', '\
-            <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-                <div style="font-size:80px;margin-bottom:24px">🌙</div>\
-                <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">OB-tillägg</div>\
-                <div style="font-size:22px;color:#888">Denna funktion är under utveckling</div>\
-            </div>');
+        VR.showLoader('Laddar OB-tillägg');
+        VR.updateLoader(5, 'Letar efter sidan...');
+
+        // Check if already on Löneredovisningar page
+        var hamtaBtn = VR.findHamtaButton();
+        if (hamtaBtn) {
+            VR.updateLoader(30, 'Sidan redan laddad...');
+            VR.setupOBAndFetch();
+            return;
+        }
+
+        // Try to find menu item directly
+        var el = VR.findMenuItem('Löneredovisningar');
+        if (el) {
+            VR.updateLoader(15, 'Klickar på Löneredovisningar...');
+            el.click();
+            VR.waitForOBPage();
+            return;
+        }
+
+        // Open folder menu first
+        VR.updateLoader(10, 'Öppnar meny...');
+        VR.clickFolder();
+
+        setTimeout(function() {
+            VR.updateLoader(15, 'Letar efter Löneredovisningar...');
+            var n = 0;
+            VR.timer = setInterval(function() {
+                n++;
+                var el2 = VR.findMenuItem('Löneredovisningar');
+                if (el2) {
+                    VR.stopTimer();
+                    el2.click();
+                    VR.updateLoader(25, 'Navigerar...');
+                    VR.waitForOBPage();
+                } else if (n > 20) {
+                    VR.stopTimer();
+                    VR.updateLoader(0, 'Timeout - hittade ej Löneredovisningar');
+                    setTimeout(VR.hideLoader, 2000);
+                }
+            }, 400);
+        }, 600);
+    };
+
+    // Find Hämta button
+    VR.findHamtaButton = function() {
+        var inputs = document.querySelectorAll('input[type="submit"], input[type="button"], button');
+        for (var i = 0; i < inputs.length; i++) {
+            var val = (inputs[i].value || inputs[i].textContent || '').toLowerCase();
+            if (val.indexOf('hämta') > -1) {
+                return inputs[i];
+            }
+        }
+        return null;
+    };
+
+    // Wait for OB page to load
+    VR.waitForOBPage = function() {
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+            VR.updateLoader(30 + n, 'Väntar på sidan...');
+
+            var hamtaBtn = VR.findHamtaButton();
+            if (hamtaBtn) {
+                VR.stopTimer();
+                VR.updateLoader(45, 'Sidan laddad!');
+                setTimeout(VR.setupOBAndFetch, 400);
+            } else if (n > 30) {
+                VR.stopTimer();
+                VR.updateLoader(0, 'Sidan laddades ej');
+                setTimeout(VR.hideLoader, 2000);
+            }
+        }, 400);
+    };
+
+    // Setup OB page - select Lönedagar, set dates, click Hämta
+    VR.setupOBAndFetch = function() {
+        VR.updateLoader(50, 'Väljer Lönedagar...');
+
+        // Find and click Lönedagar radio button
+        var radios = document.querySelectorAll('input[type="radio"]');
+        var lonedagarRadio = null;
+        for (var i = 0; i < radios.length; i++) {
+            var label = radios[i].parentElement ? radios[i].parentElement.textContent : '';
+            var name = radios[i].name || '';
+            var id = radios[i].id || '';
+            if (label.toLowerCase().indexOf('lönedagar') > -1 ||
+                name.toLowerCase().indexOf('lönedagar') > -1 ||
+                id.toLowerCase().indexOf('lönedagar') > -1) {
+                lonedagarRadio = radios[i];
+                break;
+            }
+        }
+
+        // Also check for labels
+        if (!lonedagarRadio) {
+            var labels = document.querySelectorAll('label');
+            for (var j = 0; j < labels.length; j++) {
+                if (labels[j].textContent.toLowerCase().indexOf('lönedagar') > -1) {
+                    var forId = labels[j].getAttribute('for');
+                    if (forId) {
+                        lonedagarRadio = document.getElementById(forId);
+                    } else {
+                        lonedagarRadio = labels[j].querySelector('input[type="radio"]');
+                    }
+                    if (lonedagarRadio) break;
+                }
+            }
+        }
+
+        if (lonedagarRadio && !lonedagarRadio.checked) {
+            lonedagarRadio.click();
+        }
+
+        setTimeout(function() {
+            VR.updateLoader(55, 'Ställer in datum...');
+            VR.setOBDates();
+        }, 300);
+    };
+
+    // Set date range for OB
+    VR.setOBDates = function() {
+        // Find date dropdowns - look for select elements with date values
+        var selects = document.querySelectorAll('select');
+        var dateSelects = [];
+
+        for (var i = 0; i < selects.length; i++) {
+            var options = selects[i].querySelectorAll('option');
+            for (var j = 0; j < options.length; j++) {
+                var val = options[j].value || options[j].textContent;
+                // Check if it looks like a date (DD-MM-YYYY or similar)
+                if (val && val.match(/\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/)) {
+                    dateSelects.push(selects[i]);
+                    break;
+                }
+            }
+        }
+
+        // Set first dropdown to earliest date (14-12-2025)
+        if (dateSelects.length >= 1) {
+            VR.setDateDropdown(dateSelects[0], '14-12-2025', true);
+        }
+
+        // Set second dropdown to latest date (31-12-2026)
+        if (dateSelects.length >= 2) {
+            VR.setDateDropdown(dateSelects[1], '31-12-2026', false);
+        }
+
+        setTimeout(function() {
+            VR.updateLoader(65, 'Klickar Hämta...');
+            VR.clickOBHamta();
+        }, 400);
+    };
+
+    // Set a date dropdown to a specific date or earliest/latest available
+    VR.setDateDropdown = function(select, targetDate, selectEarliest) {
+        var options = select.querySelectorAll('option');
+        var bestOption = null;
+        var bestDate = null;
+
+        for (var i = 0; i < options.length; i++) {
+            var val = options[i].value || options[i].textContent;
+            var match = val.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+            if (match) {
+                var day = parseInt(match[1], 10);
+                var month = parseInt(match[2], 10);
+                var year = parseInt(match[3], 10);
+                var dateObj = new Date(year, month - 1, day);
+
+                // Check if this matches target date
+                if (val.indexOf(targetDate) > -1) {
+                    bestOption = options[i];
+                    break;
+                }
+
+                // Otherwise find earliest or latest
+                if (!bestDate) {
+                    bestDate = dateObj;
+                    bestOption = options[i];
+                } else if (selectEarliest && dateObj < bestDate) {
+                    bestDate = dateObj;
+                    bestOption = options[i];
+                } else if (!selectEarliest && dateObj > bestDate) {
+                    bestDate = dateObj;
+                    bestOption = options[i];
+                }
+            }
+        }
+
+        if (bestOption) {
+            select.value = bestOption.value;
+            // Trigger change event
+            var evt = document.createEvent('HTMLEvents');
+            evt.initEvent('change', true, true);
+            select.dispatchEvent(evt);
+        }
+    };
+
+    // Click Hämta button and wait for data
+    VR.clickOBHamta = function() {
+        var hamtaBtn = VR.findHamtaButton();
+        if (hamtaBtn) {
+            hamtaBtn.click();
+            VR.updateLoader(70, 'Hämtar data...');
+            VR.waitForOBData();
+        } else {
+            VR.updateLoader(0, 'Hämta-knapp ej hittad');
+            setTimeout(VR.hideLoader, 2000);
+        }
+    };
+
+    // Wait for OB data to load after clicking Hämta
+    VR.waitForOBData = function() {
+        var n = 0;
+        var initialContent = document.body.innerHTML.length;
+
+        VR.timer = setInterval(function() {
+            n++;
+            VR.updateLoader(70 + Math.min(n, 20), 'Väntar på data...');
+
+            // Check if page content has changed (data loaded)
+            var currentContent = document.body.innerHTML.length;
+            var tables = document.querySelectorAll('table');
+
+            // Look for date headers like "14-12-2025 - Söndag"
+            var dateHeaders = document.body.innerHTML.match(/\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/gi);
+
+            if ((tables.length > 2 && dateHeaders && dateHeaders.length > 0) || n > 40) {
+                VR.stopTimer();
+                VR.updateLoader(92, 'Läser OB-data...');
+                setTimeout(VR.parseAndShowOB, 500);
+            } else if (n > 60) {
+                VR.stopTimer();
+                VR.updateLoader(0, 'Timeout - ingen data');
+                setTimeout(VR.hideLoader, 2000);
+            }
+        }, 400);
+    };
+
+    VR.parseAndShowOB = function() {
+        VR.updateLoader(95, 'Analyserar OB-data...');
+
+        var obData = [];
+        var dayData = [];
+
+        // Parse the page content - look for day sections
+        // Format: "14-12-2025 - Söndag - 17209" followed by tables
+        var pageText = document.body.innerText;
+        var html = document.body.innerHTML;
+
+        // Find all tables
+        var tables = document.querySelectorAll('table');
+
+        for (var t = 0; t < tables.length; t++) {
+            var rows = tables[t].querySelectorAll('tr');
+
+            for (var r = 0; r < rows.length; r++) {
+                var cells = rows[r].querySelectorAll('td, th');
+                if (cells.length < 2) continue;
+
+                var col1 = cells[0] ? cells[0].textContent.trim() : '';
+                var col2 = cells[1] ? cells[1].textContent.trim() : '';
+
+                // Skip headers
+                if (col1.toLowerCase() === 'löneslag' && col2.toLowerCase() === 'saldo') continue;
+
+                // Only include rows with actual data
+                if (col1 && col2) {
+                    obData.push({
+                        type: col1,
+                        value: col2
+                    });
+                }
+            }
+        }
+
+        // Also find date headers
+        var dateMatches = pageText.match(/(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)(?:\s*-\s*(\d+))?/gi) || [];
+
+        VR.updateLoader(98, 'Bygger vy...');
+
+        var viewHtml = VR.buildOBView(obData, dateMatches);
+
+        setTimeout(function() {
+            VR.hideLoader();
+            VR.showView('OB-tillägg', obData.length + ' poster', viewHtml);
+        }, 300);
+    };
+
+    VR.buildOBView = function(obData, dateMatches) {
+        if (obData.length === 0) {
+            return '\
+                <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
+                    <div style="font-size:80px;margin-bottom:24px">🔍</div>\
+                    <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Ingen OB-data hittades</div>\
+                    <div style="font-size:22px;color:#888">Kontrollera att du är på rätt sida i CrewWeb</div>\
+                </div>';
+        }
+
+        // Group data by type and calculate totals
+        var totals = {};
+        for (var i = 0; i < obData.length; i++) {
+            var item = obData[i];
+            var type = item.type;
+            var value = item.value;
+
+            if (!totals[type]) {
+                totals[type] = { count: 0, totalMinutes: 0 };
+            }
+            totals[type].count++;
+
+            // Parse time value (e.g., "7:45" -> 465 minutes)
+            var timeMatch = value.match(/(\d+):(\d+)/);
+            if (timeMatch) {
+                var hours = parseInt(timeMatch[1], 10);
+                var mins = parseInt(timeMatch[2], 10);
+                totals[type].totalMinutes += hours * 60 + mins;
+            }
+        }
+
+        // Summary card
+        var html = '<div style="background:linear-gradient(135deg,#AF52DE,#5856D6);border-radius:30px;padding:40px;margin-bottom:30px;text-align:center;box-shadow:0 10px 40px rgba(175,82,222,0.3)">';
+        html += '<div style="font-size:60px;margin-bottom:16px">🌙</div>';
+        html += '<div style="font-size:28px;font-weight:700;color:#fff">OB-tillägg</div>';
+        html += '<div style="font-size:18px;color:rgba(255,255,255,0.8);margin-top:8px">' + dateMatches.length + ' lönedagar</div>';
+        html += '</div>';
+
+        // Summary cards per type
+        var typeKeys = Object.keys(totals);
+        if (typeKeys.length > 0) {
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:24px">';
+
+            for (var t = 0; t < typeKeys.length; t++) {
+                var typeKey = typeKeys[t];
+                var typeData = totals[typeKey];
+                var totalHrs = Math.floor(typeData.totalMinutes / 60);
+                var totalMins = typeData.totalMinutes % 60;
+                var timeStr = totalHrs + ':' + (totalMins < 10 ? '0' : '') + totalMins;
+
+                // Choose icon based on type
+                var icon = '⏰';
+                var typeKeyLower = typeKey.toLowerCase();
+                if (typeKeyLower.indexOf('hb') > -1 || typeKeyLower.indexOf('l.hb') > -1) icon = '🚂';
+                else if (typeKeyLower.indexOf('försen') > -1) icon = '⚡';
+                else if (typeKeyLower.indexOf('frånvaro') > -1 || typeKeyLower.indexOf('fridag') > -1) icon = '🏠';
+                else if (typeKeyLower.indexOf('föräldr') > -1) icon = '👶';
+                else if (typeKeyLower.indexOf('fp') > -1) icon = '🏖️';
+
+                html += '<div style="background:#fff;border-radius:20px;padding:24px;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
+                html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">';
+                html += '<span style="font-size:32px">' + icon + '</span>';
+                html += '<span style="font-size:18px;font-weight:600;color:#333">' + typeKey + '</span>';
+                html += '</div>';
+                html += '<div style="font-size:36px;font-weight:700;color:#AF52DE">' + timeStr + '</div>';
+                html += '<div style="font-size:14px;color:#8E8E93;margin-top:4px">' + typeData.count + ' poster</div>';
+                html += '</div>';
+            }
+
+            html += '</div>';
+        }
+
+        // Detailed list in collapsible
+        html += '<details style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
+        html += '<summary style="padding:20px 24px;font-size:18px;font-weight:600;color:#333;cursor:pointer;background:#F8F8F8">Visa alla poster (' + obData.length + ' st)</summary>';
+        html += '<div style="max-height:400px;overflow-y:auto">';
+
+        for (var d = 0; d < obData.length; d++) {
+            var dataItem = obData[d];
+            var bgCol = d % 2 === 0 ? '#fff' : '#F8F8F8';
+
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<span style="font-size:16px;color:#333">' + dataItem.type + '</span>';
+            html += '<span style="font-size:16px;font-weight:600;color:#AF52DE">' + dataItem.value + '</span>';
+            html += '</div>';
+        }
+
+        html += '</div></details>';
+
+        return html;
     };
 
     VR.doOnskemål = function() {
@@ -366,14 +741,39 @@
             }
         }
 
+        // Filter out garbage data
+        var filteredData = {};
+        var keys = Object.keys(data);
+        for (var f = 0; f < keys.length; f++) {
+            var key = keys[f];
+            var value = data[key];
+
+            // Skip entries where key is just a number
+            if (/^\d+$/.test(key)) continue;
+
+            // Skip entries where value is just "20" or similar short meaningless numbers
+            if (/^\d{1,2}$/.test(value)) continue;
+
+            // Skip entries with date+number pattern like "2026-01-2620"
+            if (/^\d{4}-\d{2}-\d{2}\d+$/.test(value)) continue;
+
+            // Skip entries with malformed dates
+            if (/^\d{4}-\d{2}-\d{2}[^\s]/.test(value) && !/^\d{4}-\d{2}-\d{2}\s/.test(value)) continue;
+
+            // Skip very short keys (likely garbage)
+            if (key.length < 2) continue;
+
+            filteredData[key] = value;
+        }
+
         VR.updateLoader(95, 'Bygger vy...');
 
         // Build the view
-        var html = VR.buildAnstalldataView(data);
+        var html = VR.buildAnstalldataView(filteredData);
 
         setTimeout(function() {
             VR.hideLoader();
-            var count = Object.keys(data).length;
+            var count = Object.keys(filteredData).length;
             VR.showView('Anställddata', count + ' fält hittade', html);
         }, 300);
     };
