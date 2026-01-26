@@ -66,9 +66,56 @@
     VR.parseAndShowAnstallddata = function() {
         VR.updateLoader(80, 'Analyserar data...');
 
+        var kvalifikationer = [];
         var data = {};
 
-        // Method 1: Look for labeled input fields
+        // Look for Kvalifikationer table (3 columns: Namn, Giltig från, Giltig till)
+        var tables = document.querySelectorAll('table');
+        for (var t = 0; t < tables.length; t++) {
+            var table = tables[t];
+            var headerRow = table.querySelector('tr');
+            if (!headerRow) continue;
+
+            var headers = headerRow.querySelectorAll('th, td');
+            var hasNamn = false;
+            var hasGiltigFran = false;
+            var hasGiltigTill = false;
+
+            for (var h = 0; h < headers.length; h++) {
+                var headerText = headers[h].textContent.trim().toLowerCase();
+                if (headerText === 'namn') hasNamn = true;
+                if (headerText.indexOf('giltig från') > -1 || headerText === 'giltig från') hasGiltigFran = true;
+                if (headerText.indexOf('giltig till') > -1 || headerText === 'giltig till') hasGiltigTill = true;
+            }
+
+            // If this looks like the Kvalifikationer table
+            if (hasNamn && hasGiltigFran) {
+                var rows = table.querySelectorAll('tr');
+                for (var r = 1; r < rows.length; r++) { // Skip header row
+                    var cells = rows[r].querySelectorAll('td');
+                    if (cells.length >= 2) {
+                        var namn = cells[0] ? cells[0].textContent.trim() : '';
+                        var giltigFran = cells[1] ? cells[1].textContent.trim() : '';
+                        var giltigTill = cells[2] ? cells[2].textContent.trim() : '';
+
+                        // Skip empty rows or header-like rows
+                        if (!namn || namn.toLowerCase() === 'namn') continue;
+                        if (namn.toLowerCase() === 'lokförare') continue; // Skip category header
+
+                        // Skip single letters that are category markers
+                        if (namn.length === 1 && /^[A-Z]$/.test(namn)) continue;
+
+                        kvalifikationer.push({
+                            namn: namn,
+                            giltigFran: giltigFran,
+                            giltigTill: giltigTill
+                        });
+                    }
+                }
+            }
+        }
+
+        // Also look for employee info
         var inputs = document.querySelectorAll('input[type="text"], input:not([type])');
         for (var i = 0; i < inputs.length; i++) {
             var input = inputs[i];
@@ -99,88 +146,20 @@
             }
         }
 
-        // Method 2: Look for table rows with label-value pairs
-        var rows = document.querySelectorAll('tr');
-        for (var r = 0; r < rows.length; r++) {
-            var cells = rows[r].querySelectorAll('td, th');
-            if (cells.length >= 2) {
-                var lbl = cells[0].textContent.trim();
-                var val = cells[1].textContent.trim();
-                if (lbl && val && lbl.length < 50 && val.length < 100) {
-                    data[lbl] = val;
-                }
-            }
-        }
-
-        // Method 3: Look for spans/divs with specific patterns
-        var allElements = document.querySelectorAll('span, div, label');
-        for (var k = 0; k < allElements.length; k++) {
-            var el = allElements[k];
-            var text = el.textContent.trim();
-
-            var colonMatch = text.match(/^([^:]+):\s*(.+)$/);
-            if (colonMatch && colonMatch[1].length < 30 && colonMatch[2].length < 100) {
-                data[colonMatch[1].trim()] = colonMatch[2].trim();
-            }
-        }
-
-        // Filter out garbage data
-        var filteredData = {};
-        var keys = Object.keys(data);
-        for (var f = 0; f < keys.length; f++) {
-            var key = keys[f];
-            var dataValue = data[key];
-
-            // Skip entries where key is just a number
-            if (/^\d+$/.test(key)) continue;
-
-            // Skip entries where value is just "20" or similar short meaningless numbers
-            if (/^\d{1,2}$/.test(dataValue)) continue;
-
-            // Skip entries with date+number pattern like "2026-01-2620"
-            if (/^\d{4}-\d{2}-\d{2}\d+$/.test(dataValue)) continue;
-
-            // Skip entries with malformed dates
-            if (/^\d{4}-\d{2}-\d{2}[^\s]/.test(dataValue) && !/^\d{4}-\d{2}-\d{2}\s/.test(dataValue)) continue;
-
-            // Skip very short keys (likely garbage)
-            if (key.length < 2) continue;
-
-            // Skip corrupt keys with numbers at start followed by date pattern (e.g. "3021132026-01-2621")
-            if (/^\d+\d{4}-\d{2}-\d+$/.test(key)) continue;
-
-            // Skip malformed date-like keys (e.g. "2026-01-2621")
-            if (/^\d{4}-\d{2}-\d{4,}$/.test(key)) continue;
-
-            // Skip header-related garbage (Idag, Saldo, etc from VR header)
-            if (/Idag/i.test(key)) continue;
-            if (/^Saldo/i.test(key)) continue;
-            if (/Imorgon/i.test(key)) continue;
-            if (/FPSaldo/i.test(key)) continue;
-            if (/^≡/.test(key)) continue;
-
-            // Skip values that contain header garbage patterns
-            if (/ImorgonLedig/i.test(dataValue)) continue;
-            if (/FPSaldo/i.test(dataValue)) continue;
-
-            filteredData[key] = dataValue;
-        }
-
         VR.updateLoader(95, 'Bygger vy...');
 
-        var html = VR.buildAnstalldataView(filteredData);
+        var html = VR.buildAnstalldataView(data, kvalifikationer);
 
         setTimeout(function() {
             VR.hideLoader();
-            var count = Object.keys(filteredData).length;
-            VR.showView('Anställddata', count + ' fält hittade', html);
+            VR.showView('', '', html);
         }, 300);
     };
 
-    VR.buildAnstalldataView = function(data) {
-        var keys = Object.keys(data);
+    VR.buildAnstalldataView = function(data, kvalifikationer) {
+        kvalifikationer = kvalifikationer || [];
 
-        if (keys.length === 0) {
+        if (kvalifikationer.length === 0) {
             return '\
                 <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
                     <div style="font-size:80px;margin-bottom:24px">🔍</div>\
@@ -189,48 +168,57 @@
                 </div>';
         }
 
-        // Profile card
-        var html = '<div style="background:linear-gradient(135deg,#5AC8FA,#007AFF);border-radius:30px;padding:40px;margin-bottom:30px;text-align:center;box-shadow:0 10px 40px rgba(0,122,255,0.3)">';
-        html += '<div style="width:120px;height:120px;background:rgba(255,255,255,0.2);border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:60px">👤</div>';
+        // Kvalifikationer table with 3 columns
+        var html = '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
 
-        var name = data['Namn'] || data['Name'] || data['Förnamn'] || '';
-        if (name) {
-            html += '<div style="font-size:36px;font-weight:700;color:#fff">' + name + '</div>';
-        }
-
-        var empNr = data['Anställningsnummer'] || data['Anst.nr'] || data['Anst nr'] || data['Personal nr'] || data['Personnr'] || '';
-        if (empNr) {
-            html += '<div style="font-size:22px;color:rgba(255,255,255,0.8);margin-top:8px">#' + empNr + '</div>';
-        }
-
+        // Header
+        html += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff">Namn</div>';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:center">Giltig från</div>';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:center">Giltig till</div>';
         html += '</div>';
 
-        // Data cards
-        html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
+        // Rows
+        for (var i = 0; i < kvalifikationer.length; i++) {
+            var kval = kvalifikationer[i];
+            var bgCol = i % 2 === 0 ? '#fff' : '#F8F8F8';
 
-        for (var i = 0; i < keys.length; i++) {
-            var key = keys[i];
-            var value = data[key];
+            // Check if expiring soon (within 3 months)
+            var isExpiringSoon = false;
+            var isExpired = false;
+            if (kval.giltigTill) {
+                var tillParts = kval.giltigTill.match(/(\d{2})-(\d{2})-(\d{4})/);
+                if (tillParts) {
+                    var tillDate = new Date(parseInt(tillParts[3]), parseInt(tillParts[2]) - 1, parseInt(tillParts[1]));
+                    var now = new Date();
+                    var threeMonths = new Date();
+                    threeMonths.setMonth(threeMonths.getMonth() + 3);
 
-            if (key === 'Namn' || key === 'Name' || key === 'Förnamn' ||
-                key === 'Anställningsnummer' || key === 'Anst.nr' || key === 'Anst nr' ||
-                key === 'Personal nr' || key === 'Personnr') continue;
+                    if (tillDate < now) {
+                        isExpired = true;
+                    } else if (tillDate < threeMonths) {
+                        isExpiringSoon = true;
+                    }
+                }
+            }
 
-            var borderStyle = i < keys.length - 1 ? 'border-bottom:1px solid #E5E5EA;' : '';
+            var tillColor = '#333';
+            if (isExpired) tillColor = '#FF3B30';
+            else if (isExpiringSoon) tillColor = '#FF9500';
 
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;' + borderStyle + '">';
-            html += '<div style="font-size:20px;color:#8E8E93">' + key + '</div>';
-            html += '<div style="font-size:22px;font-weight:600;color:#000;text-align:right;max-width:60%;word-break:break-word">' + value + '</div>';
+            html += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<div style="font-size:15px;color:#333;font-weight:500">' + kval.namn + '</div>';
+            html += '<div style="font-size:15px;color:#666;text-align:center">' + (kval.giltigFran || '-') + '</div>';
+            html += '<div style="font-size:15px;color:' + tillColor + ';text-align:center;font-weight:' + (isExpired || isExpiringSoon ? '600' : '400') + '">' + (kval.giltigTill || '-') + '</div>';
             html += '</div>';
         }
 
         html += '</div>';
 
-        // Debug: Show raw data
-        html += '<details style="margin-top:30px;background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
-        html += '<summary style="padding:20px 24px;font-size:20px;color:#8E8E93;cursor:pointer">Visa rådata (debug)</summary>';
-        html += '<pre style="padding:20px 24px;font-size:14px;color:#666;overflow-x:auto;background:#F8F8F8">' + JSON.stringify(data, null, 2) + '</pre>';
-        html += '</details>';
+        // Summary
+        html += '<div style="margin-top:16px;padding:12px 20px;text-align:center;color:#8E8E93;font-size:14px">';
+        html += kvalifikationer.length + ' kvalifikationer';
+        html += '</div>';
 
         return html;
     };
