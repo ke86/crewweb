@@ -63,11 +63,25 @@
 
     // ===== DOM HELPERS =====
     VR.findMenuItem = function(text) {
+        var textLower = text.toLowerCase();
+
         // Try standard menu items first
-        var items = document.querySelectorAll('.MenuItem, .menuitem, [class*="MenuItem"]');
+        var items = document.querySelectorAll('.MenuItem, .menuitem, [class*="MenuItem"], [class*="menuitem"]');
         for (var i = 0; i < items.length; i++) {
-            if (items[i].textContent.trim() === text) return items[i];
+            var itemText = items[i].textContent.trim();
+            if (itemText === text || itemText.toLowerCase() === textLower) return items[i];
         }
+
+        // Try links and buttons
+        var links = document.querySelectorAll('a, button, [role="menuitem"], [role="button"]');
+        for (var m = 0; m < links.length; m++) {
+            var linkText = links[m].textContent.trim();
+            if (linkText === text || linkText.toLowerCase() === textLower) {
+                var rect = links[m].getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) return links[m];
+            }
+        }
+
         // Fallback: search all elements for direct text
         var all = document.querySelectorAll('*');
         for (var k = 0; k < all.length; k++) {
@@ -78,21 +92,65 @@
                     direct += el.childNodes[j].textContent;
                 }
             }
-            if (direct.trim() === text) {
+            var directTrim = direct.trim();
+            if (directTrim === text || directTrim.toLowerCase() === textLower) {
                 var r = el.getBoundingClientRect();
                 if (r.width > 0 && r.height > 0) return el;
             }
         }
+
+        // Last resort: partial match for visible elements
+        for (var n = 0; n < all.length; n++) {
+            var el2 = all[n];
+            var elText = el2.textContent.trim();
+            if (elText.toLowerCase().indexOf(textLower) === 0 && elText.length < text.length + 20) {
+                var r2 = el2.getBoundingClientRect();
+                if (r2.width > 0 && r2.height > 0 && r2.width < 400) {
+                    return el2;
+                }
+            }
+        }
+
         return null;
     };
 
     VR.clickFolder = function() {
-        var menu = document.querySelector('.PopoutTrigger, .MenuOpen');
-        if (menu) { menu.click(); return true; }
-        menu = document.querySelector('.MainMenu, .DockLeft, .BaseMenu');
-        if (menu) { menu.click(); return true; }
-        var folder = document.querySelector('[id*="navbar_folder"], .folderico');
-        if (folder) { folder.click(); return true; }
+        // Try various menu triggers
+        var selectors = [
+            '.PopoutTrigger',
+            '.MenuOpen',
+            '.MainMenu',
+            '.DockLeft',
+            '.BaseMenu',
+            '[id*="navbar_folder"]',
+            '.folderico',
+            '[class*="folder"]',
+            '[class*="Folder"]',
+            'img[src*="folder"]',
+            '[title*="Mapp"]',
+            '[title*="mapp"]',
+            '[aria-label*="meny"]',
+            '[aria-label*="Meny"]'
+        ];
+
+        for (var i = 0; i < selectors.length; i++) {
+            var el = document.querySelector(selectors[i]);
+            if (el) {
+                el.click();
+                return true;
+            }
+        }
+
+        // Fallback: find element with folder icon by looking at images
+        var imgs = document.querySelectorAll('img');
+        for (var j = 0; j < imgs.length; j++) {
+            var src = imgs[j].src || '';
+            if (src.indexOf('folder') > -1 || src.indexOf('mapp') > -1) {
+                imgs[j].click();
+                return true;
+            }
+        }
+
         return false;
     };
 
