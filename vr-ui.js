@@ -4,13 +4,17 @@
 
     var VR = window.VR;
 
+    // Add menu ID
+    VR.ID.menu = 'vrMenu';
+    VR.ID.menuOverlay = 'vrMenuOverlay';
+
     // ===== MOBILE DETECTION =====
     VR.isMobile = function() {
         return window.innerWidth < 768;
     };
 
     VR.getHeaderHeight = function() {
-        return VR.isMobile() ? '255px' : '210px';
+        return VR.isMobile() ? '180px' : '140px';
     };
 
     // ===== LOADER =====
@@ -101,6 +105,142 @@
         document.body.appendChild(v);
     };
 
+    // ===== HAMBURGER MENU =====
+    VR.createMenu = function() {
+        // Menu overlay (dark background)
+        var overlay = document.createElement('div');
+        overlay.id = VR.ID.menuOverlay;
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:99999990;opacity:0;visibility:hidden;transition:opacity 0.3s ease,visibility 0.3s ease';
+        overlay.onclick = function() { VR.closeMenu(); };
+        document.body.appendChild(overlay);
+
+        // Menu panel
+        var menu = document.createElement('div');
+        menu.id = VR.ID.menu;
+        menu.style.cssText = 'position:fixed;top:0;left:-320px;width:300px;height:100%;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);z-index:99999991;transition:left 0.3s ease;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;flex-direction:column;box-shadow:5px 0 30px rgba(0,0,0,0.5)';
+
+        var menuItems = [
+            { icon: '📅', label: 'Schema', action: 'doSchema', color: '#007AFF' },
+            { icon: '⏰', label: 'Komp', action: 'doKomp', color: '#34C759' },
+            { icon: '🌙', label: 'OB', action: 'doOB', color: '#AF52DE' },
+            { icon: '📝', label: 'Önskemål', action: 'doOnskemål', color: '#FF9500' },
+            { icon: '🏖️', label: 'FP/FPV', action: 'doFPFPV', color: '#FF2D55' },
+            { icon: '👤', label: 'Anställddata', action: 'doAnstallddata', color: '#5AC8FA' }
+        ];
+
+        var menuHTML = '<div style="padding:30px 24px;border-bottom:1px solid rgba(255,255,255,0.1)">\
+            <div style="font-size:28px;font-weight:700;color:#fff">CrewWeb</div>\
+            <div style="font-size:16px;color:rgba(255,255,255,0.5);margin-top:4px">Schema & Verktyg</div>\
+        </div>';
+
+        menuHTML += '<div style="flex:1;padding:18px 0;overflow-y:auto">';
+
+        for (var i = 0; i < menuItems.length; i++) {
+            var item = menuItems[i];
+            menuHTML += '<div class="vrMenuItem" data-action="' + item.action + '" style="display:flex;align-items:center;gap:18px;padding:20px 24px;cursor:pointer;transition:background 0.2s ease">\
+                <div style="width:50px;height:50px;border-radius:14px;background:' + item.color + ';display:flex;align-items:center;justify-content:center;font-size:26px">' + item.icon + '</div>\
+                <div style="font-size:22px;font-weight:600;color:#fff">' + item.label + '</div>\
+            </div>';
+        }
+
+        menuHTML += '</div>';
+
+        // Close button at bottom
+        menuHTML += '<div style="padding:20px 24px;border-top:1px solid rgba(255,255,255,0.1)">\
+            <div class="vrMenuItem" data-action="cleanup" style="display:flex;align-items:center;gap:18px;padding:16px 20px;cursor:pointer;background:rgba(255,59,48,0.2);border-radius:16px">\
+                <div style="width:50px;height:50px;border-radius:14px;background:#FF3B30;display:flex;align-items:center;justify-content:center;font-size:26px">✕</div>\
+                <div style="font-size:22px;font-weight:600;color:#FF3B30">Stäng app</div>\
+            </div>\
+        </div>';
+
+        menu.innerHTML = menuHTML;
+        document.body.appendChild(menu);
+
+        // Add hover effects and click handlers
+        var items = menu.querySelectorAll('.vrMenuItem');
+        for (var j = 0; j < items.length; j++) {
+            items[j].onmouseenter = function() {
+                this.style.background = 'rgba(255,255,255,0.1)';
+            };
+            items[j].onmouseleave = function() {
+                if (this.getAttribute('data-action') !== 'cleanup') {
+                    this.style.background = 'transparent';
+                } else {
+                    this.style.background = 'rgba(255,59,48,0.2)';
+                }
+            };
+            items[j].onclick = function() {
+                var action = this.getAttribute('data-action');
+                VR.closeMenu();
+                if (VR[action]) {
+                    VR.closeDayDetail();
+                    VR[action]();
+                }
+            };
+        }
+    };
+
+    VR.openMenu = function() {
+        var menu = document.getElementById(VR.ID.menu);
+        var overlay = document.getElementById(VR.ID.menuOverlay);
+        if (menu) menu.style.left = '0';
+        if (overlay) {
+            overlay.style.opacity = '1';
+            overlay.style.visibility = 'visible';
+        }
+    };
+
+    VR.closeMenu = function() {
+        var menu = document.getElementById(VR.ID.menu);
+        var overlay = document.getElementById(VR.ID.menuOverlay);
+        if (menu) menu.style.left = '-320px';
+        if (overlay) {
+            overlay.style.opacity = '0';
+            overlay.style.visibility = 'hidden';
+        }
+    };
+
+    // ===== PLACEHOLDER FUNCTIONS FOR NEW MENU ITEMS =====
+    VR.doOB = function() {
+        VR.closeOverlay();
+        VR.showView('OB-tillägg', 'Kommer snart...', '\
+            <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
+                <div style="font-size:80px;margin-bottom:24px">🌙</div>\
+                <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">OB-tillägg</div>\
+                <div style="font-size:22px;color:#888">Denna funktion är under utveckling</div>\
+            </div>');
+    };
+
+    VR.doOnskemål = function() {
+        VR.closeOverlay();
+        VR.showView('Önskemål', 'Kommer snart...', '\
+            <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
+                <div style="font-size:80px;margin-bottom:24px">📝</div>\
+                <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Önskemål</div>\
+                <div style="font-size:22px;color:#888">Denna funktion är under utveckling</div>\
+            </div>');
+    };
+
+    VR.doFPFPV = function() {
+        VR.closeOverlay();
+        VR.showView('FP/FPV', 'Kommer snart...', '\
+            <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
+                <div style="font-size:80px;margin-bottom:24px">🏖️</div>\
+                <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">FP/FPV</div>\
+                <div style="font-size:22px;color:#888">Denna funktion är under utveckling</div>\
+            </div>');
+    };
+
+    VR.doAnstallddata = function() {
+        VR.closeOverlay();
+        VR.showView('Anställddata', 'Kommer snart...', '\
+            <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
+                <div style="font-size:80px;margin-bottom:24px">👤</div>\
+                <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Anställddata</div>\
+                <div style="font-size:22px;color:#888">Denna funktion är under utveckling</div>\
+            </div>');
+    };
+
     // ===== HEADER =====
     VR.createHeader = function() {
         var h = document.createElement('div');
@@ -108,44 +248,36 @@
         var headerH = VR.getHeaderHeight();
 
         h.style.cssText = 'position:fixed;top:0;left:0;right:0;height:' + headerH +
-            ';background:rgba(0,0,0,0.95);backdrop-filter:blur(20px);z-index:9999999;padding:18px 24px;font-family:-apple-system,BlinkMacSystemFont,sans-serif';
+            ';background:rgba(0,0,0,0.95);backdrop-filter:blur(20px);z-index:9999999;padding:18px 20px;font-family:-apple-system,BlinkMacSystemFont,sans-serif';
 
         h.innerHTML = '\
-<div style="display:flex;gap:18px;align-items:flex-start">\
-<div style="flex:2;display:flex;flex-direction:column;gap:9px">\
-<button id="vrBtnS" style="width:100%;padding:23px 27px;border-radius:21px;border:none;background:linear-gradient(135deg,#007AFF,#5856D6);color:#fff;font-weight:700;font-size:32px;cursor:pointer">📅 Schema</button>\
-<div style="display:flex;gap:9px">\
-<div id="vrTodayBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:14px;padding:14px 18px;text-align:center;cursor:pointer">\
-<div style="font-size:20px;color:rgba(255,255,255,0.5)">Idag</div>\
-<div id="vrTodayTur" style="font-size:24px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">...</div>\
+<div style="display:flex;gap:14px;align-items:center;height:100%">\
+<button id="vrMenuBtn" style="background:rgba(255,255,255,0.1);color:#fff;border:none;width:70px;height:70px;border-radius:18px;font-size:32px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">☰</button>\
+<div style="flex:1;display:flex;gap:12px">\
+<div id="vrTodayBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;text-align:center;cursor:pointer">\
+<div style="font-size:16px;color:rgba(255,255,255,0.5)">Idag</div>\
+<div id="vrTodayTur" style="font-size:22px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">...</div>\
 </div>\
-<div id="vrTomorrowBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:14px;padding:14px 18px;text-align:center;cursor:pointer">\
-<div style="font-size:20px;color:rgba(255,255,255,0.5)">Imorgon</div>\
-<div id="vrTomorrowTur" style="font-size:24px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">...</div>\
+<div id="vrTomorrowBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;text-align:center;cursor:pointer">\
+<div style="font-size:16px;color:rgba(255,255,255,0.5)">Imorgon</div>\
+<div id="vrTomorrowTur" style="font-size:22px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">...</div>\
 </div>\
-</div>\
-</div>\
-<div style="flex:1;display:flex;flex-direction:column;gap:9px">\
-<button id="vrBtnK" style="width:100%;padding:23px 27px;border-radius:21px;border:none;background:linear-gradient(135deg,#34C759,#30D158);color:#fff;font-weight:700;font-size:32px;cursor:pointer">⏰ Komp</button>\
-<div id="vrSaldoBox" style="background:rgba(255,255,255,0.1);border-radius:14px;padding:14px 18px;text-align:center;cursor:pointer">\
-<div style="font-size:20px;color:rgba(255,255,255,0.5)">Saldo <span style="font-size:14px">🔄</span></div>\
-<div id="vrKompSaldo" style="font-size:24px;color:#34C759;font-weight:700">...</div>\
+<div id="vrSaldoBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;text-align:center;cursor:pointer">\
+<div style="font-size:16px;color:rgba(255,255,255,0.5)">Saldo 🔄</div>\
+<div id="vrKompSaldo" style="font-size:22px;color:#34C759;font-weight:700">...</div>\
 </div>\
 </div>\
-<button id="vrCloseBtn" style="background:rgba(255,255,255,0.1);color:#fff;border:none;width:81px;height:81px;border-radius:50%;font-size:36px;cursor:pointer;flex-shrink:0;margin-top:5px">✕</button>\
 </div>';
 
         document.body.appendChild(h);
         document.body.style.paddingTop = headerH;
 
+        // Create menu
+        VR.createMenu();
+
         // Event listeners
-        document.getElementById('vrBtnS').onclick = function() {
-            VR.closeDayDetail();
-            VR.doSchema();
-        };
-        document.getElementById('vrBtnK').onclick = function() {
-            VR.closeDayDetail();
-            VR.doKomp();
+        document.getElementById('vrMenuBtn').onclick = function() {
+            VR.openMenu();
         };
         document.getElementById('vrTodayBox').onclick = function() {
             if (VR.todayDateStr) VR.openDayFromHeader(VR.todayDateStr);
@@ -156,20 +288,22 @@
         document.getElementById('vrSaldoBox').onclick = function() {
             VR.manualRefreshSaldo();
         };
-        document.getElementById('vrCloseBtn').onclick = function() {
-            VR.cleanup();
-        };
     };
 
     // ===== CLEANUP =====
     VR.cleanup = function() {
-        document.getElementById(VR.ID.header).remove();
+        var header = document.getElementById(VR.ID.header);
+        if (header) header.remove();
         var v = document.getElementById(VR.ID.view);
         if (v) v.remove();
         var l = document.getElementById(VR.ID.loader);
         if (l) l.remove();
         var d = document.getElementById(VR.ID.detail);
         if (d) d.remove();
+        var m = document.getElementById(VR.ID.menu);
+        if (m) m.remove();
+        var mo = document.getElementById(VR.ID.menuOverlay);
+        if (mo) mo.remove();
         document.body.style.paddingTop = '';
     };
 
