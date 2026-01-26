@@ -29,6 +29,8 @@
     var modules = [
         'vr-core.js',
         'vr-ui.js',
+        'vr-lone.js',
+        'vr-anstalld.js',
         'vr-schema.js',
         'vr-komp.js',
         'vr-daydetail.js'
