@@ -4,16 +4,23 @@ Ett bokmärkesverktyg för att visa schema och kompsaldo från CrewWeb.
 
 ## Installation
 
-### 1. Ladda upp filerna till GitHub Pages
+### 1. Ladda upp filerna till GitHub
 
-Ladda upp alla `.js`-filer till ditt repository `ke86.github.io/crewweb/`:
+Lägg alla `.js`-filer i mappen `crewweb/` i **main**-branchen på ditt repository `ke86.github.io`:
 
-- `vr-loader.js`
-- `vr-core.js`
-- `vr-ui.js`
-- `vr-schema.js`
-- `vr-komp.js`
-- `vr-daydetail.js`
+```
+ke86.github.io/
+└── crewweb/
+    ├── vr-loader.js
+    ├── vr-core.js
+    ├── vr-ui.js
+    ├── vr-schema.js
+    ├── vr-komp.js
+    ├── vr-daydetail.js
+    └── README.md
+```
+
+Filerna blir tillgängliga på `https://ke86.github.io/crewweb/`
 
 ### 2. Skapa bokmärket
 
