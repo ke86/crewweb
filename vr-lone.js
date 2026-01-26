@@ -16,64 +16,57 @@
         return null;
     };
 
-    // ===== SHARED: Set date dropdown =====
-    VR.setDateDropdown = function(select, targetDate, selectEarliest) {
-        var options = select.querySelectorAll('option');
-        var bestOption = null;
-        var bestDate = null;
-        var exactMatch = false;
+    // ===== SHARED: Set date INPUT field =====
+    VR.setDateInput = function(input, targetDate) {
+        console.log('VR setDateInput: Setting to "' + targetDate + '"');
+        input.value = targetDate;
+        // Trigger change event
+        var evt = document.createEvent('HTMLEvents');
+        evt.initEvent('change', true, true);
+        input.dispatchEvent(evt);
+        // Also trigger input event for good measure
+        var inputEvt = document.createEvent('HTMLEvents');
+        inputEvt.initEvent('input', true, true);
+        input.dispatchEvent(inputEvt);
+    };
 
-        console.log('VR setDateDropdown: Looking for "' + targetDate + '" in ' + options.length + ' options');
+    // ===== SHARED: Find date INPUT fields =====
+    VR.findDateInputs = function() {
+        var inputs = document.querySelectorAll('input');
+        var dateInputs = [];
 
-        for (var i = 0; i < options.length; i++) {
-            var val = options[i].value || options[i].textContent;
-            var match = val.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
-            if (match) {
-                var day = parseInt(match[1], 10);
-                var month = parseInt(match[2], 10);
-                var year = parseInt(match[3], 10);
-                var dateObj = new Date(year, month - 1, day);
-
-                // Check for exact match
-                if (val.indexOf(targetDate) > -1) {
-                    bestOption = options[i];
-                    exactMatch = true;
-                    console.log('VR setDateDropdown: EXACT match found: ' + val);
-                    break;
-                }
-
-                // Otherwise find earliest/latest
-                if (!bestDate) {
-                    bestDate = dateObj;
-                    bestOption = options[i];
-                } else if (selectEarliest && dateObj < bestDate) {
-                    bestDate = dateObj;
-                    bestOption = options[i];
-                } else if (!selectEarliest && dateObj > bestDate) {
-                    bestDate = dateObj;
-                    bestOption = options[i];
-                }
+        for (var i = 0; i < inputs.length; i++) {
+            var val = inputs[i].value || '';
+            // Match date format DD-MM-YYYY
+            if (val.match(/^\d{1,2}-\d{2}-\d{4}$/)) {
+                dateInputs.push(inputs[i]);
+                console.log('VR: Found date input with value: ' + val);
             }
         }
 
-        if (bestOption) {
-            console.log('VR setDateDropdown: Setting to "' + bestOption.value + '" (exact=' + exactMatch + ')');
-            select.value = bestOption.value;
-            // Trigger change event
-            var evt = document.createEvent('HTMLEvents');
-            evt.initEvent('change', true, true);
-            select.dispatchEvent(evt);
-        } else {
-            console.log('VR setDateDropdown: No matching option found!');
+        console.log('VR: Found ' + dateInputs.length + ' date inputs total');
+        return dateInputs;
+    };
+
+    // ===== SHARED: Check if on Löneredovisningar page =====
+    VR.isOnLonePage = function() {
+        // Check for Lönedagar/Löneperiod radio buttons - unique to this page
+        var radios = document.querySelectorAll('input[type="radio"]');
+        for (var i = 0; i < radios.length; i++) {
+            var parent = radios[i].parentElement;
+            if (parent && parent.textContent.toLowerCase().indexOf('lönedagar') > -1) {
+                return true;
+            }
         }
+        return false;
     };
 
     // ===== SHARED: Navigate to Löneredovisningar =====
     // Path: Mapp-ikon → Löneredovisningar
     VR.navigateToLoneredovisningar = function(callback) {
-        // Check if already on the page (Hämta button exists)
-        var hamtaBtn = VR.findHamtaButton();
-        if (hamtaBtn) {
+        // Check if already on Löneredovisningar page (look for Lönedagar radio, not just Hämta)
+        if (VR.isOnLonePage()) {
+            console.log('VR: Already on Löneredovisningar page');
             VR.updateLoader(30, 'Sidan redan laddad...');
             callback();
             return;
@@ -109,8 +102,8 @@
             n++;
             VR.updateLoader(30 + n, 'Väntar på sidan...');
 
-            var hamtaBtn = VR.findHamtaButton();
-            if (hamtaBtn) {
+            // Check for Lönedagar radio button - specific to this page
+            if (VR.isOnLonePage()) {
                 VR.stopTimer();
                 VR.updateLoader(45, 'Sidan laddad!');
                 setTimeout(callback, 400);
@@ -167,38 +160,25 @@
         setTimeout(function() {
             VR.updateLoader(55, 'Ställer in datum...');
 
-            // Find all select elements that contain dates
-            var selects = document.querySelectorAll('select');
-            var dateSelects = [];
-
-            console.log('VR: Found ' + selects.length + ' select elements');
-
-            for (var i = 0; i < selects.length; i++) {
-                var options = selects[i].querySelectorAll('option');
-                for (var k = 0; k < options.length; k++) {
-                    var val = options[k].value || options[k].textContent;
-                    if (val && val.match(/\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/)) {
-                        dateSelects.push(selects[i]);
-                        console.log('VR: Found date select with ' + options.length + ' options');
-                        break;
-                    }
-                }
-            }
-
-            console.log('VR: Found ' + dateSelects.length + ' date selects');
+            // Find all INPUT elements that contain dates
+            var dateInputs = VR.findDateInputs();
 
             // Set start date (14-12-2025)
-            if (dateSelects.length >= 1) {
+            if (dateInputs.length >= 1) {
                 console.log('VR: Setting start date to 14-12-2025');
-                VR.setDateDropdown(dateSelects[0], '14-12-2025', true);
+                VR.setDateInput(dateInputs[0], '14-12-2025');
+            } else {
+                console.log('VR: No date input found for start date!');
             }
 
             // Wait a bit then set end date
             setTimeout(function() {
                 // Set end date (31-12-2026)
-                if (dateSelects.length >= 2) {
+                if (dateInputs.length >= 2) {
                     console.log('VR: Setting end date to 31-12-2026');
-                    VR.setDateDropdown(dateSelects[1], '31-12-2026', false);
+                    VR.setDateInput(dateInputs[1], '31-12-2026');
+                } else {
+                    console.log('VR: No date input found for end date!');
                 }
 
                 // Step 3: Click Hämta button
