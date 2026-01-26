@@ -448,140 +448,202 @@
         VR.updateLoader(95, 'Analyserar OB-data...');
 
         var obData = [];
-        var dayData = [];
 
-        // Parse the page content - look for day sections
-        // Format: "14-12-2025 - Söndag - 17209" followed by tables
-        var pageText = document.body.innerText;
-        var html = document.body.innerHTML;
+        // OB rates
+        var OB_RATES = {
+            'L.Hb': { name: 'Kvalificerad OB', rate: 54.69 },
+            'L.Storhelgstillägg': { name: 'Storhelgs OB', rate: 122.88 }
+        };
 
-        // Find all tables
-        var tables = document.querySelectorAll('table');
+        // We need to find date headers and their associated tables
+        // The structure is: date header text, then a table below it
+        // Walk through the DOM to find this pattern
 
-        for (var t = 0; t < tables.length; t++) {
-            var rows = tables[t].querySelectorAll('tr');
+        var bodyHTML = document.body.innerHTML;
+        var currentDate = null;
 
-            for (var r = 0; r < rows.length; r++) {
-                var cells = rows[r].querySelectorAll('td, th');
-                if (cells.length < 2) continue;
+        // Find all elements that might contain date headers or tables
+        var allElements = document.body.querySelectorAll('*');
 
-                var col1 = cells[0] ? cells[0].textContent.trim() : '';
-                var col2 = cells[1] ? cells[1].textContent.trim() : '';
+        for (var i = 0; i < allElements.length; i++) {
+            var el = allElements[i];
+            var text = el.textContent || '';
 
-                // Skip headers
-                if (col1.toLowerCase() === 'löneslag' && col2.toLowerCase() === 'saldo') continue;
+            // Check if this element contains a date header pattern
+            // Format: "14-12-2025 - Söndag" or "14-12-2025 - Söndag - 17209"
+            var dateMatch = text.match(/^(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i);
 
-                // Only include rows with actual data
-                if (col1 && col2) {
-                    obData.push({
-                        type: col1,
-                        value: col2
-                    });
+            if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE' && el.tagName !== 'TR' && el.tagName !== 'TD') {
+                // Check if it's a direct match (not a parent containing many things)
+                var directText = '';
+                for (var c = 0; c < el.childNodes.length; c++) {
+                    if (el.childNodes[c].nodeType === 3) { // Text node
+                        directText += el.childNodes[c].textContent;
+                    }
+                }
+                if (directText.match(/^\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i)) {
+                    currentDate = dateMatch[1];
+                }
+            }
+
+            // Check if this is a table
+            if (el.tagName === 'TABLE' && currentDate) {
+                var rows = el.querySelectorAll('tr');
+                for (var r = 0; r < rows.length; r++) {
+                    var cells = rows[r].querySelectorAll('td, th');
+                    if (cells.length < 2) continue;
+
+                    var col1 = cells[0] ? cells[0].textContent.trim() : '';
+                    var col2 = cells[1] ? cells[1].textContent.trim() : '';
+
+                    // Skip headers
+                    if (col1.toLowerCase() === 'löneslag') continue;
+
+                    // Only include L.Hb and L.Storhelgstillägg
+                    if (col1 === 'L.Hb' || col1 === 'L.Storhelgstillägg') {
+                        // Parse time value (e.g., "7:45")
+                        var timeMatch = col2.match(/(\d+):(\d+)/);
+                        var hours = 0;
+                        var minutes = 0;
+                        if (timeMatch) {
+                            hours = parseInt(timeMatch[1], 10);
+                            minutes = parseInt(timeMatch[2], 10);
+                        }
+                        var totalHours = hours + (minutes / 60);
+                        var rate = OB_RATES[col1] ? OB_RATES[col1].rate : 0;
+                        var kronor = totalHours * rate;
+
+                        obData.push({
+                            date: currentDate,
+                            type: col1,
+                            typeName: OB_RATES[col1] ? OB_RATES[col1].name : col1,
+                            time: col2,
+                            hours: totalHours,
+                            rate: rate,
+                            kronor: kronor
+                        });
+                    }
                 }
             }
         }
 
-        // Also find date headers
-        var dateMatches = pageText.match(/(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)(?:\s*-\s*(\d+))?/gi) || [];
-
         VR.updateLoader(98, 'Bygger vy...');
 
-        var viewHtml = VR.buildOBView(obData, dateMatches);
+        var viewHtml = VR.buildOBView(obData);
+
+        var totalKr = 0;
+        for (var k = 0; k < obData.length; k++) {
+            totalKr += obData[k].kronor;
+        }
 
         setTimeout(function() {
             VR.hideLoader();
-            VR.showView('OB-tillägg', obData.length + ' poster', viewHtml);
+            VR.showView('OB-tillägg', obData.length + ' poster | ' + totalKr.toFixed(2) + ' kr', viewHtml);
         }, 300);
     };
 
-    VR.buildOBView = function(obData, dateMatches) {
+    VR.buildOBView = function(obData) {
         if (obData.length === 0) {
             return '\
                 <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
                     <div style="font-size:80px;margin-bottom:24px">🔍</div>\
                     <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Ingen OB-data hittades</div>\
-                    <div style="font-size:22px;color:#888">Kontrollera att du är på rätt sida i CrewWeb</div>\
+                    <div style="font-size:22px;color:#888">Endast L.Hb och L.Storhelgstillägg visas</div>\
                 </div>';
         }
 
-        // Group data by type and calculate totals
-        var totals = {};
+        // Calculate totals per type
+        var totals = {
+            'L.Hb': { hours: 0, kronor: 0, count: 0, rate: 54.69, name: 'Kvalificerad OB' },
+            'L.Storhelgstillägg': { hours: 0, kronor: 0, count: 0, rate: 122.88, name: 'Storhelgs OB' }
+        };
+
+        var grandTotalKr = 0;
+        var grandTotalHours = 0;
+
         for (var i = 0; i < obData.length; i++) {
             var item = obData[i];
-            var type = item.type;
-            var value = item.value;
-
-            if (!totals[type]) {
-                totals[type] = { count: 0, totalMinutes: 0 };
+            if (totals[item.type]) {
+                totals[item.type].hours += item.hours;
+                totals[item.type].kronor += item.kronor;
+                totals[item.type].count++;
             }
-            totals[type].count++;
-
-            // Parse time value (e.g., "7:45" -> 465 minutes)
-            var timeMatch = value.match(/(\d+):(\d+)/);
-            if (timeMatch) {
-                var hours = parseInt(timeMatch[1], 10);
-                var mins = parseInt(timeMatch[2], 10);
-                totals[type].totalMinutes += hours * 60 + mins;
-            }
+            grandTotalKr += item.kronor;
+            grandTotalHours += item.hours;
         }
 
-        // Summary card
-        var html = '<div style="background:linear-gradient(135deg,#AF52DE,#5856D6);border-radius:30px;padding:40px;margin-bottom:30px;text-align:center;box-shadow:0 10px 40px rgba(175,82,222,0.3)">';
-        html += '<div style="font-size:60px;margin-bottom:16px">🌙</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#fff">OB-tillägg</div>';
-        html += '<div style="font-size:18px;color:rgba(255,255,255,0.8);margin-top:8px">' + dateMatches.length + ' lönedagar</div>';
+        // Header card with total
+        var html = '<div style="background:linear-gradient(135deg,#AF52DE,#5856D6);border-radius:30px;padding:40px;margin-bottom:24px;text-align:center;box-shadow:0 10px 40px rgba(175,82,222,0.3)">';
+        html += '<div style="font-size:50px;margin-bottom:12px">🌙</div>';
+        html += '<div style="font-size:24px;font-weight:600;color:rgba(255,255,255,0.9)">OB-tillägg</div>';
+        html += '<div style="font-size:48px;font-weight:700;color:#fff;margin:12px 0">' + grandTotalKr.toFixed(2) + ' kr</div>';
+        html += '<div style="font-size:16px;color:rgba(255,255,255,0.8)">' + grandTotalHours.toFixed(1) + ' timmar totalt</div>';
         html += '</div>';
 
-        // Summary cards per type
-        var typeKeys = Object.keys(totals);
-        if (typeKeys.length > 0) {
-            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:24px">';
+        // Summary cards for each OB type
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:24px">';
 
-            for (var t = 0; t < typeKeys.length; t++) {
-                var typeKey = typeKeys[t];
-                var typeData = totals[typeKey];
-                var totalHrs = Math.floor(typeData.totalMinutes / 60);
-                var totalMins = typeData.totalMinutes % 60;
-                var timeStr = totalHrs + ':' + (totalMins < 10 ? '0' : '') + totalMins;
-
-                // Choose icon based on type
-                var icon = '⏰';
-                var typeKeyLower = typeKey.toLowerCase();
-                if (typeKeyLower.indexOf('hb') > -1 || typeKeyLower.indexOf('l.hb') > -1) icon = '🚂';
-                else if (typeKeyLower.indexOf('försen') > -1) icon = '⚡';
-                else if (typeKeyLower.indexOf('frånvaro') > -1 || typeKeyLower.indexOf('fridag') > -1) icon = '🏠';
-                else if (typeKeyLower.indexOf('föräldr') > -1) icon = '👶';
-                else if (typeKeyLower.indexOf('fp') > -1) icon = '🏖️';
-
-                html += '<div style="background:#fff;border-radius:20px;padding:24px;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
-                html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">';
-                html += '<span style="font-size:32px">' + icon + '</span>';
-                html += '<span style="font-size:18px;font-weight:600;color:#333">' + typeKey + '</span>';
-                html += '</div>';
-                html += '<div style="font-size:36px;font-weight:700;color:#AF52DE">' + timeStr + '</div>';
-                html += '<div style="font-size:14px;color:#8E8E93;margin-top:4px">' + typeData.count + ' poster</div>';
-                html += '</div>';
-            }
-
+        // L.Hb card
+        if (totals['L.Hb'].count > 0) {
+            html += '<div style="background:#fff;border-radius:20px;padding:24px;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
+            html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">';
+            html += '<span style="font-size:28px">🚂</span>';
+            html += '<span style="font-size:16px;font-weight:600;color:#333">Kvalificerad OB</span>';
+            html += '</div>';
+            html += '<div style="font-size:14px;color:#8E8E93;margin-bottom:12px">L.Hb · 54,69 kr/h</div>';
+            html += '<div style="font-size:32px;font-weight:700;color:#AF52DE">' + totals['L.Hb'].kronor.toFixed(2) + ' kr</div>';
+            html += '<div style="font-size:14px;color:#8E8E93;margin-top:4px">' + totals['L.Hb'].hours.toFixed(1) + ' h · ' + totals['L.Hb'].count + ' dagar</div>';
             html += '</div>';
         }
 
-        // Detailed list in collapsible
-        html += '<details style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
-        html += '<summary style="padding:20px 24px;font-size:18px;font-weight:600;color:#333;cursor:pointer;background:#F8F8F8">Visa alla poster (' + obData.length + ' st)</summary>';
-        html += '<div style="max-height:400px;overflow-y:auto">';
+        // L.Storhelgstillägg card
+        if (totals['L.Storhelgstillägg'].count > 0) {
+            html += '<div style="background:#fff;border-radius:20px;padding:24px;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
+            html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">';
+            html += '<span style="font-size:28px">🎄</span>';
+            html += '<span style="font-size:16px;font-weight:600;color:#333">Storhelgs OB</span>';
+            html += '</div>';
+            html += '<div style="font-size:14px;color:#8E8E93;margin-bottom:12px">L.Storhelgstillägg · 122,88 kr/h</div>';
+            html += '<div style="font-size:32px;font-weight:700;color:#FF9500">' + totals['L.Storhelgstillägg'].kronor.toFixed(2) + ' kr</div>';
+            html += '<div style="font-size:14px;color:#8E8E93;margin-top:4px">' + totals['L.Storhelgstillägg'].hours.toFixed(1) + ' h · ' + totals['L.Storhelgstillägg'].count + ' dagar</div>';
+            html += '</div>';
+        }
 
+        html += '</div>';
+
+        // Data table
+        html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
+
+        // Table header
+        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff">OB-typ</div>';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Antal</div>';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Kr</div>';
+        html += '</div>';
+
+        // Table rows
         for (var d = 0; d < obData.length; d++) {
-            var dataItem = obData[d];
+            var row = obData[d];
             var bgCol = d % 2 === 0 ? '#fff' : '#F8F8F8';
 
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
-            html += '<span style="font-size:16px;color:#333">' + dataItem.type + '</span>';
-            html += '<span style="font-size:16px;font-weight:600;color:#AF52DE">' + dataItem.value + '</span>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
+            html += '<div style="font-size:15px;color:#333">' + row.typeName + '</div>';
+            html += '<div style="font-size:15px;color:#333;text-align:right">' + row.time + '</div>';
+            html += '<div style="font-size:15px;font-weight:600;color:#AF52DE;text-align:right">' + row.kronor.toFixed(2) + '</div>';
             html += '</div>';
         }
 
-        html += '</div></details>';
+        // Total row
+        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:8px;padding:16px 20px;background:#F0F0F5;border-top:2px solid #E5E5EA">';
+        html += '<div style="font-size:16px;font-weight:700;color:#333">Totalt</div>';
+        html += '<div></div>';
+        html += '<div style="font-size:16px;font-weight:600;color:#333;text-align:right">' + grandTotalHours.toFixed(1) + ' h</div>';
+        html += '<div style="font-size:16px;font-weight:700;color:#AF52DE;text-align:right">' + grandTotalKr.toFixed(2) + ' kr</div>';
+        html += '</div>';
+
+        html += '</div>';
 
         return html;
     };
