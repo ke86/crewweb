@@ -123,6 +123,7 @@
             { icon: '📅', label: 'Schema', action: 'doSchema', color: '#007AFF' },
             { icon: '⏰', label: 'Komp', action: 'doKomp', color: '#34C759' },
             { icon: '🌙', label: 'OB', action: 'doOB', color: '#AF52DE' },
+            { icon: '🏠', label: 'Frånvaro', action: 'doFranvaro', color: '#FF6B6B' },
             { icon: '📝', label: 'Önskemål', action: 'doOnskemål', color: '#FF9500' },
             { icon: '🏖️', label: 'FP/FPV', action: 'doFPFPV', color: '#FF2D55' },
             { icon: '👤', label: 'Anställddata', action: 'doAnstallddata', color: '#5AC8FA' }
@@ -656,6 +657,364 @@
                 <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Önskemål</div>\
                 <div style="font-size:22px;color:#888">Denna funktion är under utveckling</div>\
             </div>');
+    };
+
+    // ===== FRÅNVARO FUNCTIONALITY =====
+    VR.doFranvaro = function() {
+        VR.stopTimer();
+        VR.closeOverlay();
+        VR.showLoader('Laddar Frånvaro');
+        VR.updateLoader(5, 'Letar efter sidan...');
+
+        // Check if already on Löneredovisningar page
+        var hamtaBtn = VR.findHamtaButton();
+        if (hamtaBtn) {
+            VR.updateLoader(30, 'Sidan redan laddad...');
+            VR.setupFranvaroAndFetch();
+            return;
+        }
+
+        // Try to find menu item directly
+        var el = VR.findMenuItem('Löneredovisningar');
+        if (el) {
+            VR.updateLoader(15, 'Klickar på Löneredovisningar...');
+            el.click();
+            VR.waitForFranvaroPage();
+            return;
+        }
+
+        // Open folder menu first
+        VR.updateLoader(10, 'Öppnar meny...');
+        VR.clickFolder();
+
+        setTimeout(function() {
+            VR.updateLoader(15, 'Letar efter Löneredovisningar...');
+            var n = 0;
+            VR.timer = setInterval(function() {
+                n++;
+                var el2 = VR.findMenuItem('Löneredovisningar');
+                if (el2) {
+                    VR.stopTimer();
+                    el2.click();
+                    VR.updateLoader(25, 'Navigerar...');
+                    VR.waitForFranvaroPage();
+                } else if (n > 20) {
+                    VR.stopTimer();
+                    VR.updateLoader(0, 'Timeout - hittade ej Löneredovisningar');
+                    setTimeout(VR.hideLoader, 2000);
+                }
+            }, 400);
+        }, 600);
+    };
+
+    VR.waitForFranvaroPage = function() {
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+            VR.updateLoader(30 + n, 'Väntar på sidan...');
+
+            var hamtaBtn = VR.findHamtaButton();
+            if (hamtaBtn) {
+                VR.stopTimer();
+                VR.updateLoader(45, 'Sidan laddad!');
+                setTimeout(VR.setupFranvaroAndFetch, 400);
+            } else if (n > 30) {
+                VR.stopTimer();
+                VR.updateLoader(0, 'Sidan laddades ej');
+                setTimeout(VR.hideLoader, 2000);
+            }
+        }, 400);
+    };
+
+    VR.setupFranvaroAndFetch = function() {
+        VR.updateLoader(50, 'Väljer Lönedagar...');
+
+        // Find and click Lönedagar radio button
+        var radios = document.querySelectorAll('input[type="radio"]');
+        var lonedagarRadio = null;
+        for (var i = 0; i < radios.length; i++) {
+            var label = radios[i].parentElement ? radios[i].parentElement.textContent : '';
+            var name = radios[i].name || '';
+            var id = radios[i].id || '';
+            if (label.toLowerCase().indexOf('lönedagar') > -1 ||
+                name.toLowerCase().indexOf('lönedagar') > -1 ||
+                id.toLowerCase().indexOf('lönedagar') > -1) {
+                lonedagarRadio = radios[i];
+                break;
+            }
+        }
+
+        if (!lonedagarRadio) {
+            var labels = document.querySelectorAll('label');
+            for (var j = 0; j < labels.length; j++) {
+                if (labels[j].textContent.toLowerCase().indexOf('lönedagar') > -1) {
+                    var forId = labels[j].getAttribute('for');
+                    if (forId) {
+                        lonedagarRadio = document.getElementById(forId);
+                    } else {
+                        lonedagarRadio = labels[j].querySelector('input[type="radio"]');
+                    }
+                    if (lonedagarRadio) break;
+                }
+            }
+        }
+
+        if (lonedagarRadio && !lonedagarRadio.checked) {
+            lonedagarRadio.click();
+        }
+
+        setTimeout(function() {
+            VR.updateLoader(55, 'Ställer in datum...');
+            VR.setFranvaroDates();
+        }, 300);
+    };
+
+    VR.setFranvaroDates = function() {
+        var selects = document.querySelectorAll('select');
+        var dateSelects = [];
+
+        for (var i = 0; i < selects.length; i++) {
+            var options = selects[i].querySelectorAll('option');
+            for (var j = 0; j < options.length; j++) {
+                var val = options[j].value || options[j].textContent;
+                if (val && val.match(/\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/)) {
+                    dateSelects.push(selects[i]);
+                    break;
+                }
+            }
+        }
+
+        if (dateSelects.length >= 1) {
+            VR.setDateDropdown(dateSelects[0], '14-12-2025', true);
+        }
+        if (dateSelects.length >= 2) {
+            VR.setDateDropdown(dateSelects[1], '31-12-2026', false);
+        }
+
+        setTimeout(function() {
+            VR.updateLoader(65, 'Klickar Hämta...');
+            VR.clickFranvaroHamta();
+        }, 400);
+    };
+
+    VR.clickFranvaroHamta = function() {
+        var hamtaBtn = VR.findHamtaButton();
+        if (hamtaBtn) {
+            hamtaBtn.click();
+            VR.updateLoader(70, 'Hämtar data...');
+            VR.waitForFranvaroData();
+        } else {
+            VR.updateLoader(0, 'Hämta-knapp ej hittad');
+            setTimeout(VR.hideLoader, 2000);
+        }
+    };
+
+    VR.waitForFranvaroData = function() {
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+            VR.updateLoader(70 + Math.min(n, 20), 'Väntar på data...');
+
+            var tables = document.querySelectorAll('table');
+            var dateHeaders = document.body.innerHTML.match(/\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/gi);
+
+            if ((tables.length > 2 && dateHeaders && dateHeaders.length > 0) || n > 40) {
+                VR.stopTimer();
+                VR.updateLoader(92, 'Läser frånvaro-data...');
+                setTimeout(VR.parseAndShowFranvaro, 500);
+            } else if (n > 60) {
+                VR.stopTimer();
+                VR.updateLoader(0, 'Timeout - ingen data');
+                setTimeout(VR.hideLoader, 2000);
+            }
+        }, 400);
+    };
+
+    VR.parseAndShowFranvaro = function() {
+        VR.updateLoader(95, 'Analyserar frånvaro-data...');
+
+        var franvaroData = [];
+
+        // Frånvaro type mappings
+        var FRANVARO_TYPES = {
+            'L.Föräldraledig >5 dagar': { name: 'Föräldrarledig, lång', icon: '👶' },
+            'L.Föräldraledig>5 dagar': { name: 'Föräldrarledig, lång', icon: '👶' },
+            'L.Föräldraledig <5 dagar': { name: 'Föräldrarledig, kort', icon: '👶' },
+            'L.Föräldraledig<5 dagar': { name: 'Föräldrarledig, kort', icon: '👶' },
+            'S.Frånvaro: FRIDAG': { name: 'FP', icon: '🏖️' },
+            'S.Frånvaro: FV/FP2/FP-V': { name: 'FPV', icon: '🌴' },
+            'L.Vård av barn': { name: 'VAB', icon: '🏥' }
+        };
+
+        var currentDate = null;
+        var allElements = document.body.querySelectorAll('*');
+
+        for (var i = 0; i < allElements.length; i++) {
+            var el = allElements[i];
+            var text = el.textContent || '';
+
+            var dateMatch = text.match(/^(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i);
+
+            if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE' && el.tagName !== 'TR' && el.tagName !== 'TD') {
+                var directText = '';
+                for (var c = 0; c < el.childNodes.length; c++) {
+                    if (el.childNodes[c].nodeType === 3) {
+                        directText += el.childNodes[c].textContent;
+                    }
+                }
+                if (directText.match(/^\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i)) {
+                    currentDate = dateMatch[1];
+                }
+            }
+
+            if (el.tagName === 'TABLE' && currentDate) {
+                var rows = el.querySelectorAll('tr');
+                for (var r = 0; r < rows.length; r++) {
+                    var cells = rows[r].querySelectorAll('td, th');
+                    if (cells.length < 2) continue;
+
+                    var col1 = cells[0] ? cells[0].textContent.trim() : '';
+                    var col2 = cells[1] ? cells[1].textContent.trim() : '';
+
+                    if (col1.toLowerCase() === 'löneslag') continue;
+
+                    // Check if this matches any frånvaro type
+                    var matchedType = null;
+                    var matchedInfo = null;
+
+                    for (var typeKey in FRANVARO_TYPES) {
+                        if (col1.indexOf(typeKey) > -1 || col1 === typeKey) {
+                            matchedType = typeKey;
+                            matchedInfo = FRANVARO_TYPES[typeKey];
+                            break;
+                        }
+                    }
+
+                    // Also check with partial matches
+                    if (!matchedType) {
+                        if (col1.indexOf('Föräldraledig') > -1 && col1.indexOf('>5') > -1) {
+                            matchedInfo = { name: 'Föräldrarledig, lång', icon: '👶' };
+                            matchedType = col1;
+                        } else if (col1.indexOf('Föräldraledig') > -1 && col1.indexOf('<5') > -1) {
+                            matchedInfo = { name: 'Föräldrarledig, kort', icon: '👶' };
+                            matchedType = col1;
+                        } else if (col1.indexOf('S.Frånvaro') > -1 && col1.indexOf('FRIDAG') > -1) {
+                            matchedInfo = { name: 'FP', icon: '🏖️' };
+                            matchedType = col1;
+                        } else if (col1.indexOf('S.Frånvaro') > -1 && (col1.indexOf('FV') > -1 || col1.indexOf('FP2') > -1 || col1.indexOf('FP-V') > -1)) {
+                            matchedInfo = { name: 'FPV', icon: '🌴' };
+                            matchedType = col1;
+                        } else if (col1.indexOf('Vård av barn') > -1) {
+                            matchedInfo = { name: 'VAB', icon: '🏥' };
+                            matchedType = col1;
+                        }
+                    }
+
+                    if (matchedInfo) {
+                        franvaroData.push({
+                            date: currentDate,
+                            originalType: col1,
+                            typeName: matchedInfo.name,
+                            icon: matchedInfo.icon,
+                            time: col2
+                        });
+                    }
+                }
+            }
+        }
+
+        VR.updateLoader(98, 'Bygger vy...');
+
+        var viewHtml = VR.buildFranvaroView(franvaroData);
+
+        setTimeout(function() {
+            VR.hideLoader();
+            VR.showView('Frånvaro', franvaroData.length + ' poster', viewHtml);
+        }, 300);
+    };
+
+    VR.buildFranvaroView = function(franvaroData) {
+        if (franvaroData.length === 0) {
+            return '\
+                <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
+                    <div style="font-size:80px;margin-bottom:24px">🔍</div>\
+                    <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Ingen frånvaro hittades</div>\
+                    <div style="font-size:22px;color:#888">Söker: FP, FPV, VAB, Föräldraledig</div>\
+                </div>';
+        }
+
+        // Calculate totals per type
+        var totals = {};
+        for (var i = 0; i < franvaroData.length; i++) {
+            var item = franvaroData[i];
+            if (!totals[item.typeName]) {
+                totals[item.typeName] = { count: 0, icon: item.icon, totalMinutes: 0 };
+            }
+            totals[item.typeName].count++;
+
+            var timeMatch = item.time.match(/(\d+):(\d+)/);
+            if (timeMatch) {
+                var hours = parseInt(timeMatch[1], 10);
+                var mins = parseInt(timeMatch[2], 10);
+                totals[item.typeName].totalMinutes += hours * 60 + mins;
+            }
+        }
+
+        // Header card
+        var html = '<div style="background:linear-gradient(135deg,#FF6B6B,#EE5A5A);border-radius:30px;padding:40px;margin-bottom:24px;text-align:center;box-shadow:0 10px 40px rgba(255,107,107,0.3)">';
+        html += '<div style="font-size:50px;margin-bottom:12px">🏠</div>';
+        html += '<div style="font-size:24px;font-weight:600;color:rgba(255,255,255,0.9)">Frånvaro</div>';
+        html += '<div style="font-size:48px;font-weight:700;color:#fff;margin:12px 0">' + franvaroData.length + ' dagar</div>';
+        html += '</div>';
+
+        // Summary cards
+        var typeKeys = Object.keys(totals);
+        if (typeKeys.length > 0) {
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px">';
+
+            for (var t = 0; t < typeKeys.length; t++) {
+                var typeKey = typeKeys[t];
+                var typeData = totals[typeKey];
+                var totalHrs = Math.floor(typeData.totalMinutes / 60);
+                var totalMins = typeData.totalMinutes % 60;
+                var timeStr = totalHrs + ':' + (totalMins < 10 ? '0' : '') + totalMins;
+
+                html += '<div style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 5px 20px rgba(0,0,0,0.08);text-align:center">';
+                html += '<div style="font-size:36px;margin-bottom:8px">' + typeData.icon + '</div>';
+                html += '<div style="font-size:16px;font-weight:600;color:#333">' + typeKey + '</div>';
+                html += '<div style="font-size:28px;font-weight:700;color:#FF6B6B;margin-top:8px">' + typeData.count + '</div>';
+                html += '<div style="font-size:13px;color:#8E8E93">(' + timeStr + ')</div>';
+                html += '</div>';
+            }
+
+            html += '</div>';
+        }
+
+        // Data table
+        html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
+
+        // Table header
+        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff">Frånvaro-typ</div>';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Antal</div>';
+        html += '</div>';
+
+        // Table rows
+        for (var d = 0; d < franvaroData.length; d++) {
+            var row = franvaroData[d];
+            var bgCol = d % 2 === 0 ? '#fff' : '#F8F8F8';
+
+            html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
+            html += '<div style="font-size:15px;color:#333;display:flex;align-items:center;gap:8px"><span>' + row.icon + '</span> ' + row.typeName + '</div>';
+            html += '<div style="font-size:15px;font-weight:600;color:#FF6B6B;text-align:right">' + row.time + '</div>';
+            html += '</div>';
+        }
+
+        html += '</div>';
+
+        return html;
     };
 
     VR.doFPFPV = function() {
