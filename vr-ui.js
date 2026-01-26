@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.06';
+    VR.VERSION = 'V.0.07';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -181,7 +181,10 @@
                 VR.closeMenu();
                 if (VR[action]) {
                     VR.closeDayDetail();
-                    VR[action]();
+                    // Small delay to let menu close completely before running action
+                    setTimeout(function() {
+                        VR[action]();
+                    }, 100);
                 }
             };
         }
