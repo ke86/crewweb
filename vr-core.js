@@ -99,6 +99,57 @@
         return best;
     };
 
+    // Debug: List all potential menu items - run VR.debugMenu() in console
+    VR.debugMenu = function() {
+        var items = [];
+        var all = document.querySelectorAll('*');
+
+        for (var i = 0; i < all.length; i++) {
+            var el = all[i];
+            var text = el.textContent.trim();
+
+            // Skip empty or very long text
+            if (!text || text.length > 50 || text.length < 3) continue;
+
+            // Skip if contains newlines (likely container)
+            if (text.indexOf('\n') > -1) continue;
+
+            var rect = el.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) continue;
+
+            var area = rect.width * rect.height;
+
+            // Only small-ish elements (likely menu items)
+            if (area > 5000) continue;
+
+            items.push({
+                text: text,
+                area: Math.round(area),
+                tag: el.tagName,
+                className: el.className || ''
+            });
+        }
+
+        // Remove duplicates and sort by text
+        var seen = {};
+        var unique = [];
+        for (var j = 0; j < items.length; j++) {
+            var key = items[j].text;
+            if (!seen[key]) {
+                seen[key] = true;
+                unique.push(items[j]);
+            }
+        }
+
+        unique.sort(function(a, b) {
+            return a.text.localeCompare(b.text);
+        });
+
+        console.log('=== VR DEBUG: Found ' + unique.length + ' menu items ===');
+        console.table(unique);
+        return unique;
+    };
+
     VR.clickFolder = function() {
         // Try various menu triggers
         var selectors = [
