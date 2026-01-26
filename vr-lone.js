@@ -306,14 +306,9 @@
 
         var viewHtml = VR.buildOBView(obData);
 
-        var totalKr = 0;
-        for (var k = 0; k < obData.length; k++) {
-            totalKr += obData[k].kronor;
-        }
-
         setTimeout(function() {
             VR.hideLoader();
-            VR.showView('OB-tillägg', obData.length + ' poster | ' + totalKr.toFixed(2) + ' kr', viewHtml);
+            VR.showView('', '', viewHtml);
         }, 300);
     };
 
@@ -368,20 +363,20 @@
         var prevMonthTotal = monthlyTotals[prevKey] ? monthlyTotals[prevKey].kronor : 0;
 
         // Build HTML - Two month cards side by side
-        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">';
+        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
 
         // Previous month card (left)
-        html += '<div style="background:linear-gradient(135deg,#5856D6,#AF52DE);border-radius:24px;padding:28px;text-align:center;box-shadow:0 8px 32px rgba(88,86,214,0.3)">';
-        html += '<div style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.85);margin-bottom:6px">Föregående månad</div>';
-        html += '<div style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:16px">' + monthNames[prevMonth] + ' ' + prevYear + '</div>';
-        html += '<div style="font-size:36px;font-weight:700;color:#fff">' + prevMonthTotal.toFixed(2) + ' kr</div>';
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:32px;margin-bottom:8px">🌙</div>';
+        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">' + monthNames[prevMonth] + '</div>';
+        html += '<div style="font-size:28px;font-weight:700;color:#333">' + prevMonthTotal.toFixed(0) + ' kr</div>';
         html += '</div>';
 
         // Current month card (right)
-        html += '<div style="background:linear-gradient(135deg,#AF52DE,#FF2D55);border-radius:24px;padding:28px;text-align:center;box-shadow:0 8px 32px rgba(175,82,222,0.3)">';
-        html += '<div style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.85);margin-bottom:6px">Nuvarande månad</div>';
-        html += '<div style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:16px">' + monthNames[currentMonth] + ' ' + currentYear + '</div>';
-        html += '<div style="font-size:36px;font-weight:700;color:#fff">' + currentMonthTotal.toFixed(2) + ' kr</div>';
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:32px;margin-bottom:8px">✨</div>';
+        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">' + monthNames[currentMonth] + '</div>';
+        html += '<div style="font-size:28px;font-weight:700;color:#AF52DE">' + currentMonthTotal.toFixed(0) + ' kr</div>';
         html += '</div>';
 
         html += '</div>';
@@ -437,12 +432,10 @@
         var franvaroData = [];
 
         var FRANVARO_TYPES = {
-            'L.Föräldraledig >5 dagar': { name: 'Föräldrarledig, lång', icon: '👶' },
-            'L.Föräldraledig>5 dagar': { name: 'Föräldrarledig, lång', icon: '👶' },
-            'L.Föräldraledig <5 dagar': { name: 'Föräldrarledig, kort', icon: '👶' },
-            'L.Föräldraledig<5 dagar': { name: 'Föräldrarledig, kort', icon: '👶' },
-            'S.Frånvaro: FRIDAG': { name: 'FP', icon: '🏖️' },
-            'S.Frånvaro: FV/FP2/FP-V': { name: 'FPV', icon: '🌴' },
+            'L.Föräldraledig >5 dagar': { name: 'Föräldraledig, lång', icon: '👶' },
+            'L.Föräldraledig>5 dagar': { name: 'Föräldraledig, lång', icon: '👶' },
+            'L.Föräldraledig <5 dagar': { name: 'Föräldraledig, kort', icon: '👶' },
+            'L.Föräldraledig<5 dagar': { name: 'Föräldraledig, kort', icon: '👶' },
             'L.Vård av barn': { name: 'VAB', icon: '🏥' }
         };
 
@@ -491,16 +484,10 @@
 
                     if (!matchedType) {
                         if (col1.indexOf('Föräldraledig') > -1 && col1.indexOf('>5') > -1) {
-                            matchedInfo = { name: 'Föräldrarledig, lång', icon: '👶' };
+                            matchedInfo = { name: 'Föräldraledig, lång', icon: '👶' };
                             matchedType = col1;
                         } else if (col1.indexOf('Föräldraledig') > -1 && col1.indexOf('<5') > -1) {
-                            matchedInfo = { name: 'Föräldrarledig, kort', icon: '👶' };
-                            matchedType = col1;
-                        } else if (col1.indexOf('S.Frånvaro') > -1 && col1.indexOf('FRIDAG') > -1) {
-                            matchedInfo = { name: 'FP', icon: '🏖️' };
-                            matchedType = col1;
-                        } else if (col1.indexOf('S.Frånvaro') > -1 && (col1.indexOf('FV') > -1 || col1.indexOf('FP2') > -1 || col1.indexOf('FP-V') > -1)) {
-                            matchedInfo = { name: 'FPV', icon: '🌴' };
+                            matchedInfo = { name: 'Föräldraledig, kort', icon: '👶' };
                             matchedType = col1;
                         } else if (col1.indexOf('Vård av barn') > -1) {
                             matchedInfo = { name: 'VAB', icon: '🏥' };
@@ -601,6 +588,183 @@
             html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
             html += '<div style="font-size:15px;color:#333;display:flex;align-items:center;gap:8px"><span>' + row.icon + '</span> ' + row.typeName + '</div>';
             html += '<div style="font-size:15px;font-weight:600;color:#FF6B6B;text-align:right">' + row.time + '</div>';
+            html += '</div>';
+        }
+
+        html += '</div>';
+
+        return html;
+    };
+
+    // ===== FP/FPV FUNCTIONALITY =====
+    VR.doFPFPV = function() {
+        VR.stopTimer();
+        VR.closeOverlay();
+        VR.showLoader('Laddar FP/FPV');
+        VR.updateLoader(5, 'Letar efter sidan...');
+
+        VR.navigateToLoneredovisningar(function() {
+            VR.setupLonePageAndFetch(VR.parseAndShowFPFPV);
+        });
+    };
+
+    VR.parseAndShowFPFPV = function() {
+        VR.updateLoader(95, 'Analyserar FP/FPV-data...');
+
+        var fpData = [];
+
+        var FP_TYPES = {
+            'S.Frånvaro: FRIDAG': { name: 'FP', icon: '🏖️' },
+            'S.Frånvaro: FV/FP2/FP-V': { name: 'FPV', icon: '🌴' }
+        };
+
+        var currentDate = null;
+        var allElements = document.body.querySelectorAll('*');
+
+        for (var i = 0; i < allElements.length; i++) {
+            var el = allElements[i];
+            var text = el.textContent || '';
+
+            var dateMatch = text.match(/^(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i);
+
+            if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE' && el.tagName !== 'TR' && el.tagName !== 'TD') {
+                var directText = '';
+                for (var c = 0; c < el.childNodes.length; c++) {
+                    if (el.childNodes[c].nodeType === 3) {
+                        directText += el.childNodes[c].textContent;
+                    }
+                }
+                if (directText.match(/^\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i)) {
+                    currentDate = dateMatch[1];
+                }
+            }
+
+            if (el.tagName === 'TABLE' && currentDate) {
+                var rows = el.querySelectorAll('tr');
+                for (var r = 0; r < rows.length; r++) {
+                    var cells = rows[r].querySelectorAll('td, th');
+                    if (cells.length < 2) continue;
+
+                    var col1 = cells[0] ? cells[0].textContent.trim() : '';
+                    var col2 = cells[1] ? cells[1].textContent.trim() : '';
+
+                    if (col1.toLowerCase() === 'löneslag') continue;
+
+                    var matchedType = null;
+                    var matchedInfo = null;
+
+                    for (var typeKey in FP_TYPES) {
+                        if (col1.indexOf(typeKey) > -1 || col1 === typeKey) {
+                            matchedType = typeKey;
+                            matchedInfo = FP_TYPES[typeKey];
+                            break;
+                        }
+                    }
+
+                    // Fallback matching
+                    if (!matchedType) {
+                        if (col1.indexOf('S.Frånvaro') > -1 && col1.indexOf('FRIDAG') > -1) {
+                            matchedInfo = { name: 'FP', icon: '🏖️' };
+                            matchedType = col1;
+                        } else if (col1.indexOf('S.Frånvaro') > -1 && (col1.indexOf('FV') > -1 || col1.indexOf('FP2') > -1 || col1.indexOf('FP-V') > -1)) {
+                            matchedInfo = { name: 'FPV', icon: '🌴' };
+                            matchedType = col1;
+                        }
+                    }
+
+                    if (matchedInfo) {
+                        fpData.push({
+                            date: currentDate,
+                            originalType: col1,
+                            typeName: matchedInfo.name,
+                            icon: matchedInfo.icon,
+                            time: col2
+                        });
+                    }
+                }
+            }
+        }
+
+        VR.updateLoader(98, 'Bygger vy...');
+
+        var viewHtml = VR.buildFPFPVView(fpData);
+
+        setTimeout(function() {
+            VR.hideLoader();
+            VR.showView('', '', viewHtml);
+        }, 300);
+    };
+
+    VR.buildFPFPVView = function(fpData) {
+        if (fpData.length === 0) {
+            return '\
+                <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
+                    <div style="font-size:80px;margin-bottom:24px">🔍</div>\
+                    <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Ingen FP/FPV hittades</div>\
+                    <div style="font-size:22px;color:#888">Söker: FP (Fridag) och FPV</div>\
+                </div>';
+        }
+
+        // Get current year
+        var currentYear = new Date().getFullYear();
+
+        // Count FP and FPV for current year
+        var yearlyFP = 0;
+        var yearlyFPV = 0;
+
+        for (var i = 0; i < fpData.length; i++) {
+            var item = fpData[i];
+            // Parse date DD-MM-YYYY
+            var dateParts = item.date.match(/(\d{1,2})-(\d{2})-(\d{4})/);
+            if (dateParts) {
+                var year = parseInt(dateParts[3], 10);
+                if (year === currentYear) {
+                    if (item.typeName === 'FP') {
+                        yearlyFP++;
+                    } else if (item.typeName === 'FPV') {
+                        yearlyFPV++;
+                    }
+                }
+            }
+        }
+
+        // Build HTML - Two summary cards
+        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
+
+        // FP card (left)
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:32px;margin-bottom:8px">🏖️</div>';
+        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">FP ' + currentYear + '</div>';
+        html += '<div style="font-size:28px;font-weight:700;color:#34C759">' + yearlyFP + ' dagar</div>';
+        html += '</div>';
+
+        // FPV card (right)
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:32px;margin-bottom:8px">🌴</div>';
+        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">FPV ' + currentYear + '</div>';
+        html += '<div style="font-size:28px;font-weight:700;color:#007AFF">' + yearlyFPV + ' dagar</div>';
+        html += '</div>';
+
+        html += '</div>';
+
+        // List of all FP/FPV days
+        html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
+
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff">Typ</div>';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tid</div>';
+        html += '</div>';
+
+        for (var d = 0; d < fpData.length; d++) {
+            var row = fpData[d];
+            var bgCol = d % 2 === 0 ? '#fff' : '#F8F8F8';
+            var typeColor = row.typeName === 'FP' ? '#34C759' : '#007AFF';
+
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
+            html += '<div style="font-size:15px;color:#333;display:flex;align-items:center;gap:8px"><span>' + row.icon + '</span> ' + row.typeName + '</div>';
+            html += '<div style="font-size:15px;font-weight:600;color:' + typeColor + ';text-align:right">' + row.time + '</div>';
             html += '</div>';
         }
 

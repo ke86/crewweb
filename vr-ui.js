@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.12';
+    VR.VERSION = 'V.0.13';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -221,15 +221,7 @@
             </div>');
     };
 
-    VR.doFPFPV = function() {
-        VR.closeOverlay();
-        VR.showView('FP/FPV', 'Kommer snart...', '\
-            <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-                <div style="font-size:80px;margin-bottom:24px">🏖️</div>\
-                <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">FP/FPV</div>\
-                <div style="font-size:22px;color:#888">Denna funktion är under utveckling</div>\
-            </div>');
-    };
+    // VR.doFPFPV is now defined in vr-lone.js
 
     // ===== HEADER =====
     VR.createHeader = function() {
