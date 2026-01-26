@@ -327,57 +327,62 @@
                 </div>';
         }
 
-        var totals = {
-            'L.Hb': { hours: 0, kronor: 0, count: 0, rate: 54.69, name: 'Kvalificerad OB' },
-            'L.Storhelgstillägg': { hours: 0, kronor: 0, count: 0, rate: 122.88, name: 'Storhelgs OB' }
-        };
+        // Get current month and previous month
+        var now = new Date();
+        var currentMonth = now.getMonth(); // 0-11
+        var currentYear = now.getFullYear();
+        var prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-        var grandTotalKr = 0;
+        // Swedish month names
+        var monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
+                          'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
+
+        // Group OB by month
+        var monthlyTotals = {};
         var grandTotalHours = 0;
+        var grandTotalKr = 0;
 
         for (var i = 0; i < obData.length; i++) {
             var item = obData[i];
-            if (totals[item.type]) {
-                totals[item.type].hours += item.hours;
-                totals[item.type].kronor += item.kronor;
-                totals[item.type].count++;
+            // Parse date DD-MM-YYYY
+            var dateParts = item.date.match(/(\d{1,2})-(\d{2})-(\d{4})/);
+            if (dateParts) {
+                var month = parseInt(dateParts[2], 10) - 1; // 0-11
+                var year = parseInt(dateParts[3], 10);
+                var key = year + '-' + month;
+
+                if (!monthlyTotals[key]) {
+                    monthlyTotals[key] = { kronor: 0, month: month, year: year };
+                }
+                monthlyTotals[key].kronor += item.kronor;
             }
-            grandTotalKr += item.kronor;
             grandTotalHours += item.hours;
+            grandTotalKr += item.kronor;
         }
 
-        var html = '<div style="background:linear-gradient(135deg,#AF52DE,#5856D6);border-radius:30px;padding:40px;margin-bottom:24px;text-align:center;box-shadow:0 10px 40px rgba(175,82,222,0.3)">';
-        html += '<div style="font-size:50px;margin-bottom:12px">🌙</div>';
-        html += '<div style="font-size:24px;font-weight:600;color:rgba(255,255,255,0.9)">OB-tillägg</div>';
-        html += '<div style="font-size:48px;font-weight:700;color:#fff;margin:12px 0">' + grandTotalKr.toFixed(2) + ' kr</div>';
-        html += '<div style="font-size:16px;color:rgba(255,255,255,0.8)">' + grandTotalHours.toFixed(1) + ' timmar totalt</div>';
+        // Get totals for current and previous month
+        var currentKey = currentYear + '-' + currentMonth;
+        var prevKey = prevYear + '-' + prevMonth;
+        var currentMonthTotal = monthlyTotals[currentKey] ? monthlyTotals[currentKey].kronor : 0;
+        var prevMonthTotal = monthlyTotals[prevKey] ? monthlyTotals[prevKey].kronor : 0;
+
+        // Build HTML - Two month cards side by side
+        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">';
+
+        // Previous month card (left)
+        html += '<div style="background:linear-gradient(135deg,#5856D6,#AF52DE);border-radius:24px;padding:28px;text-align:center;box-shadow:0 8px 32px rgba(88,86,214,0.3)">';
+        html += '<div style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.85);margin-bottom:6px">Föregående månad</div>';
+        html += '<div style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:16px">' + monthNames[prevMonth] + ' ' + prevYear + '</div>';
+        html += '<div style="font-size:36px;font-weight:700;color:#fff">' + prevMonthTotal.toFixed(2) + ' kr</div>';
         html += '</div>';
 
-        html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:24px">';
-
-        if (totals['L.Hb'].count > 0) {
-            html += '<div style="background:#fff;border-radius:20px;padding:24px;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
-            html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">';
-            html += '<span style="font-size:28px">🚂</span>';
-            html += '<span style="font-size:16px;font-weight:600;color:#333">Kvalificerad OB</span>';
-            html += '</div>';
-            html += '<div style="font-size:14px;color:#8E8E93;margin-bottom:12px">L.Hb · 54,69 kr/h</div>';
-            html += '<div style="font-size:32px;font-weight:700;color:#AF52DE">' + totals['L.Hb'].kronor.toFixed(2) + ' kr</div>';
-            html += '<div style="font-size:14px;color:#8E8E93;margin-top:4px">' + totals['L.Hb'].hours.toFixed(1) + ' h · ' + totals['L.Hb'].count + ' dagar</div>';
-            html += '</div>';
-        }
-
-        if (totals['L.Storhelgstillägg'].count > 0) {
-            html += '<div style="background:#fff;border-radius:20px;padding:24px;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
-            html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">';
-            html += '<span style="font-size:28px">🎄</span>';
-            html += '<span style="font-size:16px;font-weight:600;color:#333">Storhelgs OB</span>';
-            html += '</div>';
-            html += '<div style="font-size:14px;color:#8E8E93;margin-bottom:12px">L.Storhelgstillägg · 122,88 kr/h</div>';
-            html += '<div style="font-size:32px;font-weight:700;color:#FF9500">' + totals['L.Storhelgstillägg'].kronor.toFixed(2) + ' kr</div>';
-            html += '<div style="font-size:14px;color:#8E8E93;margin-top:4px">' + totals['L.Storhelgstillägg'].hours.toFixed(1) + ' h · ' + totals['L.Storhelgstillägg'].count + ' dagar</div>';
-            html += '</div>';
-        }
+        // Current month card (right)
+        html += '<div style="background:linear-gradient(135deg,#AF52DE,#FF2D55);border-radius:24px;padding:28px;text-align:center;box-shadow:0 8px 32px rgba(175,82,222,0.3)">';
+        html += '<div style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.85);margin-bottom:6px">Nuvarande månad</div>';
+        html += '<div style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:16px">' + monthNames[currentMonth] + ' ' + currentYear + '</div>';
+        html += '<div style="font-size:36px;font-weight:700;color:#fff">' + currentMonthTotal.toFixed(2) + ' kr</div>';
+        html += '</div>';
 
         html += '</div>';
 
