@@ -65,45 +65,65 @@
     VR.findMenuItem = function(text) {
         var textLower = text.toLowerCase();
 
-        // Try standard menu items first
-        var items = document.querySelectorAll('.MenuItem, .menuitem, [class*="MenuItem"], [class*="menuitem"]');
-        for (var i = 0; i < items.length; i++) {
-            var itemText = items[i].textContent.trim();
-            if (itemText === text || itemText.toLowerCase() === textLower) return items[i];
+        // Helper to check exact match (case insensitive)
+        function isExactMatch(elText) {
+            var trimmed = elText.trim().toLowerCase();
+            return trimmed === textLower;
         }
 
-        // Try links and buttons
-        var links = document.querySelectorAll('a, button, [role="menuitem"], [role="button"]');
-        for (var m = 0; m < links.length; m++) {
-            var linkText = links[m].textContent.trim();
-            if (linkText === text || linkText.toLowerCase() === textLower) {
-                var rect = links[m].getBoundingClientRect();
-                if (rect.width > 0 && rect.height > 0) return links[m];
-            }
-        }
-
-        // Fallback: search all elements for direct text
-        var all = document.querySelectorAll('*');
-        for (var k = 0; k < all.length; k++) {
-            var el = all[k];
+        // Helper to get direct text only (not from children)
+        function getDirectText(el) {
             var direct = '';
             for (var j = 0; j < el.childNodes.length; j++) {
                 if (el.childNodes[j].nodeType === 3) {
                     direct += el.childNodes[j].textContent;
                 }
             }
-            var directTrim = direct.trim();
-            if (directTrim === text || directTrim.toLowerCase() === textLower) {
+            return direct.trim();
+        }
+
+        // Try standard menu items first - exact match only
+        var items = document.querySelectorAll('.MenuItem, .menuitem, [class*="MenuItem"], [class*="menuitem"]');
+        for (var i = 0; i < items.length; i++) {
+            var directText = getDirectText(items[i]);
+            if (isExactMatch(directText)) return items[i];
+            // Also check full textContent if it's short enough (no nested items)
+            var fullText = items[i].textContent.trim();
+            if (fullText.length < text.length + 5 && isExactMatch(fullText)) return items[i];
+        }
+
+        // Try links and buttons - exact match only
+        var links = document.querySelectorAll('a, button, [role="menuitem"], [role="button"]');
+        for (var m = 0; m < links.length; m++) {
+            var linkDirect = getDirectText(links[m]);
+            if (isExactMatch(linkDirect)) {
+                var rect = links[m].getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) return links[m];
+            }
+            var linkFull = links[m].textContent.trim();
+            if (linkFull.length < text.length + 5 && isExactMatch(linkFull)) {
+                var rect2 = links[m].getBoundingClientRect();
+                if (rect2.width > 0 && rect2.height > 0) return links[m];
+            }
+        }
+
+        // Search all elements for direct text match
+        var all = document.querySelectorAll('*');
+        for (var k = 0; k < all.length; k++) {
+            var el = all[k];
+            var directTrim = getDirectText(el);
+            if (isExactMatch(directTrim)) {
                 var r = el.getBoundingClientRect();
                 if (r.width > 0 && r.height > 0) return el;
             }
         }
 
-        // Last resort: partial match for visible elements
+        // Try textContent but only if element text length is close to search text
         for (var n = 0; n < all.length; n++) {
             var el2 = all[n];
             var elText = el2.textContent.trim();
-            if (elText.toLowerCase().indexOf(textLower) === 0 && elText.length < text.length + 20) {
+            // Only match if textContent length is very close to search text (avoid parent containers)
+            if (elText.length >= text.length && elText.length <= text.length + 3 && isExactMatch(elText)) {
                 var r2 = el2.getBoundingClientRect();
                 if (r2.width > 0 && r2.height > 0 && r2.width < 400) {
                     return el2;
