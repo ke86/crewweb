@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.15';
+    VR.VERSION = 'V.0.17';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -210,15 +210,94 @@
         }
     };
 
-    // ===== PLACEHOLDER FUNCTIONS =====
+    // ===== ÖNSKEMÅL FUNCTION =====
     VR.doOnskemål = function() {
+        VR.stopTimer();
         VR.closeOverlay();
-        VR.showView('Önskemål', 'Kommer snart...', '\
-            <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-                <div style="font-size:80px;margin-bottom:24px">📝</div>\
-                <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Önskemål</div>\
-                <div style="font-size:22px;color:#888">Denna funktion är under utveckling</div>\
-            </div>');
+        VR.showLoader('Laddar Önskemål');
+        VR.updateLoader(5, 'Öppnar meny...');
+
+        // First open folder menu
+        VR.clickFolder();
+
+        setTimeout(function() {
+            VR.updateLoader(15, 'Letar efter Mina arbetsscheman...');
+            var n = 0;
+            VR.timer = setInterval(function() {
+                n++;
+                var el = VR.findMenuItem('Mina arbetsscheman');
+                if (el) {
+                    VR.stopTimer();
+                    VR.updateLoader(25, 'Klickar på Mina arbetsscheman...');
+                    el.click();
+                    VR.waitForOnskemålPage();
+                } else if (n > 25) {
+                    VR.stopTimer();
+                    VR.updateLoader(0, 'Hittade ej Mina arbetsscheman');
+                    setTimeout(VR.hideLoader, 2000);
+                }
+            }, 400);
+        }, 600);
+    };
+
+    VR.waitForOnskemålPage = function() {
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+            VR.updateLoader(30 + n, 'Väntar på sidan...');
+
+            // Look for signs we're on the right page
+            // Could be a specific element on Mina arbetsscheman page
+            var pageLoaded = document.body.innerHTML.indexOf('arbetsschema') > -1 ||
+                             document.body.innerHTML.indexOf('Arbetsschema') > -1 ||
+                             n > 15;
+
+            if (pageLoaded) {
+                VR.stopTimer();
+                VR.updateLoader(50, 'Sidan laddad!');
+                setTimeout(VR.parseOnskemålPage, 500);
+            } else if (n > 30) {
+                VR.stopTimer();
+                VR.updateLoader(0, 'Timeout');
+                setTimeout(VR.hideLoader, 2000);
+            }
+        }, 400);
+    };
+
+    VR.parseOnskemålPage = function() {
+        VR.updateLoader(70, 'Analyserar sidan...');
+
+        // For now, just show what we find on the page
+        // This is a debug step to understand the page structure
+        var debugInfo = [];
+
+        // Find all interesting elements
+        var tables = document.querySelectorAll('table');
+        debugInfo.push('Tabeller: ' + tables.length);
+
+        var inputs = document.querySelectorAll('input');
+        debugInfo.push('Inputs: ' + inputs.length);
+
+        var buttons = document.querySelectorAll('button, input[type="button"], input[type="submit"]');
+        debugInfo.push('Knappar: ' + buttons.length);
+
+        // Find text that might be relevant
+        var pageText = document.body.innerText.substring(0, 2000);
+
+        var html = '<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:16px;font-weight:600;color:#333;margin-bottom:12px">Debug Info:</div>';
+        html += '<div style="font-size:14px;color:#666">' + debugInfo.join('<br>') + '</div>';
+        html += '</div>';
+
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:16px;font-weight:600;color:#333;margin-bottom:12px">Sidinnehåll (första 2000 tecken):</div>';
+        html += '<pre style="font-size:12px;color:#666;white-space:pre-wrap;word-break:break-all;max-height:400px;overflow-y:auto">' + pageText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+        html += '</div>';
+
+        setTimeout(function() {
+            VR.hideLoader();
+            VR.showView('', '', html);
+        }, 300);
     };
 
     // VR.doFPFPV is now defined in vr-lone.js

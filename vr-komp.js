@@ -218,7 +218,7 @@
 
         setTimeout(function() {
             VR.hideLoader();
-            VR.showView('Kompsaldo', data.length + ' poster', html);
+            VR.showView('', '', html);
         }, 400);
     };
 
@@ -226,13 +226,13 @@
     VR.buildKompHeader = function(saldo) {
         var sp = saldo.split(':');
         var isPos = saldo.indexOf('-') === -1;
-        var gradColor = isPos ? '#34C759,#30D158' : '#FF3B30,#FF6B6B';
+        var valueColor = isPos ? '#34C759' : '#FF3B30';
 
         return '\
-<div style="background:linear-gradient(135deg,' + gradColor + ');border-radius:30px;padding:48px 30px;margin-bottom:30px;text-align:center">\
-<div style="font-size:18px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:3px;margin-bottom:12px">Kompsaldo</div>\
-<div style="font-size:84px;font-weight:700;color:#fff">' + sp[0] + '<span style="font-size:48px;opacity:0.7">:' + (sp[1] || '00') + '</span></div>\
-<div style="font-size:21px;color:rgba(255,255,255,0.7);margin-top:12px">timmar</div>\
+<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">\
+<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Kompsaldo</div>\
+<div style="font-size:36px;font-weight:700;color:' + valueColor + '">' + sp[0] + '<span style="font-size:24px;opacity:0.7">:' + (sp[1] || '00') + '</span></div>\
+<div style="font-size:13px;color:#8E8E93;margin-top:4px">timmar</div>\
 </div>';
     };
 
