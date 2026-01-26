@@ -64,11 +64,11 @@
     // ===== DOM HELPERS =====
     VR.findMenuItem = function(text) {
         var textLower = text.toLowerCase();
+        var candidates = [];
 
         // Helper to check exact match (case insensitive)
-        function isExactMatch(elText) {
-            var trimmed = elText.trim().toLowerCase();
-            return trimmed === textLower;
+        function isExactMatch(str) {
+            return str.trim().toLowerCase() === textLower;
         }
 
         // Helper to get direct text only (not from children)
@@ -82,55 +82,51 @@
             return direct.trim();
         }
 
-        // Try standard menu items first - exact match only
-        var items = document.querySelectorAll('.MenuItem, .menuitem, [class*="MenuItem"], [class*="menuitem"]');
-        for (var i = 0; i < items.length; i++) {
-            var directText = getDirectText(items[i]);
-            if (isExactMatch(directText)) return items[i];
-            // Also check full textContent if it's short enough (no nested items)
-            var fullText = items[i].textContent.trim();
-            if (fullText.length < text.length + 5 && isExactMatch(fullText)) return items[i];
+        // Helper to check if element is valid (visible)
+        function isVisible(el) {
+            var r = el.getBoundingClientRect();
+            return r.width > 0 && r.height > 0;
         }
 
-        // Try links and buttons - exact match only
-        var links = document.querySelectorAll('a, button, [role="menuitem"], [role="button"]');
-        for (var m = 0; m < links.length; m++) {
-            var linkDirect = getDirectText(links[m]);
-            if (isExactMatch(linkDirect)) {
-                var rect = links[m].getBoundingClientRect();
-                if (rect.width > 0 && rect.height > 0) return links[m];
-            }
-            var linkFull = links[m].textContent.trim();
-            if (linkFull.length < text.length + 5 && isExactMatch(linkFull)) {
-                var rect2 = links[m].getBoundingClientRect();
-                if (rect2.width > 0 && rect2.height > 0) return links[m];
-            }
-        }
-
-        // Search all elements for direct text match
+        // Collect ALL matching candidates with their "specificity score"
         var all = document.querySelectorAll('*');
-        for (var k = 0; k < all.length; k++) {
-            var el = all[k];
-            var directTrim = getDirectText(el);
-            if (isExactMatch(directTrim)) {
-                var r = el.getBoundingClientRect();
-                if (r.width > 0 && r.height > 0) return el;
+        for (var i = 0; i < all.length; i++) {
+            var el = all[i];
+            if (!isVisible(el)) continue;
+
+            var directText = getDirectText(el);
+            var fullText = el.textContent.trim();
+
+            // Skip if direct text is a DIFFERENT menu item (e.g. "Redovisningar" when looking for "Löneredovisningar")
+            if (directText.length > 0 && directText.length < text.length && textLower.indexOf(directText.toLowerCase()) > -1) {
+                continue; // This element's direct text is a substring of what we want - skip it
+            }
+
+            // Check for exact match on direct text (best match)
+            if (isExactMatch(directText)) {
+                candidates.push({ el: el, score: 100, textLen: directText.length });
+                continue;
+            }
+
+            // Check for exact match on full text (only if text length matches closely)
+            if (isExactMatch(fullText) && fullText.length <= text.length + 2) {
+                candidates.push({ el: el, score: 80, textLen: fullText.length });
             }
         }
 
-        // Try textContent but only if element text length is close to search text
-        for (var n = 0; n < all.length; n++) {
-            var el2 = all[n];
-            var elText = el2.textContent.trim();
-            // Only match if textContent length is very close to search text (avoid parent containers)
-            if (elText.length >= text.length && elText.length <= text.length + 3 && isExactMatch(elText)) {
-                var r2 = el2.getBoundingClientRect();
-                if (r2.width > 0 && r2.height > 0 && r2.width < 400) {
-                    return el2;
-                }
-            }
+        // Sort by score (higher is better), then by text length (shorter/exact is better)
+        candidates.sort(function(a, b) {
+            if (b.score !== a.score) return b.score - a.score;
+            return a.textLen - b.textLen;
+        });
+
+        // Return best candidate
+        if (candidates.length > 0) {
+            console.log('VR findMenuItem "' + text + '" found:', candidates[0].el.textContent.trim().substring(0, 30));
+            return candidates[0].el;
         }
 
+        console.log('VR findMenuItem "' + text + '" - not found');
         return null;
     };
 
