@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.17';
+    VR.VERSION = 'V.0.18';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -246,13 +246,9 @@
             n++;
             VR.updateLoader(30 + n, 'Väntar på sidan...');
 
-            // Look for signs we're on the right page
-            // Could be a specific element on Mina arbetsscheman page
-            var pageLoaded = document.body.innerHTML.indexOf('arbetsschema') > -1 ||
-                             document.body.innerHTML.indexOf('Arbetsschema') > -1 ||
-                             n > 15;
-
-            if (pageLoaded) {
+            // Look for "Skapa önskemål" button as indicator
+            var skapaBtn = VR.findButtonByText('Skapa önskemål');
+            if (skapaBtn || n > 15) {
                 VR.stopTimer();
                 VR.updateLoader(50, 'Sidan laddad!');
                 setTimeout(VR.parseOnskemålPage, 500);
@@ -264,40 +260,265 @@
         }, 400);
     };
 
-    VR.parseOnskemålPage = function() {
-        VR.updateLoader(70, 'Analyserar sidan...');
-
-        // For now, just show what we find on the page
-        // This is a debug step to understand the page structure
-        var debugInfo = [];
-
-        // Find all interesting elements
-        var tables = document.querySelectorAll('table');
-        debugInfo.push('Tabeller: ' + tables.length);
-
-        var inputs = document.querySelectorAll('input');
-        debugInfo.push('Inputs: ' + inputs.length);
-
+    VR.findButtonByText = function(text) {
         var buttons = document.querySelectorAll('button, input[type="button"], input[type="submit"]');
-        debugInfo.push('Knappar: ' + buttons.length);
+        for (var i = 0; i < buttons.length; i++) {
+            var btnText = (buttons[i].value || buttons[i].textContent || '').trim();
+            if (btnText.toLowerCase().indexOf(text.toLowerCase()) > -1) {
+                return buttons[i];
+            }
+        }
+        return null;
+    };
 
-        // Find text that might be relevant
-        var pageText = document.body.innerText.substring(0, 2000);
+    VR.parseOnskemålPage = function() {
+        VR.updateLoader(70, 'Läser önskemål...');
 
-        var html = '<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:16px;font-weight:600;color:#333;margin-bottom:12px">Debug Info:</div>';
-        html += '<div style="font-size:14px;color:#666">' + debugInfo.join('<br>') + '</div>';
-        html += '</div>';
+        // Find existing önskemål
+        var onskemål = [];
 
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:16px;font-weight:600;color:#333;margin-bottom:12px">Sidinnehåll (första 2000 tecken):</div>';
-        html += '<pre style="font-size:12px;color:#666;white-space:pre-wrap;word-break:break-all;max-height:400px;overflow-y:auto">' + pageText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
-        html += '</div>';
+        // Look for text after "nuvarande önskemål:" or in a list/table
+        var pageText = document.body.innerText;
+
+        // Check if there are existing önskemål (look for patterns)
+        // The page shows "Ingen nuvarande önskemål:" when empty
+
+        // Get dropdown options for "Typ"
+        var typOptions = [];
+        var dropdowns = document.querySelectorAll('select');
+        for (var d = 0; d < dropdowns.length; d++) {
+            var options = dropdowns[d].querySelectorAll('option');
+            for (var o = 0; o < options.length; o++) {
+                var optText = options[o].textContent.trim();
+                if (optText && optText.indexOf('Tillgänglig') > -1 || optText.indexOf('Ledig') > -1 || optText.indexOf('Önskar') > -1) {
+                    typOptions.push(optText);
+                }
+            }
+        }
+
+        // If no standard select, look for custom dropdowns
+        if (typOptions.length === 0) {
+            // Look for listbox or custom dropdown
+            var allElements = document.querySelectorAll('*');
+            for (var e = 0; e < allElements.length; e++) {
+                var el = allElements[e];
+                var text = el.textContent.trim();
+                if (text === 'Tillgänglig Morgon' || text === 'Tillgänglig Kväll' ||
+                    text === 'Tillgänglig Heldag' || text === 'Ledig' || text === 'Önskar arbeta') {
+                    if (typOptions.indexOf(text) === -1) {
+                        typOptions.push(text);
+                    }
+                }
+            }
+        }
+
+        // Default options if we couldn't find any
+        if (typOptions.length === 0) {
+            typOptions = ['Tillgänglig Morgon', 'Tillgänglig Kväll', 'Tillgänglig Heldag', 'Ledig', 'Önskar arbeta'];
+        }
+
+        // Store references for later use
+        VR.onskemålTypOptions = typOptions;
+
+        VR.updateLoader(90, 'Bygger vy...');
+
+        var html = VR.buildOnskemålView(onskemål, typOptions);
 
         setTimeout(function() {
             VR.hideLoader();
             VR.showView('', '', html);
         }, 300);
+    };
+
+    VR.buildOnskemålView = function(onskemål, typOptions) {
+        var html = '';
+
+        // Create new önskemål form
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:16px;font-weight:600;color:#333;margin-bottom:16px">Skapa nytt önskemål</div>';
+
+        // Date picker
+        var today = new Date();
+        var todayStr = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2);
+
+        html += '<div style="margin-bottom:12px">';
+        html += '<label style="display:block;font-size:13px;color:#8E8E93;margin-bottom:4px">Datum</label>';
+        html += '<input type="date" id="vrOnskeDatum" value="' + todayStr + '" style="width:100%;padding:12px;border:1px solid #E5E5EA;border-radius:10px;font-size:16px;box-sizing:border-box">';
+        html += '</div>';
+
+        // Type dropdown
+        html += '<div style="margin-bottom:12px">';
+        html += '<label style="display:block;font-size:13px;color:#8E8E93;margin-bottom:4px">Typ</label>';
+        html += '<select id="vrOnskeTyp" style="width:100%;padding:12px;border:1px solid #E5E5EA;border-radius:10px;font-size:16px;box-sizing:border-box;background:#fff">';
+        for (var t = 0; t < typOptions.length; t++) {
+            html += '<option value="' + typOptions[t] + '">' + typOptions[t] + '</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+
+        // Time inputs
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
+        html += '<div>';
+        html += '<label style="display:block;font-size:13px;color:#8E8E93;margin-bottom:4px">Starttid</label>';
+        html += '<input type="time" id="vrOnskeStart" value="06:00" style="width:100%;padding:12px;border:1px solid #E5E5EA;border-radius:10px;font-size:16px;box-sizing:border-box">';
+        html += '</div>';
+        html += '<div>';
+        html += '<label style="display:block;font-size:13px;color:#8E8E93;margin-bottom:4px">Sluttid</label>';
+        html += '<input type="time" id="vrOnskeSlut" value="14:00" style="width:100%;padding:12px;border:1px solid #E5E5EA;border-radius:10px;font-size:16px;box-sizing:border-box">';
+        html += '</div>';
+        html += '</div>';
+
+        // Comment
+        html += '<div style="margin-bottom:16px">';
+        html += '<label style="display:block;font-size:13px;color:#8E8E93;margin-bottom:4px">Kommentar (valfritt)</label>';
+        html += '<input type="text" id="vrOnskeKommentar" placeholder="T.ex. läkarbesök" style="width:100%;padding:12px;border:1px solid #E5E5EA;border-radius:10px;font-size:16px;box-sizing:border-box">';
+        html += '</div>';
+
+        // Submit button
+        html += '<button onclick="VR.submitOnskemål()" style="width:100%;padding:14px;background:#FF9500;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer">Skapa önskemål</button>';
+
+        html += '</div>';
+
+        // Existing önskemål list
+        html += '<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+        html += '<div style="padding:16px 20px;background:#1C1C1E">';
+        html += '<div style="font-size:14px;font-weight:600;color:#fff">Befintliga önskemål</div>';
+        html += '</div>';
+
+        if (onskemål.length === 0) {
+            html += '<div style="padding:40px 20px;text-align:center;color:#8E8E93">';
+            html += '<div style="font-size:14px">Inga önskemål registrerade</div>';
+            html += '</div>';
+        } else {
+            for (var i = 0; i < onskemål.length; i++) {
+                var item = onskemål[i];
+                var bgCol = i % 2 === 0 ? '#fff' : '#F8F8F8';
+                html += '<div style="padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+                html += '<div style="font-size:15px;color:#333">' + item.datum + ' - ' + item.typ + '</div>';
+                if (item.kommentar) {
+                    html += '<div style="font-size:13px;color:#8E8E93;margin-top:4px">' + item.kommentar + '</div>';
+                }
+                html += '</div>';
+            }
+        }
+
+        html += '</div>';
+
+        return html;
+    };
+
+    VR.submitOnskemål = function() {
+        var datum = document.getElementById('vrOnskeDatum').value;
+        var typ = document.getElementById('vrOnskeTyp').value;
+        var start = document.getElementById('vrOnskeStart').value;
+        var slut = document.getElementById('vrOnskeSlut').value;
+        var kommentar = document.getElementById('vrOnskeKommentar').value;
+
+        if (!datum) {
+            VR.showToast('Välj ett datum');
+            return;
+        }
+
+        VR.showLoader('Skapar önskemål');
+        VR.updateLoader(20, 'Fyller i formuläret...');
+
+        // Convert date from YYYY-MM-DD to DD-MM-YYYY
+        var dateParts = datum.split('-');
+        var crewWebDate = dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0];
+
+        // Find and fill the CrewWeb form
+        setTimeout(function() {
+            // Find date input
+            var dateInputs = document.querySelectorAll('input');
+            var dateInput = null;
+            for (var i = 0; i < dateInputs.length; i++) {
+                var val = dateInputs[i].value || '';
+                if (val.match(/^\d{2}-\d{2}-\d{4}$/)) {
+                    dateInput = dateInputs[i];
+                    break;
+                }
+            }
+
+            if (dateInput) {
+                dateInput.value = crewWebDate;
+                dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            VR.updateLoader(40, 'Väljer typ...');
+
+            // Find and select type in dropdown
+            setTimeout(function() {
+                // Look for listbox or custom dropdown and try to select the type
+                var dropBtn = document.querySelector('.dropdlgbutton');
+                if (dropBtn) {
+                    dropBtn.click();
+                    setTimeout(function() {
+                        // Find the option
+                        var allEls = document.querySelectorAll('*');
+                        for (var j = 0; j < allEls.length; j++) {
+                            var txt = allEls[j].textContent.trim();
+                            if (txt === typ) {
+                                allEls[j].click();
+                                break;
+                            }
+                        }
+
+                        VR.updateLoader(60, 'Sätter tider...');
+
+                        // Set start and end times if possible
+                        setTimeout(function() {
+                            // Find time inputs (look for NaN:NaN or time pattern)
+                            var timeInputs = document.querySelectorAll('input');
+                            var timeFound = 0;
+                            for (var t = 0; t < timeInputs.length; t++) {
+                                var tval = timeInputs[t].value || '';
+                                if (tval.indexOf('NaN') > -1 || tval.match(/^\d{1,2}:\d{2}$/)) {
+                                    if (timeFound === 0) {
+                                        timeInputs[t].value = start;
+                                        timeInputs[t].dispatchEvent(new Event('change', { bubbles: true }));
+                                    } else if (timeFound === 1) {
+                                        timeInputs[t].value = slut;
+                                        timeInputs[t].dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
+                                    timeFound++;
+                                }
+                            }
+
+                            VR.updateLoader(80, 'Skickar...');
+
+                            // Click "Skapa önskemål" button
+                            setTimeout(function() {
+                                var skapaBtn = VR.findButtonByText('Skapa önskemål');
+                                if (skapaBtn) {
+                                    skapaBtn.click();
+                                    VR.updateLoader(100, 'Önskemål skapat!');
+                                    setTimeout(function() {
+                                        VR.hideLoader();
+                                        VR.showToast('Önskemål skapat!');
+                                    }, 500);
+                                } else {
+                                    VR.updateLoader(0, 'Kunde ej hitta knapp');
+                                    setTimeout(VR.hideLoader, 2000);
+                                }
+                            }, 500);
+                        }, 500);
+                    }, 300);
+                } else {
+                    VR.updateLoader(0, 'Dropdown ej hittad');
+                    setTimeout(VR.hideLoader, 2000);
+                }
+            }, 500);
+        }, 500);
+    };
+
+    VR.showToast = function(msg) {
+        var toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 24px;border-radius:25px;font-size:14px;z-index:99999999;font-family:-apple-system,BlinkMacSystemFont,sans-serif';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(function() {
+            toast.remove();
+        }, 3000);
     };
 
     // VR.doFPFPV is now defined in vr-lone.js
