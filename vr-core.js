@@ -63,71 +63,40 @@
 
     // ===== DOM HELPERS =====
     VR.findMenuItem = function(text) {
-        var textLower = text.toLowerCase();
-        var candidates = [];
+        var textLower = text.toLowerCase().trim();
+        var best = null;
+        var bestArea = Infinity;
 
-        // Helper to check exact match (case insensitive)
-        function isExactMatch(str) {
-            return str.trim().toLowerCase() === textLower;
-        }
-
-        // Helper to get direct text only (not from children)
-        function getDirectText(el) {
-            var direct = '';
-            for (var j = 0; j < el.childNodes.length; j++) {
-                if (el.childNodes[j].nodeType === 3) {
-                    direct += el.childNodes[j].textContent;
-                }
-            }
-            return direct.trim();
-        }
-
-        // Helper to check if element is valid (visible)
-        function isVisible(el) {
-            var r = el.getBoundingClientRect();
-            return r.width > 0 && r.height > 0;
-        }
-
-        // Collect ALL matching candidates with their "specificity score"
+        // Simple approach: find ALL elements, check for EXACT text match, pick smallest
         var all = document.querySelectorAll('*');
+
         for (var i = 0; i < all.length; i++) {
             var el = all[i];
-            if (!isVisible(el)) continue;
+            var elText = el.textContent.trim();
 
-            var directText = getDirectText(el);
-            var fullText = el.textContent.trim();
+            // Must be exact match (case insensitive)
+            if (elText.toLowerCase() !== textLower) continue;
 
-            // Skip if direct text is a DIFFERENT menu item (e.g. "Redovisningar" when looking for "Löneredovisningar")
-            if (directText.length > 0 && directText.length < text.length && textLower.indexOf(directText.toLowerCase()) > -1) {
-                continue; // This element's direct text is a substring of what we want - skip it
-            }
+            // Must be visible
+            var rect = el.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) continue;
 
-            // Check for exact match on direct text (best match)
-            if (isExactMatch(directText)) {
-                candidates.push({ el: el, score: 100, textLen: directText.length });
-                continue;
-            }
+            // Calculate area - prefer smallest element (most specific)
+            var area = rect.width * rect.height;
 
-            // Check for exact match on full text (only if text length matches closely)
-            if (isExactMatch(fullText) && fullText.length <= text.length + 2) {
-                candidates.push({ el: el, score: 80, textLen: fullText.length });
+            if (area < bestArea) {
+                bestArea = area;
+                best = el;
             }
         }
 
-        // Sort by score (higher is better), then by text length (shorter/exact is better)
-        candidates.sort(function(a, b) {
-            if (b.score !== a.score) return b.score - a.score;
-            return a.textLen - b.textLen;
-        });
-
-        // Return best candidate
-        if (candidates.length > 0) {
-            console.log('VR findMenuItem "' + text + '" found:', candidates[0].el.textContent.trim().substring(0, 30));
-            return candidates[0].el;
+        if (best) {
+            console.log('VR findMenuItem "' + text + '" found, area=' + bestArea);
+        } else {
+            console.log('VR findMenuItem "' + text + '" - not found');
         }
 
-        console.log('VR findMenuItem "' + text + '" - not found');
-        return null;
+        return best;
     };
 
     VR.clickFolder = function() {
