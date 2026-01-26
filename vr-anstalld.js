@@ -19,16 +19,7 @@
             return;
         }
 
-        // Try to find menu item
-        var el = VR.findMenuItem('Anställddata');
-        if (el) {
-            VR.updateLoader(15, 'Klickar på Anställddata...');
-            el.click();
-            VR.waitForAnstallddata();
-            return;
-        }
-
-        // Open folder menu first
+        // ALWAYS open folder menu first, then find Anställddata
         VR.updateLoader(10, 'Öppnar meny...');
         VR.clickFolder();
 
@@ -37,11 +28,11 @@
             var n = 0;
             VR.timer = setInterval(function() {
                 n++;
-                var el2 = VR.findMenuItem('Anställddata');
-                if (el2) {
+                var el = VR.findMenuItem('Anställddata');
+                if (el) {
                     VR.stopTimer();
-                    el2.click();
-                    VR.updateLoader(25, 'Navigerar...');
+                    VR.updateLoader(20, 'Klickar på Anställddata...');
+                    el.click();
                     VR.waitForAnstallddata();
                 } else if (n > 20) {
                     VR.stopTimer();

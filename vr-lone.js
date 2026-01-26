@@ -60,6 +60,7 @@
     // ===== SHARED: Navigate to Löneredovisningar =====
     // Path: Mapp-ikon → Löneredovisningar
     VR.navigateToLoneredovisningar = function(callback) {
+        // Check if already on the page (Hämta button exists)
         var hamtaBtn = VR.findHamtaButton();
         if (hamtaBtn) {
             VR.updateLoader(30, 'Sidan redan laddad...');
@@ -67,16 +68,7 @@
             return;
         }
 
-        // Check if Löneredovisningar is already visible
-        var el = VR.findMenuItem('Löneredovisningar');
-        if (el) {
-            VR.updateLoader(15, 'Klickar på Löneredovisningar...');
-            el.click();
-            VR.waitForLonePage(callback);
-            return;
-        }
-
-        // Open folder menu first
+        // ALWAYS open folder menu first, then find Löneredovisningar
         VR.updateLoader(10, 'Öppnar mapp-meny...');
         VR.clickFolder();
 

@@ -11,6 +11,7 @@
         VR.showLoader('Laddar Schema');
         VR.updateLoader(5, 'Letar efter sidan...');
 
+        // Check if already on workdays page
         var tbl = document.querySelector('#workdays table');
         if (tbl) {
             VR.updateLoader(40, 'Sidan redan laddad...');
@@ -18,14 +19,7 @@
             return;
         }
 
-        var el = VR.findMenuItem('Arbetsdag');
-        if (el) {
-            VR.updateLoader(15, 'Klickar på Arbetsdag...');
-            el.click();
-            VR.waitForWorkdays();
-            return;
-        }
-
+        // ALWAYS open folder menu first, then find Arbetsdag
         VR.updateLoader(10, 'Öppnar meny...');
         VR.clickFolder();
 
@@ -34,11 +28,11 @@
             var n = 0;
             VR.timer = setInterval(function() {
                 n++;
-                var el2 = VR.findMenuItem('Arbetsdag');
-                if (el2) {
+                var el = VR.findMenuItem('Arbetsdag');
+                if (el) {
                     VR.stopTimer();
-                    el2.click();
-                    VR.updateLoader(25, 'Navigerar...');
+                    VR.updateLoader(20, 'Klickar på Arbetsdag...');
+                    el.click();
                     VR.waitForWorkdays();
                 } else if (n > 20) {
                     VR.stopTimer();

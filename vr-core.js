@@ -66,6 +66,7 @@
         var textLower = text.toLowerCase().trim();
         var best = null;
         var bestArea = Infinity;
+        var viewportWidth = window.innerWidth;
 
         // Simple approach: find ALL elements, check for EXACT text match, pick smallest
         var all = document.querySelectorAll('*');
@@ -80,6 +81,14 @@
             // Must be visible
             var rect = el.getBoundingClientRect();
             if (rect.width === 0 || rect.height === 0) continue;
+
+            // Skip elements that are off-screen (like hidden VR menu)
+            if (rect.right < 0 || rect.left > viewportWidth) continue;
+            if (rect.bottom < 0 || rect.top > window.innerHeight) continue;
+
+            // Skip elements inside VR menu (id starts with 'vr')
+            var parent = el.closest('#vrMenu, #vrView, #vrLoader, #vrDetail');
+            if (parent) continue;
 
             // Calculate area - prefer smallest element (most specific)
             var area = rect.width * rect.height;
