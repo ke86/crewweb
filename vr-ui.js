@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.18';
+    VR.VERSION = 'V.0.19';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -419,30 +419,45 @@
             return;
         }
 
-        VR.showLoader('Skapar önskemål');
-        VR.updateLoader(20, 'Fyller i formuläret...');
+        // DEBUG: Find all date inputs and their parents
+        var dateInputs = document.querySelectorAll('input');
+        var debugInfo = 'DEBUG: Alla datumfält på sidan:\n\n';
+        var dateFields = [];
+        for (var i = 0; i < dateInputs.length; i++) {
+            var val = dateInputs[i].value || '';
+            if (val.match(/^\d{2}-\d{2}-\d{4}$/)) {
+                var parent = dateInputs[i].parentElement;
+                var grandparent = parent ? parent.parentElement : null;
+                var parentId = parent ? (parent.id || parent.className || parent.tagName) : 'N/A';
+                var gpId = grandparent ? (grandparent.id || grandparent.className || grandparent.tagName) : 'N/A';
 
-        // Convert date from YYYY-MM-DD to DD-MM-YYYY
-        var dateParts = datum.split('-');
-        var crewWebDate = dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0];
+                debugInfo += 'Fält #' + (dateFields.length + 1) + ':\n';
+                debugInfo += '  Värde: ' + val + '\n';
+                debugInfo += '  ID: ' + (dateInputs[i].id || 'inget') + '\n';
+                debugInfo += '  Name: ' + (dateInputs[i].name || 'inget') + '\n';
+                debugInfo += '  Förälder: ' + parentId + '\n';
+                debugInfo += '  Morförälder: ' + gpId + '\n\n';
 
-        // Find and fill the CrewWeb form
-        setTimeout(function() {
-            // Find date input
-            var dateInputs = document.querySelectorAll('input');
-            var dateInput = null;
-            for (var i = 0; i < dateInputs.length; i++) {
-                var val = dateInputs[i].value || '';
-                if (val.match(/^\d{2}-\d{2}-\d{4}$/)) {
-                    dateInput = dateInputs[i];
-                    break;
-                }
+                dateFields.push({
+                    input: dateInputs[i],
+                    parent: parentId,
+                    gp: gpId,
+                    id: dateInputs[i].id,
+                    name: dateInputs[i].name
+                });
             }
+        }
 
-            if (dateInput) {
-                dateInput.value = crewWebDate;
-                dateInput.dispatchEvent(new Event('change', { bubbles: true }));
-            }
+        debugInfo += 'Totalt: ' + dateFields.length + ' datumfält hittade';
+
+        // Show debug in a modal
+        var debugModal = document.createElement('div');
+        debugModal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:999999999;padding:20px;overflow:auto;font-family:monospace';
+        debugModal.innerHTML = '<pre style="color:#0f0;font-size:12px;white-space:pre-wrap">' + debugInfo + '</pre>' +
+            '<button onclick="this.parentElement.remove()" style="margin-top:20px;padding:15px 30px;font-size:16px;background:#FF9500;color:#fff;border:none;border-radius:10px">Stäng</button>';
+        document.body.appendChild(debugModal);
+
+        return; // Stop here for debug
 
             VR.updateLoader(40, 'Väljer typ...');
 
