@@ -192,6 +192,9 @@
             dayEntries[currentDate].push(en);
         }
 
+        // Regex to detect NNNNNN-NNNNNN pattern (Tågplan references, not real tour numbers)
+        var tpPattern = /^\d{6}-\d{6}/;
+
         for (var dateKey in dayEntries) {
             if (!dayEntries.hasOwnProperty(dateKey)) continue;
 
@@ -205,7 +208,10 @@
 
                 if (entry.isHeader && tn) tourNumber = tn;
 
-                if (tn && tn.length >= 4) {
+                // Check if this is a real tour number (not NNNNNN-NNNNNN pattern)
+                var isRealTourNumber = tn && tn.length >= 4 && !tpPattern.test(tn);
+
+                if (isRealTourNumber) {
                     var c3 = tn.charAt(2);
                     var c4 = tn.charAt(3);
                     // Skip if 4th char is 8 or 9 (Reserv - no SR-tillägg)
@@ -222,6 +228,7 @@
                     }
                 }
 
+                // Always check DK.K (works for both real tour numbers and TP references)
                 var sP = (entry.sP || '').toUpperCase();
                 var eP = (entry.eP || '').toUpperCase();
                 if (sP.indexOf('DK.K') > -1 || eP.indexOf('DK.K') > -1) {
