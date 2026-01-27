@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.50';
+    VR.VERSION = 'V.0.51';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -378,19 +378,33 @@
             saldoEl.style.fontSize = '18px';
         }
 
+        // Check if already on balances page
+        var balances = document.getElementById('CrewBalances');
+        if (balances) {
+            VR.refreshKompSaldo();
+            return;
+        }
+
+        // Try to find Redovisningar menu item
         var el = VR.findMenuItem('Redovisningar');
         if (el) {
             el.click();
             setTimeout(VR.selectKompForHeader, 1500);
-        } else {
-            var balances = document.getElementById('CrewBalances');
-            if (balances) {
-                VR.refreshKompSaldo();
+            return;
+        }
+
+        // Menu item not visible - open folder menu first
+        VR.clickFolder();
+        setTimeout(function() {
+            var el2 = VR.findMenuItem('Redovisningar');
+            if (el2) {
+                el2.click();
+                setTimeout(VR.selectKompForHeader, 1500);
             } else if (saldoEl) {
                 saldoEl.textContent = 'Tryck 🔄';
                 saldoEl.style.fontSize = '16px';
             }
-        }
+        }, 800);
     };
 
     VR.manualRefreshSaldo = function() {
