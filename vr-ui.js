@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.49';
+    VR.VERSION = 'V.0.50';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -233,7 +233,7 @@
 </div>\
 <div id="vrSaldoBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;text-align:center;cursor:pointer">\
 <div style="font-size:16px;color:rgba(255,255,255,0.5)">Saldo 🔄</div>\
-<div id="vrKompSaldo" style="font-size:22px;color:#34C759;font-weight:700">...</div>\
+<div id="vrKompSaldo" style="font-size:18px;color:rgba(255,255,255,0.6);font-weight:600">Laddar...</div>\
 </div>\
 </div>\
 </div>';
@@ -371,13 +371,25 @@
 
     // ===== KOMP SALDO FOR HEADER =====
     VR.fetchKompForHeader = function() {
+        var saldoEl = document.getElementById('vrKompSaldo');
+        if (saldoEl) {
+            saldoEl.textContent = 'Hämtar...';
+            saldoEl.style.color = 'rgba(255,255,255,0.6)';
+            saldoEl.style.fontSize = '18px';
+        }
+
         var el = VR.findMenuItem('Redovisningar');
         if (el) {
             el.click();
             setTimeout(VR.selectKompForHeader, 1500);
         } else {
             var balances = document.getElementById('CrewBalances');
-            if (balances) VR.refreshKompSaldo();
+            if (balances) {
+                VR.refreshKompSaldo();
+            } else if (saldoEl) {
+                saldoEl.textContent = 'Tryck 🔄';
+                saldoEl.style.fontSize = '16px';
+            }
         }
     };
 
@@ -510,6 +522,8 @@
         if (el) {
             el.textContent = saldo + ' tim';
             el.style.color = saldo.indexOf('-') > -1 ? '#FF3B30' : '#34C759';
+            el.style.fontSize = '22px';
+            el.style.fontWeight = '700';
         }
     };
 
