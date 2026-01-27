@@ -1,4 +1,4 @@
-// VR CrewWeb - Löneredovisningar (OB + Frånvaro)
+// VR CrewWeb - Löneredovisningar (Shared functions)
 (function() {
     'use strict';
 
@@ -20,11 +20,9 @@
     VR.setDateInput = function(input, targetDate) {
         console.log('VR setDateInput: Setting to "' + targetDate + '"');
         input.value = targetDate;
-        // Trigger change event
         var evt = document.createEvent('HTMLEvents');
         evt.initEvent('change', true, true);
         input.dispatchEvent(evt);
-        // Also trigger input event for good measure
         var inputEvt = document.createEvent('HTMLEvents');
         inputEvt.initEvent('input', true, true);
         input.dispatchEvent(inputEvt);
@@ -37,7 +35,6 @@
 
         for (var i = 0; i < inputs.length; i++) {
             var val = inputs[i].value || '';
-            // Match date format DD-MM-YYYY
             if (val.match(/^\d{1,2}-\d{2}-\d{4}$/)) {
                 dateInputs.push(inputs[i]);
                 console.log('VR: Found date input with value: ' + val);
@@ -50,7 +47,6 @@
 
     // ===== SHARED: Check if on Löneredovisningar page =====
     VR.isOnLonePage = function() {
-        // Check for Lönedagar/Löneperiod radio buttons - unique to this page
         var radios = document.querySelectorAll('input[type="radio"]');
         for (var i = 0; i < radios.length; i++) {
             var parent = radios[i].parentElement;
@@ -62,9 +58,7 @@
     };
 
     // ===== SHARED: Navigate to Löneredovisningar =====
-    // Path: Mapp-ikon → Löneredovisningar
     VR.navigateToLoneredovisningar = function(callback) {
-        // Check if already on Löneredovisningar page (look for Lönedagar radio, not just Hämta)
         if (VR.isOnLonePage()) {
             console.log('VR: Already on Löneredovisningar page');
             VR.updateLoader(30, 'Sidan redan laddad...');
@@ -72,7 +66,6 @@
             return;
         }
 
-        // ALWAYS open folder menu first, then find Löneredovisningar
         VR.updateLoader(10, 'Öppnar mapp-meny...');
         VR.clickFolder();
 
@@ -102,7 +95,6 @@
             n++;
             VR.updateLoader(30 + n, 'Väntar på sidan...');
 
-            // Check for Lönedagar radio button - specific to this page
             if (VR.isOnLonePage()) {
                 VR.stopTimer();
                 VR.updateLoader(45, 'Sidan laddad!');
@@ -119,7 +111,6 @@
     VR.setupLonePageAndFetch = function(parseCallback) {
         VR.updateLoader(50, 'Väljer Lönedagar...');
 
-        // Step 1: Find and click Lönedagar radio button
         var radios = document.querySelectorAll('input[type="radio"]');
         var lonedagarRadio = null;
         for (var i = 0; i < radios.length; i++) {
@@ -156,14 +147,11 @@
             console.log('VR: Lönedagar radio NOT found');
         }
 
-        // Step 2: Wait for page to update, then set dates
         setTimeout(function() {
             VR.updateLoader(55, 'Ställer in datum...');
 
-            // Find all INPUT elements that contain dates
             var dateInputs = VR.findDateInputs();
 
-            // Set start date (14-12-2025)
             if (dateInputs.length >= 1) {
                 console.log('VR: Setting start date to 14-12-2025');
                 VR.setDateInput(dateInputs[0], '14-12-2025');
@@ -171,9 +159,7 @@
                 console.log('VR: No date input found for start date!');
             }
 
-            // Wait a bit then set end date
             setTimeout(function() {
-                // Set end date (31-12-2026)
                 if (dateInputs.length >= 2) {
                     console.log('VR: Setting end date to 31-12-2026');
                     VR.setDateInput(dateInputs[1], '31-12-2026');
@@ -181,7 +167,6 @@
                     console.log('VR: No date input found for end date!');
                 }
 
-                // Step 3: Click Hämta button
                 setTimeout(function() {
                     VR.updateLoader(65, 'Klickar Hämta...');
 
@@ -222,602 +207,5 @@
         }, 400);
     };
 
-    // ===== OB FUNCTIONALITY =====
-    VR.doOB = function() {
-        VR.stopTimer();
-        VR.closeOverlay();
-        VR.showLoader('Laddar OB-tillägg');
-        VR.updateLoader(5, 'Letar efter sidan...');
-
-        VR.navigateToLoneredovisningar(function() {
-            VR.setupLonePageAndFetch(VR.parseAndShowOB);
-        });
-    };
-
-    VR.parseAndShowOB = function() {
-        VR.updateLoader(95, 'Analyserar OB-data...');
-
-        var obData = [];
-
-        var OB_RATES = {
-            'L.Hb': { name: 'Kvalificerad OB', rate: 54.69 },
-            'L.Storhelgstillägg': { name: 'Storhelgs OB', rate: 122.88 }
-        };
-
-        var currentDate = null;
-        var allElements = document.body.querySelectorAll('*');
-
-        for (var i = 0; i < allElements.length; i++) {
-            var el = allElements[i];
-            var text = el.textContent || '';
-
-            var dateMatch = text.match(/^(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i);
-
-            if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE' && el.tagName !== 'TR' && el.tagName !== 'TD') {
-                var directText = '';
-                for (var c = 0; c < el.childNodes.length; c++) {
-                    if (el.childNodes[c].nodeType === 3) {
-                        directText += el.childNodes[c].textContent;
-                    }
-                }
-                if (directText.match(/^\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i)) {
-                    currentDate = dateMatch[1];
-                }
-            }
-
-            if (el.tagName === 'TABLE' && currentDate) {
-                var rows = el.querySelectorAll('tr');
-                for (var r = 0; r < rows.length; r++) {
-                    var cells = rows[r].querySelectorAll('td, th');
-                    if (cells.length < 2) continue;
-
-                    var col1 = cells[0] ? cells[0].textContent.trim() : '';
-                    var col2 = cells[1] ? cells[1].textContent.trim() : '';
-
-                    if (col1.toLowerCase() === 'löneslag') continue;
-
-                    if (col1 === 'L.Hb' || col1 === 'L.Storhelgstillägg') {
-                        var timeMatch = col2.match(/(\d+):(\d+)/);
-                        var hours = 0;
-                        var minutes = 0;
-                        if (timeMatch) {
-                            hours = parseInt(timeMatch[1], 10);
-                            minutes = parseInt(timeMatch[2], 10);
-                        }
-                        var totalHours = hours + (minutes / 60);
-                        var rate = OB_RATES[col1] ? OB_RATES[col1].rate : 0;
-                        var kronor = totalHours * rate;
-
-                        obData.push({
-                            date: currentDate,
-                            type: col1,
-                            typeName: OB_RATES[col1] ? OB_RATES[col1].name : col1,
-                            time: col2,
-                            hours: totalHours,
-                            rate: rate,
-                            kronor: kronor
-                        });
-                    }
-                }
-            }
-        }
-
-        VR.updateLoader(98, 'Bygger vy...');
-
-        var viewHtml = VR.buildOBView(obData);
-
-        setTimeout(function() {
-            VR.hideLoader();
-            VR.showView('', '', viewHtml);
-        }, 300);
-    };
-
-    VR.buildOBView = function(obData) {
-        if (obData.length === 0) {
-            return '\
-                <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-                    <div style="font-size:80px;margin-bottom:24px">🔍</div>\
-                    <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Ingen OB-data hittades</div>\
-                    <div style="font-size:22px;color:#888">Endast L.Hb och L.Storhelgstillägg visas</div>\
-                </div>';
-        }
-
-        // Get current month and previous month
-        var now = new Date();
-        var currentMonth = now.getMonth(); // 0-11
-        var currentYear = now.getFullYear();
-        var prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-        var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
-        // Swedish month names
-        var monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
-                          'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
-
-        // Group OB by month
-        var monthlyTotals = {};
-        var grandTotalHours = 0;
-        var grandTotalKr = 0;
-
-        for (var i = 0; i < obData.length; i++) {
-            var item = obData[i];
-            // Parse date DD-MM-YYYY
-            var dateParts = item.date.match(/(\d{1,2})-(\d{2})-(\d{4})/);
-            if (dateParts) {
-                var month = parseInt(dateParts[2], 10) - 1; // 0-11
-                var year = parseInt(dateParts[3], 10);
-                var key = year + '-' + month;
-
-                if (!monthlyTotals[key]) {
-                    monthlyTotals[key] = { kronor: 0, month: month, year: year };
-                }
-                monthlyTotals[key].kronor += item.kronor;
-            }
-            grandTotalHours += item.hours;
-            grandTotalKr += item.kronor;
-        }
-
-        // Get totals for current and previous month
-        var currentKey = currentYear + '-' + currentMonth;
-        var prevKey = prevYear + '-' + prevMonth;
-        var currentMonthTotal = monthlyTotals[currentKey] ? monthlyTotals[currentKey].kronor : 0;
-        var prevMonthTotal = monthlyTotals[prevKey] ? monthlyTotals[prevKey].kronor : 0;
-
-        // Build HTML - Two month cards side by side
-        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
-
-        // Previous month card (left)
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:32px;margin-bottom:8px">🌙</div>';
-        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">' + monthNames[prevMonth] + '</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#333">' + prevMonthTotal.toFixed(0) + ' kr</div>';
-        html += '</div>';
-
-        // Current month card (right)
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:32px;margin-bottom:8px">✨</div>';
-        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">' + monthNames[currentMonth] + '</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#AF52DE">' + currentMonthTotal.toFixed(0) + ' kr</div>';
-        html += '</div>';
-
-        html += '</div>';
-
-        html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
-
-        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">OB-typ</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Antal</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Kr</div>';
-        html += '</div>';
-
-        // Loop backwards to show newest first
-        for (var d = obData.length - 1; d >= 0; d--) {
-            var row = obData[d];
-            var rowIndex = obData.length - 1 - d;
-            var bgCol = rowIndex % 2 === 0 ? '#fff' : '#F8F8F8';
-
-            html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
-            html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
-            html += '<div style="font-size:15px;color:#333">' + row.typeName + '</div>';
-            html += '<div style="font-size:15px;color:#333;text-align:right">' + row.time + '</div>';
-            html += '<div style="font-size:15px;font-weight:600;color:#AF52DE;text-align:right">' + row.kronor.toFixed(2) + '</div>';
-            html += '</div>';
-        }
-
-        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:8px;padding:16px 20px;background:#F0F0F5;border-top:2px solid #E5E5EA">';
-        html += '<div style="font-size:16px;font-weight:700;color:#333">Totalt</div>';
-        html += '<div></div>';
-        html += '<div style="font-size:16px;font-weight:600;color:#333;text-align:right">' + grandTotalHours.toFixed(1) + ' h</div>';
-        html += '<div style="font-size:16px;font-weight:700;color:#AF52DE;text-align:right">' + grandTotalKr.toFixed(2) + ' kr</div>';
-        html += '</div>';
-
-        html += '</div>';
-
-        return html;
-    };
-
-    // ===== FRÅNVARO FUNCTIONALITY =====
-    VR.doFranvaro = function() {
-        VR.stopTimer();
-        VR.closeOverlay();
-        VR.showLoader('Laddar Frånvaro');
-        VR.updateLoader(5, 'Letar efter sidan...');
-
-        VR.navigateToLoneredovisningar(function() {
-            VR.setupLonePageAndFetch(VR.parseAndShowFranvaro);
-        });
-    };
-
-    VR.parseAndShowFranvaro = function() {
-        VR.updateLoader(95, 'Analyserar frånvaro-data...');
-
-        var franvaroData = [];
-
-        var FRANVARO_TYPES = {
-            'L.Föräldraledig >5 dagar': { name: 'Föräldraledig, lång', icon: '👶' },
-            'L.Föräldraledig>5 dagar': { name: 'Föräldraledig, lång', icon: '👶' },
-            'L.Föräldraledig <5 dagar': { name: 'Föräldraledig, kort', icon: '👶' },
-            'L.Föräldraledig<5 dagar': { name: 'Föräldraledig, kort', icon: '👶' },
-            'L.Vård av barn': { name: 'VAB', icon: '🏥' }
-        };
-
-        var currentDate = null;
-        var allElements = document.body.querySelectorAll('*');
-
-        for (var i = 0; i < allElements.length; i++) {
-            var el = allElements[i];
-            var text = el.textContent || '';
-
-            var dateMatch = text.match(/^(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i);
-
-            if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE' && el.tagName !== 'TR' && el.tagName !== 'TD') {
-                var directText = '';
-                for (var c = 0; c < el.childNodes.length; c++) {
-                    if (el.childNodes[c].nodeType === 3) {
-                        directText += el.childNodes[c].textContent;
-                    }
-                }
-                if (directText.match(/^\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i)) {
-                    currentDate = dateMatch[1];
-                }
-            }
-
-            if (el.tagName === 'TABLE' && currentDate) {
-                var rows = el.querySelectorAll('tr');
-                for (var r = 0; r < rows.length; r++) {
-                    var cells = rows[r].querySelectorAll('td, th');
-                    if (cells.length < 2) continue;
-
-                    var col1 = cells[0] ? cells[0].textContent.trim() : '';
-                    var col2 = cells[1] ? cells[1].textContent.trim() : '';
-
-                    if (col1.toLowerCase() === 'löneslag') continue;
-
-                    var matchedType = null;
-                    var matchedInfo = null;
-
-                    for (var typeKey in FRANVARO_TYPES) {
-                        if (col1.indexOf(typeKey) > -1 || col1 === typeKey) {
-                            matchedType = typeKey;
-                            matchedInfo = FRANVARO_TYPES[typeKey];
-                            break;
-                        }
-                    }
-
-                    if (!matchedType) {
-                        if (col1.indexOf('Föräldraledig') > -1 && col1.indexOf('>5') > -1) {
-                            matchedInfo = { name: 'Föräldraledig, lång', icon: '👶' };
-                            matchedType = col1;
-                        } else if (col1.indexOf('Föräldraledig') > -1 && col1.indexOf('<5') > -1) {
-                            matchedInfo = { name: 'Föräldraledig, kort', icon: '👶' };
-                            matchedType = col1;
-                        } else if (col1.indexOf('Vård av barn') > -1) {
-                            matchedInfo = { name: 'VAB', icon: '🏥' };
-                            matchedType = col1;
-                        }
-                    }
-
-                    if (matchedInfo) {
-                        franvaroData.push({
-                            date: currentDate,
-                            originalType: col1,
-                            typeName: matchedInfo.name,
-                            icon: matchedInfo.icon,
-                            time: col2
-                        });
-                    }
-                }
-            }
-        }
-
-        VR.updateLoader(98, 'Bygger vy...');
-
-        var viewHtml = VR.buildFranvaroView(franvaroData);
-
-        setTimeout(function() {
-            VR.hideLoader();
-            VR.showView('', '', viewHtml);
-        }, 300);
-    };
-
-    VR.buildFranvaroView = function(franvaroData) {
-        if (franvaroData.length === 0) {
-            return '\
-                <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-                    <div style="font-size:80px;margin-bottom:24px">🔍</div>\
-                    <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Ingen frånvaro hittades</div>\
-                    <div style="font-size:22px;color:#888">Söker: VAB, Föräldraledig</div>\
-                </div>';
-        }
-
-        // Get current month and previous month
-        var now = new Date();
-        var currentMonth = now.getMonth();
-        var currentYear = now.getFullYear();
-        var prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-        var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
-        var monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
-                          'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
-
-        // Group by month and type
-        var prevMonthData = {};
-        var currentMonthData = {};
-
-        for (var i = 0; i < franvaroData.length; i++) {
-            var item = franvaroData[i];
-            var dateParts = item.date.match(/(\d{1,2})-(\d{2})-(\d{4})/);
-            if (dateParts) {
-                var month = parseInt(dateParts[2], 10) - 1;
-                var year = parseInt(dateParts[3], 10);
-
-                var timeMatch = item.time.match(/(\d+):(\d+)/);
-                var minutes = 0;
-                if (timeMatch) {
-                    minutes = parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10);
-                }
-
-                var targetData = null;
-                if (year === currentYear && month === currentMonth) {
-                    targetData = currentMonthData;
-                } else if (year === prevYear && month === prevMonth) {
-                    targetData = prevMonthData;
-                }
-
-                if (targetData) {
-                    if (!targetData[item.typeName]) {
-                        targetData[item.typeName] = { count: 0, minutes: 0 };
-                    }
-                    targetData[item.typeName].count++;
-                    targetData[item.typeName].minutes += minutes;
-                }
-            }
-        }
-
-        // Helper to format minutes as H:MM
-        var formatTime = function(mins) {
-            var h = Math.floor(mins / 60);
-            var m = mins % 60;
-            return h + ':' + (m < 10 ? '0' : '') + m;
-        };
-
-        // Helper to build month summary
-        var buildMonthSummary = function(data) {
-            var keys = Object.keys(data);
-            if (keys.length === 0) {
-                return '<div style="font-size:14px;color:#8E8E93">Ingen frånvaro</div>';
-            }
-            var html = '';
-            for (var k = 0; k < keys.length; k++) {
-                var type = keys[k];
-                var info = data[type];
-                html += '<div style="font-size:14px;color:#333;margin-bottom:4px"><strong>' + type + '</strong>: ' + info.count + ' (' + formatTime(info.minutes) + ')</div>';
-            }
-            return html;
-        };
-
-        // Build HTML - Two month cards side by side
-        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
-
-        // Previous month card (left)
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">' + monthNames[prevMonth] + '</div>';
-        html += buildMonthSummary(prevMonthData);
-        html += '</div>';
-
-        // Current month card (right)
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">' + monthNames[currentMonth] + '</div>';
-        html += buildMonthSummary(currentMonthData);
-        html += '</div>';
-
-        html += '</div>';
-
-        // List
-        html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
-
-        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Frånvaro-typ</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tid</div>';
-        html += '</div>';
-
-        // Loop backwards to show newest first
-        for (var d = franvaroData.length - 1; d >= 0; d--) {
-            var row = franvaroData[d];
-            var rowIndex = franvaroData.length - 1 - d;
-            var bgCol = rowIndex % 2 === 0 ? '#fff' : '#F8F8F8';
-
-            html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
-            html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
-            html += '<div style="font-size:15px;color:#333">' + row.typeName + '</div>';
-            html += '<div style="font-size:15px;font-weight:600;color:#FF6B6B;text-align:right">' + row.time + '</div>';
-            html += '</div>';
-        }
-
-        html += '</div>';
-
-        return html;
-    };
-
-    // ===== FP/FPV FUNCTIONALITY =====
-    VR.doFPFPV = function() {
-        VR.stopTimer();
-        VR.closeOverlay();
-        VR.showLoader('Laddar FP/FPV');
-        VR.updateLoader(5, 'Letar efter sidan...');
-
-        VR.navigateToLoneredovisningar(function() {
-            VR.setupLonePageAndFetch(VR.parseAndShowFPFPV);
-        });
-    };
-
-    VR.parseAndShowFPFPV = function() {
-        VR.updateLoader(95, 'Analyserar FP/FPV-data...');
-
-        var fpData = [];
-
-        var FP_TYPES = {
-            'S.Frånvaro: FRIDAG': { name: 'FP', icon: '🏖️' },
-            'S.Frånvaro: FV/FP2/FP-V': { name: 'FPV', icon: '🌴' }
-        };
-
-        var currentDate = null;
-        var allElements = document.body.querySelectorAll('*');
-
-        for (var i = 0; i < allElements.length; i++) {
-            var el = allElements[i];
-            var text = el.textContent || '';
-
-            var dateMatch = text.match(/^(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i);
-
-            if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE' && el.tagName !== 'TR' && el.tagName !== 'TD') {
-                var directText = '';
-                for (var c = 0; c < el.childNodes.length; c++) {
-                    if (el.childNodes[c].nodeType === 3) {
-                        directText += el.childNodes[c].textContent;
-                    }
-                }
-                if (directText.match(/^\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i)) {
-                    currentDate = dateMatch[1];
-                }
-            }
-
-            if (el.tagName === 'TABLE' && currentDate) {
-                var rows = el.querySelectorAll('tr');
-                for (var r = 0; r < rows.length; r++) {
-                    var cells = rows[r].querySelectorAll('td, th');
-                    if (cells.length < 2) continue;
-
-                    var col1 = cells[0] ? cells[0].textContent.trim() : '';
-                    var col2 = cells[1] ? cells[1].textContent.trim() : '';
-
-                    if (col1.toLowerCase() === 'löneslag') continue;
-
-                    var matchedType = null;
-                    var matchedInfo = null;
-
-                    for (var typeKey in FP_TYPES) {
-                        if (col1.indexOf(typeKey) > -1 || col1 === typeKey) {
-                            matchedType = typeKey;
-                            matchedInfo = FP_TYPES[typeKey];
-                            break;
-                        }
-                    }
-
-                    // Fallback matching
-                    if (!matchedType) {
-                        if (col1.indexOf('S.Frånvaro') > -1 && col1.indexOf('FRIDAG') > -1) {
-                            matchedInfo = { name: 'FP', icon: '🏖️' };
-                            matchedType = col1;
-                        } else if (col1.indexOf('S.Frånvaro') > -1 && (col1.indexOf('FV') > -1 || col1.indexOf('FP2') > -1 || col1.indexOf('FP-V') > -1)) {
-                            matchedInfo = { name: 'FPV', icon: '🌴' };
-                            matchedType = col1;
-                        }
-                    }
-
-                    if (matchedInfo) {
-                        fpData.push({
-                            date: currentDate,
-                            originalType: col1,
-                            typeName: matchedInfo.name,
-                            icon: matchedInfo.icon,
-                            time: col2
-                        });
-                    }
-                }
-            }
-        }
-
-        VR.updateLoader(98, 'Bygger vy...');
-
-        var viewHtml = VR.buildFPFPVView(fpData);
-
-        setTimeout(function() {
-            VR.hideLoader();
-            VR.showView('', '', viewHtml);
-        }, 300);
-    };
-
-    VR.buildFPFPVView = function(fpData) {
-        if (fpData.length === 0) {
-            return '\
-                <div style="background:#fff;border-radius:27px;padding:60px 40px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-                    <div style="font-size:80px;margin-bottom:24px">🔍</div>\
-                    <div style="font-size:32px;font-weight:600;color:#333;margin-bottom:12px">Ingen FP/FPV hittades</div>\
-                    <div style="font-size:22px;color:#888">Söker: FP (Fridag) och FPV</div>\
-                </div>';
-        }
-
-        // Get current year
-        var currentYear = new Date().getFullYear();
-
-        // Count FP and FPV for current year
-        var yearlyFP = 0;
-        var yearlyFPV = 0;
-
-        for (var i = 0; i < fpData.length; i++) {
-            var item = fpData[i];
-            // Parse date DD-MM-YYYY
-            var dateParts = item.date.match(/(\d{1,2})-(\d{2})-(\d{4})/);
-            if (dateParts) {
-                var year = parseInt(dateParts[3], 10);
-                if (year === currentYear) {
-                    if (item.typeName === 'FP') {
-                        yearlyFP++;
-                    } else if (item.typeName === 'FPV') {
-                        yearlyFPV++;
-                    }
-                }
-            }
-        }
-
-        // Build HTML - Two summary cards
-        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
-
-        // FP card (left)
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:32px;margin-bottom:8px">🏖️</div>';
-        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">FP ' + currentYear + '</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#34C759">' + yearlyFP + ' dagar</div>';
-        html += '</div>';
-
-        // FPV card (right)
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:32px;margin-bottom:8px">🌴</div>';
-        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">FPV ' + currentYear + '</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#007AFF">' + yearlyFPV + ' dagar</div>';
-        html += '</div>';
-
-        html += '</div>';
-
-        // List of all FP/FPV days
-        html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
-
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Typ</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tid</div>';
-        html += '</div>';
-
-        // Loop backwards to show newest first
-        for (var d = fpData.length - 1; d >= 0; d--) {
-            var row = fpData[d];
-            var rowIndex = fpData.length - 1 - d;
-            var bgCol = rowIndex % 2 === 0 ? '#fff' : '#F8F8F8';
-            var typeColor = row.typeName === 'FP' ? '#34C759' : '#007AFF';
-
-            html += '<div style="display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
-            html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
-            html += '<div style="font-size:15px;color:#333;display:flex;align-items:center;gap:8px"><span>' + row.icon + '</span> ' + row.typeName + '</div>';
-            html += '<div style="font-size:15px;font-weight:600;color:' + typeColor + ';text-align:right">' + row.time + '</div>';
-            html += '</div>';
-        }
-
-        html += '</div>';
-
-        return html;
-    };
-
-    console.log('VR: Löne loaded');
+    console.log('VR: Löne (shared) loaded');
 })();

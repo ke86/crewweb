@@ -326,8 +326,8 @@
     // ===== BUILD DAY SUMMARY CARD =====
     VR.buildDaySummaryCard = function(hdr, es) {
         // Find unpaid break (RASTO) and paid break (RAST)
-        var obetaldRast = '';
-        var betaldRast = '';
+        var obetaldRastMins = 0;
+        var betaldRastMins = 0;
 
         for (var rI = 0; rI < es.length; rI++) {
             if (!es[rI].isHeader && es[rI].ai) {
@@ -335,65 +335,90 @@
                 var rPr = es[rI].pr || '';
                 var t = VR.parseTimeRange(rPr);
 
-                if (aiUp === 'RASTO' && t && !obetaldRast) {
+                if (aiUp === 'RASTO' && t) {
                     var rMin = t.endMins - t.startMins;
                     if (rMin < 0) rMin += 1440;
-                    var rH = Math.floor(rMin / 60);
-                    var rMi = rMin % 60;
-                    obetaldRast = (rH > 0 ? rH + ':' : '0:') + ('0' + rMi).slice(-2);
+                    obetaldRastMins += rMin;
                 }
 
-                if (aiUp === 'RAST' && t && !betaldRast) {
+                if (aiUp === 'RAST' && t) {
                     var bMin = t.endMins - t.startMins;
                     if (bMin < 0) bMin += 1440;
-                    var bH = Math.floor(bMin / 60);
-                    var bMi = bMin % 60;
-                    betaldRast = (bH > 0 ? bH + ':' : '0:') + ('0' + bMi).slice(-2);
+                    betaldRastMins += bMin;
                 }
             }
         }
 
-        // 50% smaller padding and font sizes
+        // Format minutes to H:MM
+        var formatMins = function(mins) {
+            var h = Math.floor(mins / 60);
+            var m = mins % 60;
+            return h + ':' + ('0' + m).slice(-2);
+        };
+
+        var obetaldRast = obetaldRastMins > 0 ? formatMins(obetaldRastMins) : '';
+        var betaldRast = betaldRastMins > 0 ? formatMins(betaldRastMins) : '';
+
+        // Parse betald tid for Omlopp calculation
+        var betaldTidMins = 0;
+        if (hdr.pt) {
+            var ptMatch = hdr.pt.match(/(\d+):(\d+)/);
+            if (ptMatch) {
+                betaldTidMins = parseInt(ptMatch[1], 10) * 60 + parseInt(ptMatch[2], 10);
+            }
+        }
+
+        // Omlopp = Betald tid + Obetald rast
+        var omloppMins = betaldTidMins + obetaldRastMins;
+        var omlopp = omloppMins > 0 ? formatMins(omloppMins) : '';
+
+        // Build card HTML
         var html = '<div style="background:#fff;border-radius:16px;padding:18px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.08)">';
 
-        // Pass - 50% smaller
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #E5E5EA">';
-        html += '<div style="font-size:14px;color:#8E8E93">Pass</div>';
-        html += '<div style="font-size:20px;font-weight:600;color:#000">' + hdr.ps + '</div>';
+        // Row 1: Pass (left) | Tid (right)
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
+
+        html += '<div style="text-align:center;padding:12px;background:#F8F8F8;border-radius:10px">';
+        html += '<div style="font-size:12px;color:#8E8E93;margin-bottom:4px">Pass</div>';
+        html += '<div style="font-size:18px;font-weight:600;color:#000">' + (hdr.ps || '—') + '</div>';
         html += '</div>';
 
-        // Tid (formerly Period) - 50% smaller
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #E5E5EA">';
-        html += '<div style="font-size:14px;color:#8E8E93">Tid</div>';
-        html += '<div style="font-size:20px;font-weight:600;color:#000">' + hdr.pr + '</div>';
+        html += '<div style="text-align:center;padding:12px;background:#F8F8F8;border-radius:10px">';
+        html += '<div style="font-size:12px;color:#8E8E93;margin-bottom:4px">Tid</div>';
+        html += '<div style="font-size:18px;font-weight:600;color:#000">' + (hdr.pr || '—') + '</div>';
         html += '</div>';
 
-        // Paid time - 50% smaller
-        if (hdr.pt) {
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #E5E5EA">';
-            html += '<div style="font-size:14px;color:#8E8E93">Betald tid</div>';
-            html += '<div style="font-size:20px;font-weight:600;color:#34C759">' + hdr.pt + '</div>';
-            html += '</div>';
-        }
+        html += '</div>';
 
-        // Breaks row - side by side (Betald rast left, Obetald rast right)
-        if (betaldRast || obetaldRast) {
-            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:12px">';
+        // Row 2: Betald tid (left) | Omlopp (right)
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
 
-            // Betald rast (left)
-            html += '<div style="text-align:center;padding:8px;background:#F8F8F8;border-radius:10px">';
-            html += '<div style="font-size:12px;color:#8E8E93;margin-bottom:4px">Betald rast</div>';
-            html += '<div style="font-size:18px;font-weight:600;color:#34C759">' + (betaldRast || '—') + '</div>';
-            html += '</div>';
+        html += '<div style="text-align:center;padding:12px;background:#F8F8F8;border-radius:10px">';
+        html += '<div style="font-size:12px;color:#8E8E93;margin-bottom:4px">Betald tid</div>';
+        html += '<div style="font-size:18px;font-weight:600;color:#34C759">' + (hdr.pt || '—') + '</div>';
+        html += '</div>';
 
-            // Obetald rast (right)
-            html += '<div style="text-align:center;padding:8px;background:#F8F8F8;border-radius:10px">';
-            html += '<div style="font-size:12px;color:#8E8E93;margin-bottom:4px">Obetald rast</div>';
-            html += '<div style="font-size:18px;font-weight:600;color:#FF9500">' + (obetaldRast || '—') + '</div>';
-            html += '</div>';
+        html += '<div style="text-align:center;padding:12px;background:#F8F8F8;border-radius:10px">';
+        html += '<div style="font-size:12px;color:#8E8E93;margin-bottom:4px">Omlopp</div>';
+        html += '<div style="font-size:18px;font-weight:600;color:#007AFF">' + (omlopp || '—') + '</div>';
+        html += '</div>';
 
-            html += '</div>';
-        }
+        html += '</div>';
+
+        // Row 3: Betald rast (left) | Obetald rast (right)
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+
+        html += '<div style="text-align:center;padding:12px;background:#F8F8F8;border-radius:10px">';
+        html += '<div style="font-size:12px;color:#8E8E93;margin-bottom:4px">Betald rast</div>';
+        html += '<div style="font-size:18px;font-weight:600;color:#34C759">' + (betaldRast || '—') + '</div>';
+        html += '</div>';
+
+        html += '<div style="text-align:center;padding:12px;background:#F8F8F8;border-radius:10px">';
+        html += '<div style="font-size:12px;color:#8E8E93;margin-bottom:4px">Obetald rast</div>';
+        html += '<div style="font-size:18px;font-weight:600;color:#FF9500">' + (obetaldRast || '—') + '</div>';
+        html += '</div>';
+
+        html += '</div>';
 
         html += '</div>';
         return html;

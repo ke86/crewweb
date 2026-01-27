@@ -2,27 +2,7 @@
 
 Ett bokmärkesverktyg för att visa schema och kompsaldo från CrewWeb.
 
-## Installation
-
-### 1. Ladda upp filerna till GitHub
-
-Lägg alla `.js`-filer i mappen `crewweb/` i **main**-branchen på ditt repository `ke86.github.io`:
-
-```
-ke86.github.io/
-└── crewweb/
-    ├── vr-loader.js
-    ├── vr-core.js
-    ├── vr-ui.js
-    ├── vr-schema.js
-    ├── vr-komp.js
-    ├── vr-daydetail.js
-    └── README.md
-```
-
-Filerna blir tillgängliga på `https://ke86.github.io/crewweb/`
-
-### 2. Skapa bokmärket
+## Skapa bokmärket
 
 Skapa ett nytt bokmärke i din webbläsare med följande kod som URL:
 
@@ -30,31 +10,38 @@ Skapa ett nytt bokmärke i din webbläsare med följande kod som URL:
 javascript:(function(){var H='vrHeader',S='vrScript';if(document.getElementById(H)){['vrHeader','vrView','vrLoader','vrDetail'].forEach(function(x){var e=document.getElementById(x);if(e)e.remove()});document.body.style.paddingTop='';return}var s=document.createElement('script');s.id=S;s.src='https://ke86.github.io/crewweb/vr-loader.js?'+Date.now();document.body.appendChild(s)})();
 ```
 
-### 3. Användning
+## Användning
 
-1. Gå till CrewWeb i din webbläsare
+1. Gå till CrewWeb i din webbläsare och logga in.
 2. Klicka på bokmärket
-3. Använd knapparna för att visa Schema eller Kompsaldo
-4. Klicka på bokmärket igen för att stänga verktyget
-
-## Filer
-
-| Fil | Storlek | Beskrivning |
-|-----|---------|-------------|
-| `vr-loader.js` | ~1 KB | Huvudladdare som laddar alla moduler |
-| `vr-core.js` | ~5 KB | Hjälpfunktioner och konstanter |
-| `vr-ui.js` | ~8 KB | UI-komponenter (header, loader, views) |
-| `vr-schema.js` | ~6 KB | Schema-funktionalitet |
-| `vr-komp.js` | ~5 KB | Kompsaldo-funktionalitet |
-| `vr-daydetail.js` | ~8 KB | Dagdetaljer och kalenderexport |
 
 ## Funktioner
 
 - 📅 **Schema**: Visa månadsschema med navigering
-- ⏰ **Kompsaldo**: Visa aktuellt kompsaldo och historik
-- 📱 **Responsiv**: Fungerar på både dator och mobil
+- ⏰ **Komp**: Visa aktuellt kompsaldo och historik
+- 🌙 **OB**: Visa OB-tillägg med månadssammanfattning
+- 🏠 **Frånvaro**: Visa VAB och föräldraledighet
+- 🏖️ **FP/FPV**: Visa fridagar och FPV
+- 👤 **Anställddata**: Visa kvalifikationer och giltighetstider
 - 📤 **Kalenderexport**: Exportera schema till .ics-fil
 - 🎯 **Dagdetaljer**: Klicka på en dag för detaljerad vy
+- 📱 **Responsiv**: Fungerar på både dator och mobil
+
+## Filer
+
+| Fil | Beskrivning |
+|-----|-------------|
+| `vr-loader.js` | Huvudladdare som laddar alla moduler |
+| `vr-core.js` | Hjälpfunktioner och konstanter |
+| `vr-ui.js` | UI-komponenter (header, meny, loader) |
+| `vr-schema.js` | Schema-funktionalitet |
+| `vr-komp.js` | Kompsaldo-funktionalitet |
+| `vr-lone.js` | Delade funktioner för löneredovisningar |
+| `vr-ob.js` | OB-tillägg |
+| `vr-franvaro.js` | Frånvaro (VAB, Föräldraledig) |
+| `vr-fpfpv.js` | FP/FPV (Fridagar) |
+| `vr-anstalld.js` | Anställddata och kvalifikationer |
+| `vr-daydetail.js` | Dagdetaljer och kalenderexport |
 
 ## Licens
 
