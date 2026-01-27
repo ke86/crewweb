@@ -210,8 +210,16 @@
             return;
         }
 
-        // Build HTML - use newest saldo (last row in data)
-        var html = VR.buildKompHeader(data[data.length - 1].s);
+        // Sort by date (newest first)
+        data.sort(function(a, b) {
+            var dtA = VR.formatDate(a.d);
+            var dtB = VR.formatDate(b.d);
+            if (!dtA.dateObj || !dtB.dateObj) return 0;
+            return dtB.dateObj - dtA.dateObj;
+        });
+
+        // Build HTML - use newest saldo (first row after sorting)
+        var html = VR.buildKompHeader(data[0].s);
         html += VR.buildKompRows(data);
 
         VR.updateLoader(100, 'Klar!');
@@ -248,12 +256,12 @@
 
         var maxShow = Math.min(data.length, 50);
 
-        // Loop backwards to show newest first
-        for (var j = data.length - 1; j >= Math.max(0, data.length - maxShow); j--) {
+        // Data is already sorted newest first
+        for (var j = 0; j < maxShow; j++) {
             var neg = data[j].b.indexOf('-') > -1;
             var bidrag = data[j].b.replace('-', '');
             var dt = VR.formatDate(data[j].d);
-            var isFirst = (j === data.length - 1); // Newest is now "first"
+            var isFirst = (j === 0); // First item is newest
 
             var rowStyle = isFirst
                 ? 'background:linear-gradient(135deg,rgba(52,199,89,0.08),rgba(48,209,88,0.08));'
@@ -270,14 +278,14 @@
             html += '<div style="font-size:15px;font-weight:600;color:' + (isFirst ? 'rgba(255,255,255,0.8)' : '#007AFF') + ';text-transform:uppercase">' + dt.wd + '</div>';
             html += '</div>';
 
-            // Comment
+            // Comment with year
             html += '<div style="padding:0 18px;min-width:0">';
             if (data[j].k) {
                 html += '<div style="font-size:21px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + data[j].k + '</div>';
             } else {
                 html += '<div style="font-size:20px;color:#CCC;font-style:italic">—</div>';
             }
-            html += '<div style="font-size:17px;color:#999;margin-top:3px">' + dt.day + ' ' + dt.mon + '</div>';
+            html += '<div style="font-size:17px;color:#999;margin-top:3px">' + dt.day + '/' + dt.mon + '-' + dt.year + '</div>';
             html += '</div>';
 
             // Time badge

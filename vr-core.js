@@ -15,7 +15,7 @@
     // ===== DATE HELPERS =====
     VR.formatDate = function(dateStr) {
         var p = dateStr.split('-');
-        if (p.length !== 3) return { day: '', mon: '', wd: '' };
+        if (p.length !== 3) return { day: '', mon: '', wd: '', year: '', dateObj: null };
         var dayNum = parseInt(p[0]);
         var monIdx = parseInt(p[1]) - 1;
         var year = parseInt(p[2]);
@@ -23,7 +23,9 @@
         return {
             day: dayNum,
             mon: VR.MONTHS_SHORT[monIdx],
-            wd: VR.WEEKDAYS_SHORT[dateObj.getDay()]
+            wd: VR.WEEKDAYS_SHORT[dateObj.getDay()],
+            year: year,
+            dateObj: dateObj
         };
     };
 
