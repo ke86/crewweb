@@ -280,6 +280,12 @@
             if (prevBtn) prevBtn.onclick = function() { VR.changeMonth(-1); };
             if (nextBtn) nextBtn.onclick = function() { VR.changeMonth(1); };
             if (exportBtn) exportBtn.onclick = function() { VR.exportMonthToCalendar(); };
+
+            // Load Komp saldo in background (only on first load)
+            if (!VR.kompLoaded && VR.fetchKompForHeader) {
+                VR.kompLoaded = true;
+                setTimeout(VR.fetchKompForHeader, 1000);
+            }
         }, 400);
     };
 

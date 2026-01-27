@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.47';
+    VR.VERSION = 'V.0.48';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -482,10 +482,30 @@
         var rows = tbl.querySelectorAll('tr');
         if (rows.length < 2) return;
 
-        var c = rows[1].querySelectorAll('td');
-        if (c.length < 3) return;
+        // Find the newest saldo by parsing all rows and sorting by date
+        var data = [];
+        for (var i = 1; i < rows.length; i++) {
+            var c = rows[i].querySelectorAll('td');
+            if (c.length < 3) continue;
+            var d = c[0] ? c[0].textContent.trim() : '';
+            var s = c[2] ? c[2].textContent.trim() : '';
+            if (d && d.indexOf('-') > -1 && s) {
+                var parts = d.split('-');
+                if (parts.length === 3) {
+                    var dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    data.push({ date: dateObj, saldo: s });
+                }
+            }
+        }
 
-        var saldo = c[2] ? c[2].textContent.trim() : '0:00';
+        if (data.length === 0) return;
+
+        // Sort by date descending (newest first)
+        data.sort(function(a, b) { return b.date - a.date; });
+
+        var saldo = data[0].saldo;
+        VR.kompSaldo = saldo; // Store for later use
+
         var el = document.getElementById('vrKompSaldo');
         if (el) {
             el.textContent = saldo + ' tim';
@@ -498,8 +518,9 @@
         var tbl = document.querySelector('#workdays table');
         if (tbl) VR.parseTodayTur(tbl);
 
+        // Start Schema, Komp will load after Schema is done
         setTimeout(VR.doSchema, 100);
-        setTimeout(VR.fetchKompForHeader, 2000);
+        // Note: fetchKompForHeader is now called from renderSchemaFromCache
     };
 
     // ===== INIT =====
