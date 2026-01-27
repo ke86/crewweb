@@ -7,6 +7,9 @@
     // Storage for SR data (unique per date)
     VR.srData = {};
 
+    // Detected rate from first Danmark tour (persists across loads)
+    VR.detectedSRRate = null;
+
     // ===== MAIN SR-TILLÄGG FUNCTION =====
     VR.doSRTillagg = function() {
         VR.stopTimer();
@@ -88,7 +91,7 @@
         var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
         var monthNames = VR.MONTHS;
-        var rate = VR.SR_RATE;
+        var rate = VR.detectedSRRate || 0;
 
         // Get stored data for display
         var allData = VR.getSRDataArray();
@@ -143,7 +146,11 @@
             html += '<div style="background:#fff;border-radius:20px;padding:40px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
             html += '<div style="font-size:48px;margin-bottom:16px">🇩🇰</div>';
             html += '<div style="font-size:18px;color:#666">Klicka på knapparna ovan för att ladda SR-Tillägg</div>';
-            html += '<div style="font-size:14px;color:#999;margin-top:8px">' + rate + ' kr per dag (' + (VR.userRole || 'Okänd roll') + ')</div>';
+            if (VR.detectedSRRate) {
+                html += '<div style="font-size:14px;color:#999;margin-top:8px">' + VR.detectedSRRate + ' kr per dag (' + (VR.userRole || 'Okänd roll') + ')</div>';
+            } else {
+                html += '<div style="font-size:14px;color:#999;margin-top:8px">Rate detekteras automatiskt från turnummer</div>';
+            }
             html += '</div>';
         }
 
@@ -170,7 +177,7 @@
 
     // ===== BUILD SR TABLE =====
     VR.buildSRTable = function() {
-        var rate = VR.SR_RATE;
+        var rate = VR.detectedSRRate || 0;
         var allData = VR.getSRDataArray();
 
         var html = '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
@@ -190,10 +197,11 @@
         for (var i = 0; i < sorted.length; i++) {
             var row = sorted[i];
             var bgCol = i % 2 === 0 ? '#fff' : '#F8F8F8';
+            var sourceIcon = row.source === 'tour' ? ' 🇩🇰' : (row.source === 'expanded' ? ' 📍' : '');
 
             html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
             html += '<div style="font-size:15px;color:#333">' + row.dateStr + '</div>';
-            html += '<div style="font-size:15px;color:#333">' + row.tur + (row.source === 'flag' ? ' 🇩🇰' : '') + '</div>';
+            html += '<div style="font-size:15px;color:#333">' + row.tur + sourceIcon + '</div>';
             html += '<div style="font-size:15px;font-weight:600;color:#C41E3A;text-align:right">' + rate + ' kr</div>';
             html += '</div>';
         }
@@ -262,8 +270,18 @@
             var day = parseInt(parts[0]);
             var dateKey = dt;
 
-            // Check if this day already has Danish flag (no expansion needed)
-            if (VR.hasDanishFlag(tur)) {
+            // Check if this is a regular Danmark tour (3rd char = 2 or 4)
+            if (VR.isDenmarkTour(tur)) {
+                // Get rate from this tour
+                var tourRate = VR.getSRRateFromTour(tur);
+
+                // First time detecting rate? Save it and set role
+                if (!VR.detectedSRRate && tourRate > 0) {
+                    VR.detectedSRRate = tourRate;
+                    VR.userRole = VR.getRoleFromTour(tur);
+                    console.log('VR SR: Detected rate ' + tourRate + ' kr from tour ' + tur + ' (' + VR.userRole + ')');
+                }
+
                 // Auto-add to SR data
                 if (!VR.srData[dateKey]) {
                     var dateObj = new Date(year, month, day);
@@ -275,7 +293,7 @@
                         month: month,
                         year: year,
                         tur: tur,
-                        source: 'flag'
+                        source: 'tour'
                     };
                 }
             }
@@ -293,10 +311,11 @@
             }
         }
 
-        VR.updateLoader(20, 'Hittade ' + daysToCheck.length + ' dagar att kolla...');
+        VR.updateLoader(20, 'Hittade ' + daysToCheck.length + ' dagar att expandera...');
 
         if (daysToCheck.length === 0) {
-            VR.updateLoader(100, 'Klar!');
+            var count = VR.getSRDataArray().length;
+            VR.updateLoader(100, 'Klar! ' + count + ' Danmark-dagar');
             setTimeout(function() {
                 VR.hideLoader();
                 VR.showSRView();

@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.29';
+    VR.VERSION = 'V.0.30';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -132,17 +132,17 @@
             { icon: '👤', label: 'Anställddata', action: 'doAnstallddata', color: '#5AC8FA' }
         ];
 
-        // Detect role for display
-        var roleIcon = VR.userRole === 'Tågvärd' ? '🎫' : '🚂';
-        var roleText = VR.userRole || 'Okänd roll';
+        // Role display - use detected role from SR_RATE if available
+        var roleIcon = VR.userRole === 'Tågvärd' ? '🎫' : (VR.userRole === 'Lokförare' ? '🚂' : '');
+        var roleText = VR.userRole ? (roleIcon + ' ' + VR.userRole) : '';
 
         var menuHTML = '<div style="padding:30px 24px;border-bottom:1px solid rgba(255,255,255,0.1)">\
             <div style="display:flex;justify-content:space-between;align-items:center">\
                 <div style="font-size:28px;font-weight:700;color:#fff">CrewWeb</div>\
                 <div style="font-size:14px;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:8px">' + VR.VERSION + '</div>\
-            </div>\
-            <div style="font-size:16px;color:rgba(255,255,255,0.5);margin-top:4px">' + roleIcon + ' ' + roleText + '</div>\
-        </div>';
+            </div>' +
+            (roleText ? '<div style="font-size:16px;color:rgba(255,255,255,0.5);margin-top:4px">' + roleText + '</div>' : '') +
+        '</div>';
 
         menuHTML += '<div style="flex:1;padding:18px 0;overflow-y:auto">';
 
@@ -508,7 +508,7 @@
 
     // ===== INIT =====
     VR.init = function() {
-        VR.detectRole(); // Detect user role on init
+        // Role will be detected from tour numbers in SR-Tillägg
         VR.createHeader();
         VR.fetchHeaderInfo();
         console.log('VR: Initialized');

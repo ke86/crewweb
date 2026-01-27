@@ -409,35 +409,34 @@
         return tbl;
     };
 
-    // ===== ROLE DETECTION =====
-    VR.detectRole = function() {
-        var bodyText = document.body.innerText || '';
+    // ===== SR-TILLÄGG RATE FROM TOUR NUMBER =====
+    // 3rd character: 1=LKF Sverige, 2=LKF Danmark (75kr), 3=TGV Sverige, 4=TGV Danmark (50kr)
+    VR.getSRRateFromTour = function(tn) {
+        if (!tn || tn.length < 3) return 0;
+        var c3 = tn.charAt(2);
+        if (c3 === '2') return 75; // Lokförare Danmark
+        if (c3 === '4') return 50; // Tågvärd Danmark
+        return 0; // Sverige eller okänd
+    };
 
-        // Look for "Distrikt: Lokförare" or "Distrikt: Tågvärd" pattern
-        if (bodyText.indexOf('Lokförare') > -1) {
-            VR.userRole = 'Lokförare';
-            VR.SR_RATE = 75;
-        } else if (bodyText.indexOf('Tågvärd') > -1) {
-            VR.userRole = 'Tågvärd';
-            VR.SR_RATE = 50;
-        } else {
-            VR.userRole = null;
-            VR.SR_RATE = 75; // Default to Lokförare rate
-        }
+    VR.getRoleFromTour = function(tn) {
+        if (!tn || tn.length < 3) return null;
+        var c3 = tn.charAt(2);
+        if (c3 === '1' || c3 === '2') return 'Lokförare';
+        if (c3 === '3' || c3 === '4') return 'Tågvärd';
+        return null;
+    };
 
-        console.log('VR: Detected role: ' + VR.userRole + ', SR rate: ' + VR.SR_RATE + ' kr');
-        return VR.userRole;
+    VR.isDenmarkTour = function(tn) {
+        if (!tn || tn.length < 3) return false;
+        var c3 = tn.charAt(2);
+        return c3 === '2' || c3 === '4';
     };
 
     // ===== SR-TILLÄGG HELPERS =====
     VR.hasDanishFlag = function(tn) {
-        // Check if tour number has Danish flag (3rd character is even digit)
-        if (!tn || tn.length < 3) return false;
-        var c3 = tn.charAt(2);
-        if (c3 >= '0' && c3 <= '9') {
-            return parseInt(c3) % 2 === 0;
-        }
-        return false;
+        // Check if tour number has Danish flag (3rd character = 2 or 4)
+        return VR.isDenmarkTour(tn);
     };
 
     VR.isAndradReserv = function(tn) {
