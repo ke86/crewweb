@@ -108,26 +108,26 @@
         var html = '';
 
         // Summary boxes (like OB)
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
 
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:32px;margin-bottom:8px">🇩🇰</div>';
-        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">' + monthNames[prevMonth] + '</div>';
-        html += '<div style="font-size:16px;color:#666;margin-bottom:4px">' + prevMonthData.length + ' dagar</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#333">' + prevTotal + ' kr</div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;margin-bottom:4px">🇩🇰</div>';
+        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">' + monthNames[prevMonth] + '</div>';
+        html += '<div style="font-size:14px;color:#666;margin-bottom:2px">' + prevMonthData.length + ' dagar</div>';
+        html += '<div style="font-size:24px;font-weight:700;color:#333">' + prevTotal + ' kr</div>';
         html += '</div>';
 
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:32px;margin-bottom:8px">🇩🇰</div>';
-        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">' + monthNames[currentMonth] + '</div>';
-        html += '<div style="font-size:16px;color:#666;margin-bottom:4px">' + currentMonthData.length + ' dagar</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#C41E3A">' + currentTotal + ' kr</div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;margin-bottom:4px">🇩🇰</div>';
+        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">' + monthNames[currentMonth] + '</div>';
+        html += '<div style="font-size:14px;color:#666;margin-bottom:2px">' + currentMonthData.length + ' dagar</div>';
+        html += '<div style="font-size:24px;font-weight:700;color:#C41E3A">' + currentTotal + ' kr</div>';
         html += '</div>';
 
         html += '</div>';
 
         // Load buttons
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
 
         html += '<button id="vrLoadSRPrev" style="padding:16px 20px;border-radius:16px;border:none;background:linear-gradient(135deg,#666,#888);color:#fff;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2)">';
         html += '<span>🔄</span> Ladda ' + monthNames[prevMonth];

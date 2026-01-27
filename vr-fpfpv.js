@@ -132,18 +132,18 @@
             }
         }
 
-        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
+        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
 
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:32px;margin-bottom:8px">🏖️</div>';
-        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">FP ' + currentYear + '</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#34C759">' + yearlyFP + ' dagar</div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;margin-bottom:4px">🏖️</div>';
+        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">FP ' + currentYear + '</div>';
+        html += '<div style="font-size:24px;font-weight:700;color:#34C759">' + yearlyFP + ' dagar</div>';
         html += '</div>';
 
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:32px;margin-bottom:8px">🌴</div>';
-        html += '<div style="font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">FPV ' + currentYear + '</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#007AFF">' + yearlyFPV + ' dagar</div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;margin-bottom:4px">🌴</div>';
+        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">FPV ' + currentYear + '</div>';
+        html += '<div style="font-size:24px;font-weight:700;color:#007AFF">' + yearlyFPV + ' dagar</div>';
         html += '</div>';
 
         html += '</div>';

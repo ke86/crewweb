@@ -199,14 +199,14 @@
     // ===== BUILD SCHEMA NAV =====
     VR.buildSchemaNav = function() {
         return '\
-<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:27px;padding:27px 36px;margin-bottom:36px;box-shadow:0 5px 18px rgba(0,0,0,0.08)">\
-<button id="vrPrevMonth" style="width:99px;height:99px;border-radius:50%;border:none;background:linear-gradient(135deg,#007AFF,#5856D6);color:#fff;font-size:45px;font-weight:700;cursor:pointer">←</button>\
-<div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px">\
-<div style="font-size:41px;font-weight:700;color:#000">' + VR.MONTHS[VR.schemaMonth] + ' ' + VR.schemaYear + '</div>\
-<button id="vrExportMonth" style="padding:14px 27px;border-radius:14px;border:none;background:linear-gradient(135deg,#34C759,#30D158);color:#fff;font-size:24px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:9px">\
-<span>📅</span> Exportera månad</button>\
+<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:20px;padding:16px 20px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08)">\
+<button id="vrPrevMonth" style="width:60px;height:60px;border-radius:50%;border:none;background:linear-gradient(135deg,#007AFF,#5856D6);color:#fff;font-size:28px;font-weight:700;cursor:pointer">←</button>\
+<div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px">\
+<div style="font-size:28px;font-weight:700;color:#000">' + VR.MONTHS[VR.schemaMonth] + ' ' + VR.schemaYear + '</div>\
+<button id="vrExportMonth" style="padding:10px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,#34C759,#30D158);color:#fff;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">\
+<span>📅</span> Exportera</button>\
 </div>\
-<button id="vrNextMonth" style="width:99px;height:99px;border-radius:50%;border:none;background:linear-gradient(135deg,#007AFF,#5856D6);color:#fff;font-size:45px;font-weight:700;cursor:pointer">→</button>\
+<button id="vrNextMonth" style="width:60px;height:60px;border-radius:50%;border:none;background:linear-gradient(135deg,#007AFF,#5856D6);color:#fff;font-size:28px;font-weight:700;cursor:pointer">→</button>\
 </div>';
     };
 

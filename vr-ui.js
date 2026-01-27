@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.31';
+    VR.VERSION = 'V.0.32';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -99,11 +99,7 @@
 <style>\
 #vrView{position:fixed;top:' + VR.getHeaderHeight() + ';left:0;right:0;bottom:0;background:#F2F2F7;z-index:999997;overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-overflow-scrolling:touch}\
 </style>\
-<div style="padding:45px 36px 180px">\
-<div style="margin-bottom:36px">\
-<div style="font-size:50px;font-weight:700;color:#000">' + title + '</div>\
-<div style="font-size:32px;color:#666">' + subtitle + '</div>\
-</div>' + content + '</div>';
+<div style="padding:16px 20px 180px">' + content + '</div>';
 
         document.body.appendChild(v);
     };
