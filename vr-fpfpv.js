@@ -132,18 +132,36 @@
             }
         }
 
+        // Quotas
+        var FP_QUOTA = 104;
+        var FPV_QUOTA = 14;
+        var fpRemaining = FP_QUOTA - yearlyFP;
+        var fpvRemaining = FPV_QUOTA - yearlyFPV;
+        var fpPercent = Math.min(100, Math.round((yearlyFP / FP_QUOTA) * 100));
+        var fpvPercent = Math.min(100, Math.round((yearlyFPV / FPV_QUOTA) * 100));
+
         var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
 
-        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:24px;margin-bottom:4px">🏖️</div>';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">FP ' + currentYear + '</div>';
-        html += '<div style="font-size:24px;font-weight:700;color:#34C759">' + yearlyFP + ' dagar</div>';
+        // FP Box
+        html += '<div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">FP ' + currentYear + '</div>';
+        html += '<div style="font-size:28px;font-weight:700;color:#34C759">' + yearlyFP + '<span style="font-size:18px;color:#8E8E93;font-weight:500">/' + FP_QUOTA + '</span></div>';
+        // Progress bar
+        html += '<div style="background:#E5E5EA;border-radius:6px;height:8px;margin:10px 0;overflow:hidden">';
+        html += '<div style="background:linear-gradient(90deg,#34C759,#30D158);height:100%;width:' + fpPercent + '%;border-radius:6px;transition:width 0.3s"></div>';
+        html += '</div>';
+        html += '<div style="font-size:13px;color:#8E8E93">' + fpRemaining + ' kvar</div>';
         html += '</div>';
 
-        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:24px;margin-bottom:4px">🌴</div>';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">FPV ' + currentYear + '</div>';
-        html += '<div style="font-size:24px;font-weight:700;color:#007AFF">' + yearlyFPV + ' dagar</div>';
+        // FPV Box
+        html += '<div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">FPV ' + currentYear + '</div>';
+        html += '<div style="font-size:28px;font-weight:700;color:#007AFF">' + yearlyFPV + '<span style="font-size:18px;color:#8E8E93;font-weight:500">/' + FPV_QUOTA + '</span></div>';
+        // Progress bar
+        html += '<div style="background:#E5E5EA;border-radius:6px;height:8px;margin:10px 0;overflow:hidden">';
+        html += '<div style="background:linear-gradient(90deg,#007AFF,#5856D6);height:100%;width:' + fpvPercent + '%;border-radius:6px;transition:width 0.3s"></div>';
+        html += '</div>';
+        html += '<div style="font-size:13px;color:#8E8E93">' + fpvRemaining + ' kvar</div>';
         html += '</div>';
 
         html += '</div>';
