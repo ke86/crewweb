@@ -80,6 +80,9 @@
         var prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
         var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
+        // Clear expansion list
+        VR.srNeedsExpansion = [];
+
         // Load previous month first, then current month
         VR.updateLoader(35, 'Laddar ' + VR.MONTHS[prevMonth] + '...');
         VR.loadSRMonthAuto(prevYear, prevMonth, function() {
@@ -88,13 +91,26 @@
             setTimeout(function() {
                 VR.updateLoader(65, 'Laddar ' + VR.MONTHS[currentMonth] + '...');
                 VR.loadSRMonthAuto(currentYear, currentMonth, function() {
-                    // Both done, show view
-                    var count = VR.getSRDataArray().length;
-                    VR.updateLoader(100, 'Klar! ' + count + ' Danmark-dagar');
-                    setTimeout(function() {
-                        VR.hideLoader();
-                        VR.showSRView();
-                    }, 400);
+                    // Both months parsed, now expand TP days to check for DK.KK
+                    var toExpandCount = VR.srNeedsExpansion ? VR.srNeedsExpansion.length : 0;
+                    if (toExpandCount > 0) {
+                        VR.updateLoader(75, 'Expanderar ' + toExpandCount + ' dagar...');
+                        VR.expandTPDays(function() {
+                            var count = VR.getSRDataArray().length;
+                            VR.updateLoader(100, 'Klar! ' + count + ' Danmark-dagar');
+                            setTimeout(function() {
+                                VR.hideLoader();
+                                VR.showSRView();
+                            }, 400);
+                        });
+                    } else {
+                        var count = VR.getSRDataArray().length;
+                        VR.updateLoader(100, 'Klar! ' + count + ' Danmark-dagar');
+                        setTimeout(function() {
+                            VR.hideLoader();
+                            VR.showSRView();
+                        }, 400);
+                    }
                 });
             }, 800); // Longer delay between months for mobile
         });
@@ -253,7 +269,136 @@
                     source: 'auto'
                 };
             }
+
+            // If NNNNNN-NNNNNN pattern and no Denmark found yet, mark for expansion
+            if (!hasDenmark && tourNumber && tpPattern.test(tourNumber)) {
+                if (!VR.srNeedsExpansion) VR.srNeedsExpansion = [];
+                VR.srNeedsExpansion.push({
+                    dateKey: dateKey,
+                    tourNumber: tourNumber,
+                    month: month,
+                    year: year
+                });
+            }
         }
+    };
+
+    // ===== EXPAND AND CHECK FOR DK.KK =====
+    VR.expandTPDays = function(callback) {
+        if (!VR.srNeedsExpansion || VR.srNeedsExpansion.length === 0) {
+            callback();
+            return;
+        }
+
+        var toExpand = VR.srNeedsExpansion.slice(); // Copy array
+        VR.srNeedsExpansion = [];
+        var index = 0;
+
+        function expandNext() {
+            if (index >= toExpand.length) {
+                callback();
+                return;
+            }
+
+            var item = toExpand[index];
+            VR.updateLoader(75 + Math.floor((index / toExpand.length) * 20),
+                'Kollar ' + item.dateKey + '...');
+
+            VR.expandAndCheckDate(item, function() {
+                index++;
+                setTimeout(expandNext, 300);
+            });
+        }
+
+        expandNext();
+    };
+
+    // ===== EXPAND SINGLE DATE AND CHECK =====
+    VR.expandAndCheckDate = function(item, callback) {
+        var tbl = document.querySelector('#workdays table');
+        if (!tbl) {
+            callback();
+            return;
+        }
+
+        var rows = tbl.querySelectorAll('tr');
+        var expandBtn = null;
+
+        // Find the row with this date and click expand
+        for (var i = 1; i < rows.length; i++) {
+            var c = rows[i].querySelectorAll('td');
+            if (c.length < 3) continue;
+            var dt = c[2] ? c[2].textContent.trim() : '';
+            if (dt === item.dateKey) {
+                expandBtn = rows[i].querySelector('button.ExpandRoot');
+                break;
+            }
+        }
+
+        if (!expandBtn) {
+            callback();
+            return;
+        }
+
+        // Click expand
+        expandBtn.click();
+
+        // Wait for expansion and check for DK.KK
+        setTimeout(function() {
+            VR.checkExpandedForDKKK(item, callback);
+        }, 800);
+    };
+
+    // ===== CHECK EXPANDED CONTENT FOR DK.KK =====
+    VR.checkExpandedForDKKK = function(item, callback) {
+        var tbl = document.querySelector('#workdays table');
+        if (!tbl) {
+            callback();
+            return;
+        }
+
+        var rows = tbl.querySelectorAll('tr');
+        var inTargetDate = false;
+        var foundDKKK = false;
+
+        for (var i = 1; i < rows.length; i++) {
+            var c = rows[i].querySelectorAll('td');
+            if (c.length < 3) continue;
+
+            var dt = c[2] ? c[2].textContent.trim() : '';
+            if (dt && dt.indexOf('-') > -1) {
+                inTargetDate = (dt === item.dateKey);
+            }
+
+            if (inTargetDate && c.length >= 6) {
+                var sP = (c[4] ? c[4].textContent.trim() : '').toUpperCase();
+                var eP = (c[5] ? c[5].textContent.trim() : '').toUpperCase();
+
+                if (sP.indexOf('DK.K') > -1 || eP.indexOf('DK.K') > -1) {
+                    foundDKKK = true;
+                    break;
+                }
+            }
+        }
+
+        if (foundDKKK && !VR.srData[item.dateKey]) {
+            var parts = item.dateKey.split('-');
+            var day = parseInt(parts[0]);
+            var dateObj = new Date(item.year, item.month, day);
+            var wd = VR.WEEKDAYS_SHORT[dateObj.getDay()];
+
+            VR.srData[item.dateKey] = {
+                date: item.dateKey,
+                dateStr: day + ' ' + VR.MONTHS_SHORT[item.month] + ' ' + wd,
+                day: day,
+                month: item.month,
+                year: item.year,
+                tur: item.tourNumber,
+                source: 'expanded'
+            };
+        }
+
+        callback();
     };
 
     // ===== GET SR DATA AS ARRAY =====
