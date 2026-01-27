@@ -339,7 +339,14 @@
             el.innerHTML = 'Ledig' + fB;
             el.style.color = '#F59E0B';
         } else if (tn) {
-            var ic = VR.getHeaderIcons(tn);
+            // Check if day data contains DK.KK for Danish flag on Ändrad Reserv
+            var hasDKKK = false;
+            var dateKey = elId === 'vrTodayTur' ? VR.todayDateStr : VR.tomorrowDateStr;
+            if (VR.dayData && VR.dayData[dateKey]) {
+                var evStr = JSON.stringify(VR.dayData[dateKey]).toUpperCase();
+                hasDKKK = evStr.indexOf('DK.KK') > -1 || evStr.indexOf('DK.K') > -1;
+            }
+            var ic = VR.getHeaderIcons(tn, hasDKKK);
             el.innerHTML = tn + ic;
             el.style.color = '#fff';
         } else if (period) {

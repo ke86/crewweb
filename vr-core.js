@@ -254,7 +254,7 @@
         return c === 'FRIDAG' || p === 'FRI' || p === 'FP' || isFPV;
     };
 
-    VR.getTurIcons = function(tn) {
+    VR.getTurIcons = function(tn, hasDKKK) {
         if (!tn) return '';
         var tnU = tn.toUpperCase();
         var icons = '';
@@ -263,9 +263,13 @@
         var isAndradReserv = /^\d{6}-\d{6}/.test(tn);
 
         if (isAndradReserv) {
-            // Ändrad Reserv: R badge + Ändrad badge, NO flags
+            // Ändrad Reserv: R badge + Ändrad badge
             icons += '<span style="display:inline-block;background:#DC2626;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">R</span>';
             icons += '<span style="display:inline-block;background:#EAB308;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">Ändrad</span>';
+            // If DK.KK present in day view, show Danish flag
+            if (hasDKKK) {
+                icons += '<span style="margin-left:9px;font-size:27px">🇩🇰</span>';
+            }
             return icons;
         }
 
@@ -327,7 +331,7 @@
         return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:14px">FP</span>';
     };
 
-    VR.getHeaderIcons = function(tn) {
+    VR.getHeaderIcons = function(tn, hasDKKK) {
         if (!tn) return '';
         var tnU = tn.toUpperCase();
         var icons = '';
@@ -336,9 +340,13 @@
         var isAndradReserv = /^\d{6}-\d{6}/.test(tn);
 
         if (isAndradReserv) {
-            // Ändrad Reserv: R badge + Ändrad badge, NO flags
+            // Ändrad Reserv: R badge + Ändrad badge
             icons += '<span style="background:#DC2626;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">R</span>';
             icons += '<span style="background:#EAB308;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">Ändrad</span>';
+            // If DK.KK present, show Danish flag
+            if (hasDKKK) {
+                icons += '🇩🇰';
+            }
             return icons;
         }
 

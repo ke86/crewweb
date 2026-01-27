@@ -262,12 +262,22 @@
             html += '<div style="font-size:20px;font-weight:600;color:' + dateCol + '">' + wd + '</div>';
             html += '</div>';
 
+            // Check if day contains DK.KK (for Danish flag on Ändrad Reserv)
+            var hasDKKK = false;
+            for (var dk = 0; dk < es.length; dk++) {
+                var evStr = JSON.stringify(es[dk]).toUpperCase();
+                if (evStr.indexOf('DK.KK') > -1 || evStr.indexOf('DK.K') > -1) {
+                    hasDKKK = true;
+                    break;
+                }
+            }
+
             // Content
             if (isF) {
                 var fBadge = VR.getFridagBadge(mn.ps, mn.cd);
                 html += '<div style="font-size:32px;color:' + textCol + ';display:flex;align-items:center">Ledig' + fBadge + '</div>';
             } else {
-                var turIcons = VR.getTurIcons(mn.tn || mn.ps);
+                var turIcons = VR.getTurIcons(mn.tn || mn.ps, hasDKKK);
                 html += '<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center">';
                 html += '<span style="font-size:32px;font-weight:600;color:' + textCol + '">' + (mn.pr || '—') + '</span>';
                 html += '<span style="font-size:27px;color:' + subCol + '">' + (mn.tn || mn.ps || '') + '</span>';
