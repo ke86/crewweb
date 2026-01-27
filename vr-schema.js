@@ -69,9 +69,12 @@
         VR.schemaYear = now.getFullYear();
         VR.schemaMonth = now.getMonth();
 
-        var d1 = '01-' + ('0' + (VR.schemaMonth + 1)).slice(-2) + '-' + VR.schemaYear;
-        var lastDay = new Date(VR.schemaYear, VR.schemaMonth + 1, 0).getDate();
-        var d2 = lastDay + '-' + ('0' + (VR.schemaMonth + 1)).slice(-2) + '-' + VR.schemaYear;
+        // Load wide range: 1 month before to 12 months ahead
+        var startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        var endDate = new Date(now.getFullYear() + 1, now.getMonth(), 0);
+
+        var d1 = '01-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
+        var d2 = endDate.getDate() + '-' + ('0' + (endDate.getMonth() + 1)).slice(-2) + '-' + endDate.getFullYear();
 
         VR.setDates(d1, d2);
         VR.updateLoader(55, 'Sätter datum...');
@@ -104,12 +107,26 @@
             VR.schemaYear++;
         }
 
+        // If we have cached data, just re-render with new month filter
+        if (VR.allSchemaData && Object.keys(VR.allSchemaData).length > 0) {
+            VR.showLoader('Byter månad...');
+            VR.updateLoader(80, 'Filtrerar data...');
+            setTimeout(function() {
+                VR.renderSchemaFromCache();
+            }, 200);
+            return;
+        }
+
+        // Otherwise fetch new data
         VR.showLoader('Byter månad...');
         VR.updateLoader(30, 'Sätter datum...');
 
-        var d1 = '01-' + ('0' + (VR.schemaMonth + 1)).slice(-2) + '-' + VR.schemaYear;
-        var lastDay = new Date(VR.schemaYear, VR.schemaMonth + 1, 0).getDate();
-        var d2 = lastDay + '-' + ('0' + (VR.schemaMonth + 1)).slice(-2) + '-' + VR.schemaYear;
+        // Load wide range for the new month
+        var startDate = new Date(VR.schemaYear, VR.schemaMonth - 1, 1);
+        var endDate = new Date(VR.schemaYear + 1, VR.schemaMonth, 0);
+
+        var d1 = '01-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
+        var d2 = endDate.getDate() + '-' + ('0' + (endDate.getMonth() + 1)).slice(-2) + '-' + endDate.getFullYear();
 
         VR.setDates(d1, d2);
         VR.updateLoader(50, 'Hämtar data...');
@@ -139,32 +156,17 @@
         }
 
         var rows = tbl.querySelectorAll('tr');
-        var today = VR.getTodayStr();
         var dd = {};
         var currentDate = '';
 
-        // Parse all rows - only include dates in selected month
-        var targetMonth = VR.schemaMonth + 1; // 1-indexed
-        var targetYear = VR.schemaYear;
-
+        // Parse ALL rows - no filtering here
         for (var i = 1; i < rows.length; i++) {
             var c = rows[i].querySelectorAll('td');
             if (c.length < 4) continue;
 
             var dt = c[2] ? c[2].textContent.trim() : '';
             if (dt && dt.indexOf('-') > -1) {
-                // Parse date and check if it's in target month
-                var parts = dt.split('-');
-                if (parts.length === 3) {
-                    var dtMonth = parseInt(parts[1], 10);
-                    var dtYear = parseInt(parts[2], 10);
-                    // Only use this date if it matches selected month/year
-                    if (dtMonth === targetMonth && dtYear === targetYear) {
-                        currentDate = dt;
-                    } else {
-                        currentDate = ''; // Reset - not in our month
-                    }
-                }
+                currentDate = dt;
             }
             if (!currentDate) continue;
 
@@ -187,6 +189,34 @@
 
             if (!dd[currentDate]) dd[currentDate] = [];
             dd[currentDate].push(en);
+        }
+
+        // Store ALL data for caching
+        VR.allSchemaData = dd;
+
+        // Render from cache (filters by selected month)
+        VR.renderSchemaFromCache();
+    };
+
+    // ===== RENDER FROM CACHE =====
+    VR.renderSchemaFromCache = function() {
+        var today = VR.getTodayStr();
+        var targetMonth = VR.schemaMonth + 1; // 1-indexed (1-12)
+        var targetYear = VR.schemaYear;
+
+        // Filter data for selected month only
+        var dd = {};
+        var allKeys = Object.keys(VR.allSchemaData);
+        for (var k = 0; k < allKeys.length; k++) {
+            var dKey = allKeys[k];
+            var parts = dKey.split('-');
+            if (parts.length === 3) {
+                var dtMonth = parseInt(parts[1], 10);
+                var dtYear = parseInt(parts[2], 10);
+                if (dtMonth === targetMonth && dtYear === targetYear) {
+                    dd[dKey] = VR.allSchemaData[dKey];
+                }
+            }
         }
 
         VR.dayData = dd;
