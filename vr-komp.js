@@ -248,11 +248,12 @@
 
         var maxShow = Math.min(data.length, 50);
 
-        for (var j = 0; j < maxShow; j++) {
+        // Loop backwards to show newest first
+        for (var j = data.length - 1; j >= Math.max(0, data.length - maxShow); j--) {
             var neg = data[j].b.indexOf('-') > -1;
             var bidrag = data[j].b.replace('-', '');
             var dt = VR.formatDate(data[j].d);
-            var isFirst = j === 0;
+            var isFirst = (j === data.length - 1); // Newest is now "first"
 
             var rowStyle = isFirst
                 ? 'background:linear-gradient(135deg,rgba(52,199,89,0.08),rgba(48,209,88,0.08));'

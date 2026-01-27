@@ -390,9 +390,11 @@
         html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Kr</div>';
         html += '</div>';
 
-        for (var d = 0; d < obData.length; d++) {
+        // Loop backwards to show newest first
+        for (var d = obData.length - 1; d >= 0; d--) {
             var row = obData[d];
-            var bgCol = d % 2 === 0 ? '#fff' : '#F8F8F8';
+            var rowIndex = obData.length - 1 - d;
+            var bgCol = rowIndex % 2 === 0 ? '#fff' : '#F8F8F8';
 
             html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
             html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
@@ -620,9 +622,11 @@
         html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tid</div>';
         html += '</div>';
 
-        for (var d = 0; d < franvaroData.length; d++) {
+        // Loop backwards to show newest first
+        for (var d = franvaroData.length - 1; d >= 0; d--) {
             var row = franvaroData[d];
-            var bgCol = d % 2 === 0 ? '#fff' : '#F8F8F8';
+            var rowIndex = franvaroData.length - 1 - d;
+            var bgCol = rowIndex % 2 === 0 ? '#fff' : '#F8F8F8';
 
             html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
             html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
@@ -796,9 +800,11 @@
         html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tid</div>';
         html += '</div>';
 
-        for (var d = 0; d < fpData.length; d++) {
+        // Loop backwards to show newest first
+        for (var d = fpData.length - 1; d >= 0; d--) {
             var row = fpData[d];
-            var bgCol = d % 2 === 0 ? '#fff' : '#F8F8F8';
+            var rowIndex = fpData.length - 1 - d;
+            var bgCol = rowIndex % 2 === 0 ? '#fff' : '#F8F8F8';
             var typeColor = row.typeName === 'FP' ? '#34C759' : '#007AFF';
 
             html += '<div style="display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';

@@ -4,6 +4,67 @@
 
     var VR = window.VR;
 
+    // ===== SWEDISH HOLIDAYS =====
+    VR.getSwedishHoliday = function(day, month, year) {
+        // Fixed holidays (month is 1-12)
+        var fixed = {
+            '1-1': 'Nyårsdagen',
+            '6-1': 'Trettondag',
+            '1-5': 'Första maj',
+            '6-6': 'Nationaldagen',
+            '24-12': 'Julafton',
+            '25-12': 'Juldagen',
+            '26-12': 'Annandag jul',
+            '31-12': 'Nyårsafton'
+        };
+
+        var key = day + '-' + month;
+        if (fixed[key]) return fixed[key];
+
+        // Calculate Easter (Meeus/Jones/Butcher algorithm)
+        var a = year % 19;
+        var b = Math.floor(year / 100);
+        var c = year % 100;
+        var d = Math.floor(b / 4);
+        var e = b % 4;
+        var f = Math.floor((b + 8) / 25);
+        var g = Math.floor((b - f + 1) / 3);
+        var h = (19 * a + b - d - g + 15) % 30;
+        var i = Math.floor(c / 4);
+        var k = c % 4;
+        var l = (32 + 2 * e + 2 * i - h - k) % 7;
+        var m = Math.floor((a + 11 * h + 22 * l) / 451);
+        var easterMonth = Math.floor((h + l - 7 * m + 114) / 31);
+        var easterDay = ((h + l - 7 * m + 114) % 31) + 1;
+
+        var easterDate = new Date(year, easterMonth - 1, easterDay);
+        var checkDate = new Date(year, month - 1, day);
+
+        // Easter-based holidays
+        var diffDays = Math.round((checkDate - easterDate) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === -2) return 'Långfredagen';
+        if (diffDays === 0) return 'Påskdagen';
+        if (diffDays === 1) return 'Annandag påsk';
+        if (diffDays === 39) return 'Kristi himmelsfärd';
+        if (diffDays === 49) return 'Pingstdagen';
+
+        // Midsommar (Saturday between June 20-26)
+        if (month === 6 && day >= 20 && day <= 26) {
+            var testDate = new Date(year, 5, day);
+            if (testDate.getDay() === 6) return 'Midsommardagen';
+            if (testDate.getDay() === 5) return 'Midsommarafton';
+        }
+
+        // Alla helgons dag (Saturday between Oct 31 - Nov 6)
+        if ((month === 10 && day === 31) || (month === 11 && day >= 1 && day <= 6)) {
+            var testDate2 = new Date(year, month - 1, day);
+            if (testDate2.getDay() === 6) return 'Alla helgons dag';
+        }
+
+        return null;
+    };
+
     // ===== OPEN DAY FROM HEADER =====
     VR.openDayFromHeader = function(dateStr) {
         VR.closeOverlay();
@@ -212,7 +273,13 @@
         var dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
         var wd = VR.WEEKDAYS[dateObj.getDay()];
         var dayNum = parseInt(parts[0]);
-        var monName = VR.MONTHS[parseInt(parts[1]) - 1];
+        var monthNum = parseInt(parts[1]);
+        var yearNum = parseInt(parts[2]);
+        var monName = VR.MONTHS[monthNum - 1];
+
+        // Check for Swedish holiday
+        var holiday = VR.getSwedishHoliday(dayNum, monthNum, yearNum);
+        var displayLabel = holiday ? holiday : wd;
 
         // Find header entry
         var hdr = null;
@@ -231,12 +298,11 @@
         var topPos = VR.getHeaderHeight();
         var html = '<style>#vrDetail{position:fixed;top:' + topPos + ';left:0;right:0;bottom:0;background:#F2F2F7;z-index:9999996;overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-overflow-scrolling:touch}</style>';
 
-        // Header
-        html += '<div style="padding:45px 36px 180px">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:36px">';
-        html += '<div><div style="font-size:63px;font-weight:700;color:#000">' + dayNum + ' ' + monName + '</div>';
-        html += '<div style="font-size:36px;color:#666">' + wd + '</div></div>';
-        html += '<button onclick="VR.closeDayDetail()" style="width:99px;height:99px;border-radius:50%;border:none;background:#E5E5EA;color:#000;font-size:45px;cursor:pointer">✕</button>';
+        // Header - 50% smaller, weekday/holiday + date on same line
+        html += '<div style="padding:25px 36px 180px">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">';
+        html += '<div style="font-size:32px;font-weight:700;color:#000">' + displayLabel + ', ' + dayNum + ' ' + monName + '</div>';
+        html += '<button onclick="VR.closeDayDetail()" style="width:50px;height:50px;border-radius:50%;border:none;background:#E5E5EA;color:#000;font-size:24px;cursor:pointer">✕</button>';
         html += '</div>';
 
         // Summary card
@@ -259,49 +325,73 @@
 
     // ===== BUILD DAY SUMMARY CARD =====
     VR.buildDaySummaryCard = function(hdr, es) {
-        // Find unpaid break
+        // Find unpaid break (RASTO) and paid break (RAST)
         var obetaldRast = '';
+        var betaldRast = '';
+
         for (var rI = 0; rI < es.length; rI++) {
-            if (!es[rI].isHeader && es[rI].ai && es[rI].ai.toUpperCase() === 'RASTO') {
+            if (!es[rI].isHeader && es[rI].ai) {
+                var aiUp = es[rI].ai.toUpperCase();
                 var rPr = es[rI].pr || '';
                 var t = VR.parseTimeRange(rPr);
-                if (t) {
+
+                if (aiUp === 'RASTO' && t && !obetaldRast) {
                     var rMin = t.endMins - t.startMins;
+                    if (rMin < 0) rMin += 1440;
                     var rH = Math.floor(rMin / 60);
                     var rMi = rMin % 60;
                     obetaldRast = (rH > 0 ? rH + ':' : '0:') + ('0' + rMi).slice(-2);
                 }
-                break;
+
+                if (aiUp === 'RAST' && t && !betaldRast) {
+                    var bMin = t.endMins - t.startMins;
+                    if (bMin < 0) bMin += 1440;
+                    var bH = Math.floor(bMin / 60);
+                    var bMi = bMin % 60;
+                    betaldRast = (bH > 0 ? bH + ':' : '0:') + ('0' + bMi).slice(-2);
+                }
             }
         }
 
-        var html = '<div style="background:#fff;border-radius:27px;padding:36px;margin-bottom:36px;box-shadow:0 2px 20px rgba(0,0,0,0.08)">';
+        // 50% smaller padding and font sizes
+        var html = '<div style="background:#fff;border-radius:16px;padding:18px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.08)">';
 
-        // Pass
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:24px;border-bottom:1px solid #E5E5EA">';
-        html += '<div style="font-size:27px;color:#8E8E93">Pass</div>';
-        html += '<div style="font-size:39px;font-weight:600;color:#000">' + hdr.ps + '</div>';
+        // Pass - 50% smaller
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #E5E5EA">';
+        html += '<div style="font-size:14px;color:#8E8E93">Pass</div>';
+        html += '<div style="font-size:20px;font-weight:600;color:#000">' + hdr.ps + '</div>';
         html += '</div>';
 
-        // Period
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:24px 0;border-bottom:1px solid #E5E5EA">';
-        html += '<div style="font-size:27px;color:#8E8E93">Period</div>';
-        html += '<div style="font-size:39px;font-weight:600;color:#000">' + hdr.pr + '</div>';
+        // Tid (formerly Period) - 50% smaller
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #E5E5EA">';
+        html += '<div style="font-size:14px;color:#8E8E93">Tid</div>';
+        html += '<div style="font-size:20px;font-weight:600;color:#000">' + hdr.pr + '</div>';
         html += '</div>';
 
-        // Paid time
+        // Paid time - 50% smaller
         if (hdr.pt) {
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:24px 0;border-bottom:' + (obetaldRast ? '1px solid #E5E5EA' : 'none') + '">';
-            html += '<div style="font-size:27px;color:#8E8E93">Betald tid</div>';
-            html += '<div style="font-size:39px;font-weight:600;color:#34C759">' + hdr.pt + '</div>';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #E5E5EA">';
+            html += '<div style="font-size:14px;color:#8E8E93">Betald tid</div>';
+            html += '<div style="font-size:20px;font-weight:600;color:#34C759">' + hdr.pt + '</div>';
             html += '</div>';
         }
 
-        // Unpaid break
-        if (obetaldRast) {
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:24px">';
-            html += '<div style="font-size:27px;color:#8E8E93">Obetald rast</div>';
-            html += '<div style="font-size:39px;font-weight:600;color:#FF9500">' + obetaldRast + '</div>';
+        // Breaks row - side by side (Betald rast left, Obetald rast right)
+        if (betaldRast || obetaldRast) {
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:12px">';
+
+            // Betald rast (left)
+            html += '<div style="text-align:center;padding:8px;background:#F8F8F8;border-radius:10px">';
+            html += '<div style="font-size:12px;color:#8E8E93;margin-bottom:4px">Betald rast</div>';
+            html += '<div style="font-size:18px;font-weight:600;color:#34C759">' + (betaldRast || '—') + '</div>';
+            html += '</div>';
+
+            // Obetald rast (right)
+            html += '<div style="text-align:center;padding:8px;background:#F8F8F8;border-radius:10px">';
+            html += '<div style="font-size:12px;color:#8E8E93;margin-bottom:4px">Obetald rast</div>';
+            html += '<div style="font-size:18px;font-weight:600;color:#FF9500">' + (obetaldRast || '—') + '</div>';
+            html += '</div>';
+
             html += '</div>';
         }
 
