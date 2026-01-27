@@ -33,6 +33,7 @@
         'vr-ob.js',
         'vr-franvaro.js',
         'vr-fpfpv.js',
+        'vr-srtillagg.js',
         'vr-anstalld.js',
         'vr-schema.js',
         'vr-komp.js',
