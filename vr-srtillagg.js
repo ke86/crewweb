@@ -103,18 +103,42 @@
         var lastDay = new Date(year, month + 1, 0).getDate();
         var d2 = lastDay + '-' + ('0' + (month + 1)).slice(-2) + '-' + year;
 
+        // Store expected month string for detection
+        var expectedMonth = ('0' + (month + 1)).slice(-2);
+        var prevRowCount = document.querySelectorAll('#workdays table tr').length;
+
         VR.setDates(d1, d2);
         VR.clickFetch();
 
         VR.srLoadingYear = year;
         VR.srLoadingMonth = month;
 
-        // Poll for data
+        // Poll for data - wait for NEW data to arrive
         var n = 0;
         VR.timer = setInterval(function() {
             n++;
             var rows = document.querySelectorAll('#workdays table tr');
-            if (rows.length > 5 || n > 25) {
+            var rowCount = rows.length;
+
+            // Check if we have new data for our target month
+            var hasNewData = false;
+            if (rowCount !== prevRowCount && rowCount > 5) {
+                hasNewData = true;
+            } else if (rowCount > 5) {
+                // Check if any row contains target month's date
+                for (var r = 1; r < Math.min(rows.length, 10); r++) {
+                    var cells = rows[r].querySelectorAll('td');
+                    if (cells.length > 2) {
+                        var dt = cells[2] ? cells[2].textContent.trim() : '';
+                        if (dt && dt.indexOf('-' + expectedMonth + '-' + year) > -1) {
+                            hasNewData = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (hasNewData || n > 35) {
                 VR.stopTimer();
                 VR.parseSRDataSilent();
                 setTimeout(callback, 300);
