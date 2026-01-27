@@ -257,18 +257,39 @@
     VR.getTurIcons = function(tn) {
         if (!tn) return '';
         var tnU = tn.toUpperCase();
+        var icons = '';
 
-        // Reserv types
-        if (tnU.indexOf('RESERV') === 0) {
-            return '<span style="display:inline-block;background:#9333EA;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">xR</span>';
+        // Check for "Ändrad Reserv" format: NNNNNN-NNNNNN (6 digits - 6 digits, may have more after)
+        var isAndradReserv = /^\d{6}-\d{6}/.test(tn);
+
+        if (isAndradReserv) {
+            // Ändrad Reserv: R badge + Ändrad badge, NO flags
+            icons += '<span style="display:inline-block;background:#DC2626;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">R</span>';
+            icons += '<span style="display:inline-block;background:#EAB308;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">Ändrad</span>';
+            return icons;
         }
 
+        // Reserv types (text starting with RESERV)
+        if (tnU.indexOf('RESERV') === 0) {
+            icons += '<span style="display:inline-block;background:#9333EA;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">xR</span>';
+            // Check if also contains TP → add Ändrad badge
+            if (tnU.indexOf('TP') > -1) {
+                icons += '<span style="display:inline-block;background:#EAB308;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">Ändrad</span>';
+            }
+            return icons;
+        }
+
+        // Position 4 (index 3) = 8 or 9 → R badge
         var c4 = tn.length >= 4 ? tn.charAt(3) : '';
         if (c4 === '8' || c4 === '9') {
-            return '<span style="display:inline-block;background:#DC2626;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">R</span>';
+            icons += '<span style="display:inline-block;background:#DC2626;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">R</span>';
+            // Check if also contains TP → add Ändrad badge
+            if (tnU.indexOf('TP') > -1) {
+                icons += '<span style="display:inline-block;background:#EAB308;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">Ändrad</span>';
+            }
+            return icons;
         }
 
-        var icons = '';
         var c3 = tn.length >= 3 ? tn.charAt(2) : '';
         var c6 = tn.length >= 6 ? tn.charAt(5) : '';
 
@@ -280,11 +301,18 @@
                 : '<span style="margin-left:9px;font-size:27px">🇩🇰</span>';
         }
 
-        // Shift indicator (A/B)
+        // Shift indicator (A/B) - torn paper effect
         if (c6.toUpperCase() === 'A') {
-            icons += '<span style="display:inline-block;background:#2563EB;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">1</span>';
+            // 1 = white box with torn bottom
+            icons += '<span style="display:inline-block;background:#fff;color:#222;font-size:23px;font-weight:700;padding:8px 14px 12px 14px;margin-left:9px;clip-path:polygon(0 0,100% 0,100% 75%,85% 100%,70% 75%,50% 100%,30% 75%,15% 100%,0 75%);box-shadow:0 2px 4px rgba(0,0,0,0.2)">1</span>';
         } else if (c6.toUpperCase() === 'B') {
-            icons += '<span style="display:inline-block;background:#059669;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">2</span>';
+            // 2 = white box with torn top
+            icons += '<span style="display:inline-block;background:#fff;color:#222;font-size:23px;font-weight:700;padding:12px 14px 8px 14px;margin-left:9px;clip-path:polygon(0 25%,15% 0,30% 25%,50% 0,70% 25%,85% 0,100% 25%,100% 100%,0 100%);box-shadow:0 2px 4px rgba(0,0,0,0.2)">2</span>';
+        }
+
+        // Check if contains TP → add Ändrad badge (yellow)
+        if (tnU.indexOf('TP') > -1) {
+            icons += '<span style="display:inline-block;background:#EAB308;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:9px">Ändrad</span>';
         }
 
         return icons;
@@ -294,27 +322,58 @@
         var p = (ps || '').toUpperCase();
         if (p === 'FV' || p === 'FP2' || p === 'FP-V' ||
             p.indexOf('FP-V') > -1 || p.indexOf('FP2') > -1) {
-            return '<span style="display:inline-block;background:#F59E0B;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:14px">FP-V</span>';
+            return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:14px">FP-V</span>';
         }
-        return '<span style="display:inline-block;background:#F59E0B;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:14px">FP</span>';
+        return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:23px;font-weight:700;padding:5px 12px;border-radius:9px;margin-left:14px">FP</span>';
     };
 
     VR.getHeaderIcons = function(tn) {
         if (!tn) return '';
         var tnU = tn.toUpperCase();
-        if (tnU.indexOf('RESERV') === 0) {
-            return '<span style="background:#9333EA;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">xR</span>';
+        var icons = '';
+
+        // Check for "Ändrad Reserv" format: NNNNNN-NNNNNN (6 digits - 6 digits, may have more after)
+        var isAndradReserv = /^\d{6}-\d{6}/.test(tn);
+
+        if (isAndradReserv) {
+            // Ändrad Reserv: R badge + Ändrad badge, NO flags
+            icons += '<span style="background:#DC2626;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">R</span>';
+            icons += '<span style="background:#EAB308;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">Ändrad</span>';
+            return icons;
         }
+
+        // Reserv types (text starting with RESERV)
+        if (tnU.indexOf('RESERV') === 0) {
+            icons += '<span style="background:#9333EA;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">xR</span>';
+            if (tnU.indexOf('TP') > -1) {
+                icons += '<span style="background:#EAB308;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">Ändrad</span>';
+            }
+            return icons;
+        }
+
+        // Position 4 (index 3) = 8 or 9 → R badge
         var c4 = tn.length >= 4 ? tn.charAt(3) : '';
         if (c4 === '8' || c4 === '9') {
-            return '<span style="background:#DC2626;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">R</span>';
+            icons += '<span style="background:#DC2626;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">R</span>';
+            if (tnU.indexOf('TP') > -1) {
+                icons += '<span style="background:#EAB308;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">Ändrad</span>';
+            }
+            return icons;
         }
-        var icons = '';
+
         var c3 = tn.length >= 3 ? tn.charAt(2) : '';
+
+        // Country flag based on 3rd character
         if (c3 >= '0' && c3 <= '9') {
             var d3 = parseInt(c3);
             icons += d3 % 2 === 1 ? '🇸🇪' : '🇩🇰';
         }
+
+        // Check if contains TP → add Ändrad badge (yellow)
+        if (tnU.indexOf('TP') > -1) {
+            icons += '<span style="background:#EAB308;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">Ändrad</span>';
+        }
+
         return icons;
     };
 
@@ -322,9 +381,9 @@
         var p = (ps || '').toUpperCase();
         if (p === 'FV' || p === 'FP2' || p === 'FP-V' ||
             p.indexOf('FP-V') > -1 || p.indexOf('FP2') > -1) {
-            return '<span style="background:#F59E0B;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">FP-V</span>';
+            return '<span style="background:#16A34A;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">FP-V</span>';
         }
-        return '<span style="background:#F59E0B;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">FP</span>';
+        return '<span style="background:#16A34A;color:#fff;font-size:18px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:5px">FP</span>';
     };
 
     // ===== TABLE HELPERS =====
