@@ -183,7 +183,7 @@
 
         setTimeout(function() {
             VR.hideLoader();
-            VR.showView('Schema', VR.MONTHS[VR.schemaMonth] + ' ' + VR.schemaYear, html);
+            VR.showView('', '', html);
 
             // Attach event listeners
             var prevBtn = document.getElementById('vrPrevMonth');
@@ -262,11 +262,12 @@
             html += '<div style="font-size:20px;font-weight:600;color:' + dateCol + '">' + wd + '</div>';
             html += '</div>';
 
-            // Check if day contains DK.KK (for Danish flag on Ändrad Reserv)
+            // Check if day contains DK.K in sP or eP (for Danish flag on Ändrad Reserv)
             var hasDKKK = false;
             for (var dk = 0; dk < es.length; dk++) {
-                var evStr = JSON.stringify(es[dk]).toUpperCase();
-                if (evStr.indexOf('DK.KK') > -1 || evStr.indexOf('DK.K') > -1) {
+                var sp = (es[dk].sP || '').toUpperCase();
+                var ep = (es[dk].eP || '').toUpperCase();
+                if (sp.indexOf('DK.K') > -1 || ep.indexOf('DK.K') > -1) {
                     hasDKKK = true;
                     break;
                 }

@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.26';
+    VR.VERSION = 'V.0.27';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -339,12 +339,19 @@
             el.innerHTML = 'Ledig' + fB;
             el.style.color = '#F59E0B';
         } else if (tn) {
-            // Check if day data contains DK.KK for Danish flag on Ändrad Reserv
+            // Check if day data contains DK.K in sP or eP for Danish flag on Ändrad Reserv
             var hasDKKK = false;
             var dateKey = elId === 'vrTodayTur' ? VR.todayDateStr : VR.tomorrowDateStr;
             if (VR.dayData && VR.dayData[dateKey]) {
-                var evStr = JSON.stringify(VR.dayData[dateKey]).toUpperCase();
-                hasDKKK = evStr.indexOf('DK.KK') > -1 || evStr.indexOf('DK.K') > -1;
+                var dayEvents = VR.dayData[dateKey];
+                for (var di = 0; di < dayEvents.length; di++) {
+                    var sp = (dayEvents[di].sP || '').toUpperCase();
+                    var ep = (dayEvents[di].eP || '').toUpperCase();
+                    if (sp.indexOf('DK.K') > -1 || ep.indexOf('DK.K') > -1) {
+                        hasDKKK = true;
+                        break;
+                    }
+                }
             }
             var ic = VR.getHeaderIcons(tn, hasDKKK);
             el.innerHTML = tn + ic;
