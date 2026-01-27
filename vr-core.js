@@ -299,12 +299,11 @@
         var c3 = tn.length >= 3 ? tn.charAt(2) : '';
         var c6 = tn.length >= 6 ? tn.charAt(5) : '';
 
-        // Country flag based on 3rd character
-        if (c3 >= '0' && c3 <= '9') {
-            var d3 = parseInt(c3);
-            icons += d3 % 2 === 1
-                ? '<span style="margin-left:9px;font-size:27px">🇸🇪</span>'
-                : '<span style="margin-left:9px;font-size:27px">🇩🇰</span>';
+        // Country flag based on 3rd character (1,3 = Sverige, 2,4 = Danmark)
+        if (c3 === '1' || c3 === '3') {
+            icons += '<span style="margin-left:9px;font-size:27px">🇸🇪</span>';
+        } else if (c3 === '2' || c3 === '4') {
+            icons += '<span style="margin-left:9px;font-size:27px">🇩🇰</span>';
         }
 
         // Shift indicator (A/B) - torn paper effect
@@ -373,10 +372,11 @@
 
         var c3 = tn.length >= 3 ? tn.charAt(2) : '';
 
-        // Country flag based on 3rd character
-        if (c3 >= '0' && c3 <= '9') {
-            var d3 = parseInt(c3);
-            icons += d3 % 2 === 1 ? '🇸🇪' : '🇩🇰';
+        // Country flag based on 3rd character (1,3 = Sverige, 2,4 = Danmark)
+        if (c3 === '1' || c3 === '3') {
+            icons += '🇸🇪';
+        } else if (c3 === '2' || c3 === '4') {
+            icons += '🇩🇰';
         }
 
         // Check if contains TP → add Ändrad badge (yellow)
@@ -411,10 +411,21 @@
         return tbl;
     };
 
+    // ===== RESERV CHECK =====
+    // 4th character = 8 or 9 means Reserv (no flag, no SR-tillägg)
+    VR.isReservTour = function(tn) {
+        if (!tn || tn.length < 4) return false;
+        var c4 = tn.charAt(3);
+        return c4 === '8' || c4 === '9';
+    };
+
     // ===== SR-TILLÄGG RATE FROM TOUR NUMBER =====
     // 3rd character: 1=LKF Sverige, 2=LKF Danmark (75kr), 3=TGV Sverige, 4=TGV Danmark (50kr)
+    // 4th character: 8 or 9 = Reserv (no SR-tillägg)
     VR.getSRRateFromTour = function(tn) {
-        if (!tn || tn.length < 3) return 0;
+        if (!tn || tn.length < 4) return 0;
+        // If 4th char is 8 or 9, no SR-tillägg
+        if (VR.isReservTour(tn)) return 0;
         var c3 = tn.charAt(2);
         if (c3 === '2') return 75; // Lokförare Danmark
         if (c3 === '4') return 50; // Tågvärd Danmark
@@ -430,14 +441,16 @@
     };
 
     VR.isDenmarkTour = function(tn) {
-        if (!tn || tn.length < 3) return false;
+        if (!tn || tn.length < 4) return false;
+        // If 4th char is 8 or 9, it's Reserv - no Denmark flag
+        if (VR.isReservTour(tn)) return false;
         var c3 = tn.charAt(2);
         return c3 === '2' || c3 === '4';
     };
 
     // ===== SR-TILLÄGG HELPERS =====
     VR.hasDanishFlag = function(tn) {
-        // Check if tour number has Danish flag (3rd character = 2 or 4)
+        // Check if tour number has Danish flag (3rd character = 2 or 4, and 4th != 8/9)
         return VR.isDenmarkTour(tn);
     };
 
