@@ -81,18 +81,59 @@
         VR.clickFetch();
         VR.updateLoader(65, 'Hämtar data...');
 
+        // Store expected date prefix to detect when new data arrives
+        var expectedMonth = ('0' + (VR.schemaMonth + 1)).slice(-2);
+        var expectedYear = VR.schemaYear;
+        var prevRowCount = document.querySelectorAll('#workdays table tr').length;
+
         var n = 0;
         VR.timer = setInterval(function() {
             n++;
             VR.updateLoader(65 + n, 'Laddar schema...');
 
             var rows = document.querySelectorAll('#workdays table tr');
-            if (rows.length > 5 || n > 30) {
+            var rowCount = rows.length;
+
+            // Check if we have new data (row count changed or we have rows with current month)
+            var hasNewData = false;
+            if (rowCount !== prevRowCount && rowCount > 5) {
+                hasNewData = true;
+            } else if (rowCount > 5) {
+                // Check if any row contains current month's date
+                for (var r = 1; r < Math.min(rows.length, 10); r++) {
+                    var cells = rows[r].querySelectorAll('td');
+                    if (cells.length > 2) {
+                        var dt = cells[2] ? cells[2].textContent.trim() : '';
+                        if (dt && dt.indexOf('-' + expectedMonth + '-' + expectedYear) > -1) {
+                            hasNewData = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (hasNewData || n > 40) {
                 VR.stopTimer();
                 VR.updateLoader(95, 'Bygger vy...');
                 setTimeout(VR.renderSchema, 300);
             }
         }, 400);
+    };
+
+    // ===== CHECK IF MONTH IN CACHE =====
+    VR.hasMonthInCache = function(month, year) {
+        if (!VR.allSchemaData) return false;
+        var targetMonth = month + 1; // 1-indexed
+        var keys = Object.keys(VR.allSchemaData);
+        for (var i = 0; i < keys.length; i++) {
+            var parts = keys[i].split('-');
+            if (parts.length === 3) {
+                var m = parseInt(parts[1], 10);
+                var y = parseInt(parts[2], 10);
+                if (m === targetMonth && y === year) return true;
+            }
+        }
+        return false;
     };
 
     // ===== CHANGE MONTH =====
@@ -107,8 +148,8 @@
             VR.schemaYear++;
         }
 
-        // If we have cached data, just re-render with new month filter
-        if (VR.allSchemaData && Object.keys(VR.allSchemaData).length > 0) {
+        // Check if target month exists in cache
+        if (VR.hasMonthInCache(VR.schemaMonth, VR.schemaYear)) {
             VR.showLoader('Byter månad...');
             VR.updateLoader(80, 'Filtrerar data...');
             setTimeout(function() {
@@ -117,13 +158,13 @@
             return;
         }
 
-        // Otherwise fetch new data
+        // Target month not in cache - fetch new data
         VR.showLoader('Byter månad...');
-        VR.updateLoader(30, 'Sätter datum...');
+        VR.updateLoader(30, 'Hämtar ny data...');
 
-        // Load wide range for the new month
-        var startDate = new Date(VR.schemaYear, VR.schemaMonth - 1, 1);
-        var endDate = new Date(VR.schemaYear + 1, VR.schemaMonth, 0);
+        // Load wide range around target month (6 months before, 12 months ahead)
+        var startDate = new Date(VR.schemaYear, VR.schemaMonth - 6, 1);
+        var endDate = new Date(VR.schemaYear, VR.schemaMonth + 13, 0);
 
         var d1 = '01-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
         var d2 = endDate.getDate() + '-' + ('0' + (endDate.getMonth() + 1)).slice(-2) + '-' + endDate.getFullYear();

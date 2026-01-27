@@ -130,6 +130,7 @@
         var rows = tbl.querySelectorAll('tr');
         var year = VR.srLoadingYear;
         var month = VR.srLoadingMonth;
+        var targetMonth = month + 1; // 1-indexed (1-12)
         var currentDate = '';
         var dayEntries = {};
 
@@ -138,7 +139,19 @@
             if (c.length < 4) continue;
 
             var dt = c[2] ? c[2].textContent.trim() : '';
-            if (dt && dt.indexOf('-') > -1) currentDate = dt;
+            if (dt && dt.indexOf('-') > -1) {
+                // Check if this date belongs to the month we're loading
+                var parts = dt.split('-');
+                if (parts.length === 3) {
+                    var dtMonth = parseInt(parts[1], 10);
+                    var dtYear = parseInt(parts[2], 10);
+                    if (dtMonth === targetMonth && dtYear === year) {
+                        currentDate = dt;
+                    } else {
+                        currentDate = ''; // Not our month, skip
+                    }
+                }
+            }
             if (!currentDate) continue;
 
             var en = {
