@@ -237,12 +237,12 @@
 
         setTimeout(function() {
             VR.updateLoader(15, 'Väntar på data...');
-            VR.scanAndExpandDays();
+            VR.parseSRData();
         }, 1500);
     };
 
-    // ===== SCAN AND EXPAND DAYS =====
-    VR.scanAndExpandDays = function() {
+    // ===== PARSE SR DATA (using same logic as Schema) =====
+    VR.parseSRData = function() {
         var tbl = VR.findLargestTable();
         if (!tbl) {
             VR.updateLoader(0, 'Ingen tabell hittades');
@@ -250,146 +250,106 @@
             return;
         }
 
+        VR.updateLoader(30, 'Läser in data...');
+
         var rows = tbl.querySelectorAll('tr');
-        var daysToCheck = [];
         var year = VR.srLoadingYear;
         var month = VR.srLoadingMonth;
+        var currentDate = '';
+        var dayEntries = {}; // Collect all entries per day
 
+        // Parse all rows (same approach as Schema)
         for (var i = 1; i < rows.length; i++) {
             var c = rows[i].querySelectorAll('td');
-            if (c.length < 10) continue;
+            if (c.length < 4) continue;
 
             var dt = c[2] ? c[2].textContent.trim() : '';
-            if (!dt || dt.indexOf('-') === -1) continue;
+            if (dt && dt.indexOf('-') > -1) currentDate = dt;
+            if (!currentDate) continue;
 
-            var tur = c[9] ? c[9].textContent.trim() : '';
-            var expandBtn = rows[i].querySelector('button.ExpandRoot');
+            var en = {
+                ps: c[3] ? c[3].textContent.trim() : '',
+                sP: c[4] ? c[4].textContent.trim() : '',
+                eP: c[5] ? c[5].textContent.trim() : '',
+                tn: c[9] ? c[9].textContent.trim() : '',
+                isHeader: dt && dt.indexOf('-') > -1
+            };
 
-            // Parse date
-            var parts = dt.split('-');
-            var day = parseInt(parts[0]);
-            var dateKey = dt;
+            if (!dayEntries[currentDate]) dayEntries[currentDate] = [];
+            dayEntries[currentDate].push(en);
+        }
 
-            // Check if this is a regular Danmark tour (3rd char = 2 or 4)
-            if (VR.isDenmarkTour(tur)) {
-                // Get rate from this tour
-                var tourRate = VR.getSRRateFromTour(tur);
+        VR.updateLoader(60, 'Analyserar Danmark-dagar...');
 
-                // First time detecting rate? Save it and set role
-                if (!VR.detectedSRRate && tourRate > 0) {
-                    VR.detectedSRRate = tourRate;
-                    VR.userRole = VR.getRoleFromTour(tur);
-                    console.log('VR SR: Detected rate ' + tourRate + ' kr from tour ' + tur + ' (' + VR.userRole + ')');
+        // Now check each day for Denmark
+        var addedCount = 0;
+        for (var dateKey in dayEntries) {
+            if (!dayEntries.hasOwnProperty(dateKey)) continue;
+
+            var entries = dayEntries[dateKey];
+            var hasDenmark = false;
+            var tourNumber = '';
+
+            for (var j = 0; j < entries.length; j++) {
+                var entry = entries[j];
+                var tn = entry.tn;
+
+                // Get tour number from header row
+                if (entry.isHeader && tn) {
+                    tourNumber = tn;
                 }
 
-                // Auto-add to SR data
-                if (!VR.srData[dateKey]) {
-                    var dateObj = new Date(year, month, day);
-                    var wd = VR.WEEKDAYS_SHORT[dateObj.getDay()];
-                    VR.srData[dateKey] = {
-                        date: dt,
-                        dateStr: day + ' ' + VR.MONTHS_SHORT[month] + ' ' + wd,
-                        day: day,
-                        month: month,
-                        year: year,
-                        tur: tur,
-                        source: 'tour'
-                    };
+                // Check 1: Regular Denmark tour (3rd char = 2 or 4)
+                if (tn && VR.isDenmarkTour(tn)) {
+                    hasDenmark = true;
+                    tourNumber = tn;
+
+                    // First time detecting rate? Save it
+                    var tourRate = VR.getSRRateFromTour(tn);
+                    if (!VR.detectedSRRate && tourRate > 0) {
+                        VR.detectedSRRate = tourRate;
+                        VR.userRole = VR.getRoleFromTour(tn);
+                        console.log('VR SR: Detected rate ' + tourRate + ' kr from tour ' + tn + ' (' + VR.userRole + ')');
+                    }
+                    break;
+                }
+
+                // Check 2: DK.K in sP or eP (for Ändrad Reserv)
+                var sP = (entry.sP || '').toUpperCase();
+                var eP = (entry.eP || '').toUpperCase();
+                if (sP.indexOf('DK.K') > -1 || eP.indexOf('DK.K') > -1) {
+                    hasDenmark = true;
+                    if (!tourNumber && entry.isHeader) tourNumber = tn;
                 }
             }
-            // Check if Ändrad Reserv format - needs expansion to check for DK.K
-            else if (VR.isAndradReserv(tur) && expandBtn) {
-                daysToCheck.push({
-                    row: rows[i],
-                    date: dt,
-                    btn: expandBtn,
-                    tur: tur,
+
+            // Add to SR data if Denmark day found
+            if (hasDenmark && !VR.srData[dateKey]) {
+                var parts = dateKey.split('-');
+                var day = parseInt(parts[0]);
+                var dateObj = new Date(year, month, day);
+                var wd = VR.WEEKDAYS_SHORT[dateObj.getDay()];
+
+                VR.srData[dateKey] = {
+                    date: dateKey,
+                    dateStr: day + ' ' + VR.MONTHS_SHORT[month] + ' ' + wd,
                     day: day,
                     month: month,
-                    year: year
-                });
+                    year: year,
+                    tur: tourNumber || 'Ändrad Reserv',
+                    source: tourNumber && VR.isDenmarkTour(tourNumber) ? 'tour' : 'dkk'
+                };
+                addedCount++;
             }
         }
 
-        VR.updateLoader(20, 'Hittade ' + daysToCheck.length + ' dagar att expandera...');
-
-        if (daysToCheck.length === 0) {
-            var count = VR.getSRDataArray().length;
-            VR.updateLoader(100, 'Klar! ' + count + ' Danmark-dagar');
-            setTimeout(function() {
-                VR.hideLoader();
-                VR.showSRView();
-            }, 500);
-            return;
-        }
-
-        VR.expandDaysForSR(daysToCheck, 0);
-    };
-
-    // ===== EXPAND DAYS FOR SR =====
-    VR.expandDaysForSR = function(dayRows, index) {
-        if (index >= dayRows.length) {
-            var count = VR.getSRDataArray().length;
-            VR.updateLoader(100, 'Klar! Hittade ' + count + ' Danmark-dagar');
-            setTimeout(function() {
-                VR.hideLoader();
-                VR.showSRView();
-            }, 800);
-            return;
-        }
-
-        var day = dayRows[index];
-        var progress = 20 + Math.floor((index / dayRows.length) * 75);
-        VR.updateLoader(progress, 'Kollar ' + day.date + ' (' + (index + 1) + '/' + dayRows.length + ')...');
-
-        // Click expand button
-        day.btn.click();
+        var totalCount = VR.getSRDataArray().length;
+        VR.updateLoader(100, 'Klar! ' + totalCount + ' Danmark-dagar');
 
         setTimeout(function() {
-            // Check expanded data for DK.K
-            VR.checkExpandedForDenmark(day);
-
-            // Continue to next day
-            VR.expandDaysForSR(dayRows, index + 1);
-        }, 600);
-    };
-
-    // ===== CHECK EXPANDED FOR DENMARK =====
-    VR.checkExpandedForDenmark = function(dayInfo) {
-        var tbl = VR.findLargestTable();
-        if (!tbl) return;
-
-        var rows = tbl.querySelectorAll('tr');
-        var hasDenmark = false;
-
-        for (var i = 1; i < rows.length; i++) {
-            var c = rows[i].querySelectorAll('td');
-            if (c.length < 6) continue;
-
-            // Check sP and eP for DK.K
-            var sP = c[4] ? c[4].textContent.trim().toUpperCase() : '';
-            var eP = c[5] ? c[5].textContent.trim().toUpperCase() : '';
-
-            if (sP.indexOf('DK.K') > -1 || eP.indexOf('DK.K') > -1) {
-                hasDenmark = true;
-                break;
-            }
-        }
-
-        if (hasDenmark && !VR.srData[dayInfo.date]) {
-            var dateObj = new Date(dayInfo.year, dayInfo.month, dayInfo.day);
-            var wd = VR.WEEKDAYS_SHORT[dateObj.getDay()];
-
-            VR.srData[dayInfo.date] = {
-                date: dayInfo.date,
-                dateStr: dayInfo.day + ' ' + VR.MONTHS_SHORT[dayInfo.month] + ' ' + wd,
-                day: dayInfo.day,
-                month: dayInfo.month,
-                year: dayInfo.year,
-                tur: dayInfo.tur,
-                source: 'expanded'
-            };
-        }
+            VR.hideLoader();
+            VR.showSRView();
+        }, 500);
     };
 
     console.log('VR: SR-Tillägg loaded');
