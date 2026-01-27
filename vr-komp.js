@@ -210,8 +210,8 @@
             return;
         }
 
-        // Build HTML
-        var html = VR.buildKompHeader(data[0].s);
+        // Build HTML - use newest saldo (last row in data)
+        var html = VR.buildKompHeader(data[data.length - 1].s);
         html += VR.buildKompRows(data);
 
         VR.updateLoader(100, 'Klar!');
