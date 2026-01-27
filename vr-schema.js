@@ -143,13 +143,29 @@
         var dd = {};
         var currentDate = '';
 
-        // Parse all rows
+        // Parse all rows - only include dates in selected month
+        var targetMonth = VR.schemaMonth + 1; // 1-indexed
+        var targetYear = VR.schemaYear;
+
         for (var i = 1; i < rows.length; i++) {
             var c = rows[i].querySelectorAll('td');
             if (c.length < 4) continue;
 
             var dt = c[2] ? c[2].textContent.trim() : '';
-            if (dt && dt.indexOf('-') > -1) currentDate = dt;
+            if (dt && dt.indexOf('-') > -1) {
+                // Parse date and check if it's in target month
+                var parts = dt.split('-');
+                if (parts.length === 3) {
+                    var dtMonth = parseInt(parts[1], 10);
+                    var dtYear = parseInt(parts[2], 10);
+                    // Only use this date if it matches selected month/year
+                    if (dtMonth === targetMonth && dtYear === targetYear) {
+                        currentDate = dt;
+                    } else {
+                        currentDate = ''; // Reset - not in our month
+                    }
+                }
+            }
             if (!currentDate) continue;
 
             var en = {
