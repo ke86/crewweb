@@ -235,24 +235,45 @@
         VR.srLoadingYear = year;
         VR.srLoadingMonth = month;
 
-        setTimeout(function() {
-            VR.updateLoader(15, 'Väntar på data...');
-            VR.parseSRData();
-        }, 1500);
+        // Poll for data like Schema does
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+            VR.updateLoader(15 + n * 2, 'Laddar data...');
+
+            var rows = document.querySelectorAll('#workdays table tr');
+            if (rows.length > 5 || n > 25) {
+                VR.stopTimer();
+                VR.updateLoader(50, 'Analyserar...');
+                setTimeout(VR.parseSRData, 300);
+            }
+        }, 400);
     };
 
     // ===== PARSE SR DATA (using same logic as Schema) =====
     VR.parseSRData = function() {
-        var tbl = VR.findLargestTable();
+        var tbl = document.querySelector('#workdays table');
         if (!tbl) {
             VR.updateLoader(0, 'Ingen tabell hittades');
             setTimeout(VR.hideLoader, 2000);
             return;
         }
 
-        VR.updateLoader(30, 'Läser in data...');
+        VR.updateLoader(55, 'Läser in data...');
 
         var rows = tbl.querySelectorAll('tr');
+        console.log('VR SR: Found ' + rows.length + ' rows in #workdays table');
+
+        // DEBUG: Log first 3 rows to see column structure
+        for (var dbg = 1; dbg < Math.min(4, rows.length); dbg++) {
+            var dbgCells = rows[dbg].querySelectorAll('td');
+            var colValues = [];
+            for (var cc = 0; cc < dbgCells.length; cc++) {
+                colValues.push('c[' + cc + ']=' + (dbgCells[cc].textContent.trim().substring(0, 15) || '(tom)'));
+            }
+            console.log('VR SR Row ' + dbg + ': ' + colValues.join(' | '));
+        }
+
         var year = VR.srLoadingYear;
         var month = VR.srLoadingMonth;
         var currentDate = '';
@@ -268,10 +289,9 @@
             if (!currentDate) continue;
 
             var en = {
-                ps: c[3] ? c[3].textContent.trim() : '',
+                tn: c[3] ? c[3].textContent.trim() : '',  // Passnamn = turnummer!
                 sP: c[4] ? c[4].textContent.trim() : '',
                 eP: c[5] ? c[5].textContent.trim() : '',
-                tn: c[9] ? c[9].textContent.trim() : '',
                 isHeader: dt && dt.indexOf('-') > -1
             };
 
@@ -279,7 +299,9 @@
             dayEntries[currentDate].push(en);
         }
 
-        VR.updateLoader(60, 'Analyserar Danmark-dagar...');
+        var dayCount = Object.keys(dayEntries).length;
+        console.log('VR SR: Parsed ' + dayCount + ' unique days');
+        VR.updateLoader(70, 'Analyserar ' + dayCount + ' dagar...');
 
         // Now check each day for Denmark
         var addedCount = 0;
@@ -300,18 +322,22 @@
                 }
 
                 // Check 1: Regular Denmark tour (3rd char = 2 or 4)
-                if (tn && VR.isDenmarkTour(tn)) {
-                    hasDenmark = true;
-                    tourNumber = tn;
+                if (tn && tn.length >= 3) {
+                    var c3 = tn.charAt(2);
+                    if (c3 === '2' || c3 === '4') {
+                        hasDenmark = true;
+                        tourNumber = tn;
+                        console.log('VR SR: Found Denmark tour ' + tn + ' on ' + dateKey + ' (c3=' + c3 + ')');
 
-                    // First time detecting rate? Save it
-                    var tourRate = VR.getSRRateFromTour(tn);
-                    if (!VR.detectedSRRate && tourRate > 0) {
-                        VR.detectedSRRate = tourRate;
-                        VR.userRole = VR.getRoleFromTour(tn);
-                        console.log('VR SR: Detected rate ' + tourRate + ' kr from tour ' + tn + ' (' + VR.userRole + ')');
+                        // First time detecting rate? Save it
+                        var tourRate = (c3 === '2') ? 75 : 50;
+                        if (!VR.detectedSRRate) {
+                            VR.detectedSRRate = tourRate;
+                            VR.userRole = (c3 === '2') ? 'Lokförare' : 'Tågvärd';
+                            console.log('VR SR: Detected rate ' + tourRate + ' kr (' + VR.userRole + ')');
+                        }
+                        break;
                     }
-                    break;
                 }
 
                 // Check 2: DK.K in sP or eP (for Ändrad Reserv)
@@ -320,6 +346,7 @@
                 if (sP.indexOf('DK.K') > -1 || eP.indexOf('DK.K') > -1) {
                     hasDenmark = true;
                     if (!tourNumber && entry.isHeader) tourNumber = tn;
+                    console.log('VR SR: Found DK.K on ' + dateKey + ' in sP=' + sP + ' eP=' + eP);
                 }
             }
 
