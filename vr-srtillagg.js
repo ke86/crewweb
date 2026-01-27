@@ -83,17 +83,20 @@
         // Load previous month first, then current month
         VR.updateLoader(35, 'Laddar ' + VR.MONTHS[prevMonth] + '...');
         VR.loadSRMonthAuto(prevYear, prevMonth, function() {
-            // After prev month, load current month
-            VR.updateLoader(65, 'Laddar ' + VR.MONTHS[currentMonth] + '...');
-            VR.loadSRMonthAuto(currentYear, currentMonth, function() {
-                // Both done, show view
-                var count = VR.getSRDataArray().length;
-                VR.updateLoader(100, 'Klar! ' + count + ' Danmark-dagar');
-                setTimeout(function() {
-                    VR.hideLoader();
-                    VR.showSRView();
-                }, 400);
-            });
+            // Wait a bit longer before loading next month (helps on mobile)
+            VR.updateLoader(60, 'Förbereder ' + VR.MONTHS[currentMonth] + '...');
+            setTimeout(function() {
+                VR.updateLoader(65, 'Laddar ' + VR.MONTHS[currentMonth] + '...');
+                VR.loadSRMonthAuto(currentYear, currentMonth, function() {
+                    // Both done, show view
+                    var count = VR.getSRDataArray().length;
+                    VR.updateLoader(100, 'Klar! ' + count + ' Danmark-dagar');
+                    setTimeout(function() {
+                        VR.hideLoader();
+                        VR.showSRView();
+                    }, 400);
+                });
+            }, 800); // Longer delay between months for mobile
         });
     };
 
@@ -105,7 +108,6 @@
 
         // Store expected month string for detection
         var expectedMonth = ('0' + (month + 1)).slice(-2);
-        var prevRowCount = document.querySelectorAll('#workdays table tr').length;
 
         VR.setDates(d1, d2);
         VR.clickFetch();
@@ -113,37 +115,38 @@
         VR.srLoadingYear = year;
         VR.srLoadingMonth = month;
 
-        // Poll for data - wait for NEW data to arrive
-        var n = 0;
-        VR.timer = setInterval(function() {
-            n++;
-            var rows = document.querySelectorAll('#workdays table tr');
-            var rowCount = rows.length;
+        // Wait a moment for the fetch to start, then poll for data
+        setTimeout(function() {
+            var n = 0;
+            var maxTries = 50; // ~20 seconds max wait (increased for mobile)
 
-            // Check if we have new data for our target month
-            var hasNewData = false;
-            if (rowCount !== prevRowCount && rowCount > 5) {
-                hasNewData = true;
-            } else if (rowCount > 5) {
-                // Check if any row contains target month's date
-                for (var r = 1; r < Math.min(rows.length, 10); r++) {
-                    var cells = rows[r].querySelectorAll('td');
-                    if (cells.length > 2) {
-                        var dt = cells[2] ? cells[2].textContent.trim() : '';
-                        if (dt && dt.indexOf('-' + expectedMonth + '-' + year) > -1) {
-                            hasNewData = true;
-                            break;
+            VR.timer = setInterval(function() {
+                n++;
+                var rows = document.querySelectorAll('#workdays table tr');
+
+                // Check if we have data for our target month
+                var hasTargetMonthData = false;
+                if (rows.length > 5) {
+                    // Check if any row contains target month's date
+                    for (var r = 1; r < Math.min(rows.length, 15); r++) {
+                        var cells = rows[r].querySelectorAll('td');
+                        if (cells.length > 2) {
+                            var dt = cells[2] ? cells[2].textContent.trim() : '';
+                            if (dt && dt.indexOf('-' + expectedMonth + '-' + year) > -1) {
+                                hasTargetMonthData = true;
+                                break;
+                            }
                         }
                     }
                 }
-            }
 
-            if (hasNewData || n > 35) {
-                VR.stopTimer();
-                VR.parseSRDataSilent();
-                setTimeout(callback, 300);
-            }
-        }, 400);
+                if (hasTargetMonthData || n > maxTries) {
+                    VR.stopTimer();
+                    VR.parseSRDataSilent();
+                    setTimeout(callback, 300);
+                }
+            }, 400);
+        }, 500); // Initial delay to let fetch start
     };
 
     // ===== PARSE SR DATA (silent, no loader updates) =====
