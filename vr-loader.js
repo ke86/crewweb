@@ -22,7 +22,10 @@
         schemaMonth: null,
         dayData: {},
         todayDateStr: '',
-        tomorrowDateStr: ''
+        tomorrowDateStr: '',
+        // User role and SR rate
+        userRole: null,
+        SR_RATE: 75
     };
 
     // Modules to load in order

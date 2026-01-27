@@ -4,27 +4,8 @@
 
     var VR = window.VR;
 
-    // SR-Tillägg rate per day
-    var SR_RATE = 75;
-
-    // Storage for SR data (keyed by date to avoid duplicates)
-    VR.srDataMap = {};
-
-    // ===== HELPER: Check if tour has Danish flag (3rd char is even digit) =====
-    VR.hasDanishFlag = function(tn) {
-        if (!tn || tn.length < 3) return false;
-        var c3 = tn.charAt(2);
-        if (c3 >= '0' && c3 <= '9') {
-            return parseInt(c3) % 2 === 0;
-        }
-        return false;
-    };
-
-    // ===== HELPER: Check if tour is Ändrad Reserv format =====
-    VR.isAndradReserv = function(tn) {
-        if (!tn) return false;
-        return /^\d{6}-\d{6}/.test(tn);
-    };
+    // Storage for SR data (unique per date)
+    VR.srData = {};
 
     // ===== MAIN SR-TILLÄGG FUNCTION =====
     VR.doSRTillagg = function() {
@@ -88,9 +69,9 @@
     // ===== GET SR DATA AS ARRAY =====
     VR.getSRDataArray = function() {
         var arr = [];
-        for (var key in VR.srDataMap) {
-            if (VR.srDataMap.hasOwnProperty(key)) {
-                arr.push(VR.srDataMap[key]);
+        for (var key in VR.srData) {
+            if (VR.srData.hasOwnProperty(key)) {
+                arr.push(VR.srData[key]);
             }
         }
         return arr;
@@ -107,18 +88,19 @@
         var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
         var monthNames = VR.MONTHS;
-        var srData = VR.getSRDataArray();
+        var rate = VR.SR_RATE;
 
         // Get stored data for display
-        var prevMonthData = srData.filter(function(d) {
+        var allData = VR.getSRDataArray();
+        var prevMonthData = allData.filter(function(d) {
             return d.month === prevMonth && d.year === prevYear;
         });
-        var currentMonthData = srData.filter(function(d) {
+        var currentMonthData = allData.filter(function(d) {
             return d.month === currentMonth && d.year === currentYear;
         });
 
-        var prevTotal = prevMonthData.length * SR_RATE;
-        var currentTotal = currentMonthData.length * SR_RATE;
+        var prevTotal = prevMonthData.length * rate;
+        var currentTotal = currentMonthData.length * rate;
 
         var html = '';
 
@@ -141,36 +123,56 @@
 
         html += '</div>';
 
-        // Load button
-        html += '<div style="margin-bottom:20px">';
-        html += '<button id="vrLoadSR" style="width:100%;padding:18px 24px;border-radius:16px;border:none;background:linear-gradient(135deg,#C41E3A,#DC143C);color:#fff;font-size:20px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 16px rgba(196,30,58,0.3)">';
-        html += '<span>🔄</span> Ladda SR-Tillägg';
+        // Load buttons
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
+
+        html += '<button id="vrLoadSRPrev" style="padding:16px 20px;border-radius:16px;border:none;background:linear-gradient(135deg,#666,#888);color:#fff;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2)">';
+        html += '<span>🔄</span> Ladda ' + monthNames[prevMonth];
         html += '</button>';
+
+        html += '<button id="vrLoadSRCurrent" style="padding:16px 20px;border-radius:16px;border:none;background:linear-gradient(135deg,#C41E3A,#DC143C);color:#fff;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(196,30,58,0.3)">';
+        html += '<span>🔄</span> Ladda ' + monthNames[currentMonth];
+        html += '</button>';
+
         html += '</div>';
 
         // Data table
-        if (srData.length > 0) {
-            html += VR.buildSRTable(srData);
+        if (allData.length > 0) {
+            html += VR.buildSRTable();
         } else {
             html += '<div style="background:#fff;border-radius:20px;padding:40px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
             html += '<div style="font-size:48px;margin-bottom:16px">🇩🇰</div>';
-            html += '<div style="font-size:18px;color:#666">Klicka på knappen ovan för att ladda SR-Tillägg</div>';
+            html += '<div style="font-size:18px;color:#666">Klicka på knapparna ovan för att ladda SR-Tillägg</div>';
+            html += '<div style="font-size:14px;color:#999;margin-top:8px">' + rate + ' kr per dag (' + (VR.userRole || 'Okänd roll') + ')</div>';
             html += '</div>';
         }
 
         VR.showView('', '', html);
 
-        // Attach button listener
-        var loadBtn = document.getElementById('vrLoadSR');
-        if (loadBtn) {
-            loadBtn.onclick = function() {
-                VR.loadSRData();
+        // Attach button listeners
+        var now2 = new Date();
+        var loadPrevBtn = document.getElementById('vrLoadSRPrev');
+        var loadCurrentBtn = document.getElementById('vrLoadSRCurrent');
+
+        if (loadPrevBtn) {
+            loadPrevBtn.onclick = function() {
+                var pm = now2.getMonth() === 0 ? 11 : now2.getMonth() - 1;
+                var py = now2.getMonth() === 0 ? now2.getFullYear() - 1 : now2.getFullYear();
+                VR.loadSRMonth(py, pm);
+            };
+        }
+        if (loadCurrentBtn) {
+            loadCurrentBtn.onclick = function() {
+                VR.loadSRMonth(now2.getFullYear(), now2.getMonth());
             };
         }
     };
 
     // ===== BUILD SR TABLE =====
-    VR.buildSRTable = function(srData) {
+    VR.buildSRTable = function() {
+        var rate = VR.SR_RATE;
+        var allData = VR.getSRDataArray();
+
         var html = '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
 
         // Header
@@ -181,7 +183,7 @@
         html += '</div>';
 
         // Sort by date descending
-        var sorted = srData.slice().sort(function(a, b) {
+        var sorted = allData.slice().sort(function(a, b) {
             return new Date(b.year, b.month, b.day) - new Date(a.year, a.month, a.day);
         });
 
@@ -191,16 +193,16 @@
 
             html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
             html += '<div style="font-size:15px;color:#333">' + row.dateStr + '</div>';
-            html += '<div style="font-size:15px;color:#333">' + row.tur + '</div>';
-            html += '<div style="font-size:15px;font-weight:600;color:#C41E3A;text-align:right">' + SR_RATE + ' kr</div>';
+            html += '<div style="font-size:15px;color:#333">' + row.tur + (row.source === 'flag' ? ' 🇩🇰' : '') + '</div>';
+            html += '<div style="font-size:15px;font-weight:600;color:#C41E3A;text-align:right">' + rate + ' kr</div>';
             html += '</div>';
         }
 
         // Total row
-        var total = srData.length * SR_RATE;
+        var total = allData.length * rate;
         html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr;gap:8px;padding:16px 20px;background:#F0F0F5;border-top:2px solid #E5E5EA">';
         html += '<div style="font-size:16px;font-weight:700;color:#333">Totalt</div>';
-        html += '<div style="font-size:16px;color:#666">' + srData.length + ' dagar</div>';
+        html += '<div style="font-size:16px;color:#666">' + allData.length + ' dagar</div>';
         html += '<div style="font-size:16px;font-weight:700;color:#C41E3A;text-align:right">' + total + ' kr</div>';
         html += '</div>';
 
@@ -208,64 +210,43 @@
         return html;
     };
 
-    // ===== LOAD SR DATA =====
-    VR.loadSRData = function() {
+    // ===== LOAD SR MONTH =====
+    VR.loadSRMonth = function(year, month) {
         VR.showLoader('Laddar SR-Tillägg');
-        VR.updateLoader(5, 'Förbereder...');
-
-        // Clear previous data
-        VR.srDataMap = {};
-
-        // Start with previous month
-        var now = new Date();
-        var currentMonth = now.getMonth();
-        var currentYear = now.getFullYear();
-        var prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-        var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
-        // Load previous month first
-        VR.loadMonthSR(prevYear, prevMonth, function() {
-            // Then load current month
-            VR.loadMonthSR(currentYear, currentMonth, function() {
-                VR.updateLoader(100, 'Klar! Hittade ' + VR.getSRDataArray().length + ' Danmark-dagar');
-                setTimeout(function() {
-                    VR.hideLoader();
-                    VR.showSRView();
-                }, 800);
-            });
-        });
-    };
-
-    // ===== LOAD MONTH SR =====
-    VR.loadMonthSR = function(year, month, callback) {
-        var monthName = VR.MONTHS[month];
-        VR.updateLoader(10, 'Laddar ' + monthName + '...');
+        VR.updateLoader(5, 'Förbereder ' + VR.MONTHS[month] + '...');
 
         var d1 = '01-' + ('0' + (month + 1)).slice(-2) + '-' + year;
         var lastDay = new Date(year, month + 1, 0).getDate();
         var d2 = lastDay + '-' + ('0' + (month + 1)).slice(-2) + '-' + year;
 
         VR.setDates(d1, d2);
+        VR.updateLoader(10, 'Sätter datum...');
         VR.clickFetch();
 
+        // Store which month we're loading
+        VR.srLoadingYear = year;
+        VR.srLoadingMonth = month;
+
         setTimeout(function() {
-            VR.updateLoader(20, 'Väntar på data för ' + monthName + '...');
-            VR.scanMonthForSR(year, month, callback);
+            VR.updateLoader(15, 'Väntar på data...');
+            VR.scanAndExpandDays();
         }, 1500);
     };
 
-    // ===== SCAN MONTH FOR SR =====
-    VR.scanMonthForSR = function(year, month, callback) {
+    // ===== SCAN AND EXPAND DAYS =====
+    VR.scanAndExpandDays = function() {
         var tbl = VR.findLargestTable();
         if (!tbl) {
-            if (callback) callback();
+            VR.updateLoader(0, 'Ingen tabell hittades');
+            setTimeout(VR.hideLoader, 2000);
             return;
         }
 
         var rows = tbl.querySelectorAll('tr');
-        var daysToExpand = [];
+        var daysToCheck = [];
+        var year = VR.srLoadingYear;
+        var month = VR.srLoadingMonth;
 
-        // First pass: scan header rows
         for (var i = 1; i < rows.length; i++) {
             var c = rows[i].querySelectorAll('td');
             if (c.length < 10) continue;
@@ -276,112 +257,120 @@
             var tur = c[9] ? c[9].textContent.trim() : '';
             var expandBtn = rows[i].querySelector('button.ExpandRoot');
 
-            // Skip if already processed
-            if (VR.srDataMap[dt]) continue;
+            // Parse date
+            var parts = dt.split('-');
+            var day = parseInt(parts[0]);
+            var dateKey = dt;
 
-            // Check if tour has Danish flag (3rd char even)
+            // Check if this day already has Danish flag (no expansion needed)
             if (VR.hasDanishFlag(tur)) {
-                // Automatically SR-Tillägg - no expansion needed
-                VR.addSRDay(dt, tur, 'flag');
+                // Auto-add to SR data
+                if (!VR.srData[dateKey]) {
+                    var dateObj = new Date(year, month, day);
+                    var wd = VR.WEEKDAYS_SHORT[dateObj.getDay()];
+                    VR.srData[dateKey] = {
+                        date: dt,
+                        dateStr: day + ' ' + VR.MONTHS_SHORT[month] + ' ' + wd,
+                        day: day,
+                        month: month,
+                        year: year,
+                        tur: tur,
+                        source: 'flag'
+                    };
+                }
             }
-            // Check if Ändrad Reserv format - needs expansion to check DK.K
+            // Check if Ändrad Reserv format - needs expansion to check for DK.K
             else if (VR.isAndradReserv(tur) && expandBtn) {
-                daysToExpand.push({
+                daysToCheck.push({
+                    row: rows[i],
                     date: dt,
+                    btn: expandBtn,
                     tur: tur,
-                    btn: expandBtn
+                    day: day,
+                    month: month,
+                    year: year
                 });
             }
         }
 
-        // Second pass: expand days that need checking
-        if (daysToExpand.length > 0) {
-            VR.expandDaysForSR(daysToExpand, 0, year, month, callback);
-        } else {
-            if (callback) callback();
-        }
-    };
+        VR.updateLoader(20, 'Hittade ' + daysToCheck.length + ' dagar att kolla...');
 
-    // ===== EXPAND DAYS FOR SR =====
-    VR.expandDaysForSR = function(days, index, year, month, callback) {
-        if (index >= days.length) {
-            if (callback) callback();
+        if (daysToCheck.length === 0) {
+            VR.updateLoader(100, 'Klar!');
+            setTimeout(function() {
+                VR.hideLoader();
+                VR.showSRView();
+            }, 500);
             return;
         }
 
-        var day = days[index];
-        var monthName = VR.MONTHS[month];
-        var progress = 30 + Math.floor((index / days.length) * 40);
-        VR.updateLoader(progress, 'Expanderar ' + day.date + ' (' + monthName + ')...');
+        VR.expandDaysForSR(daysToCheck, 0);
+    };
+
+    // ===== EXPAND DAYS FOR SR =====
+    VR.expandDaysForSR = function(dayRows, index) {
+        if (index >= dayRows.length) {
+            var count = VR.getSRDataArray().length;
+            VR.updateLoader(100, 'Klar! Hittade ' + count + ' Danmark-dagar');
+            setTimeout(function() {
+                VR.hideLoader();
+                VR.showSRView();
+            }, 800);
+            return;
+        }
+
+        var day = dayRows[index];
+        var progress = 20 + Math.floor((index / dayRows.length) * 75);
+        VR.updateLoader(progress, 'Kollar ' + day.date + ' (' + (index + 1) + '/' + dayRows.length + ')...');
 
         // Click expand button
         day.btn.click();
 
         setTimeout(function() {
             // Check expanded data for DK.K
-            if (VR.checkExpandedForDK(day.date)) {
-                VR.addSRDay(day.date, day.tur, 'expanded');
-            }
+            VR.checkExpandedForDenmark(day);
 
-            // Continue to next
-            VR.expandDaysForSR(days, index + 1, year, month, callback);
-        }, 500);
+            // Continue to next day
+            VR.expandDaysForSR(dayRows, index + 1);
+        }, 600);
     };
 
-    // ===== CHECK EXPANDED DATA FOR DK =====
-    VR.checkExpandedForDK = function(dateStr) {
+    // ===== CHECK EXPANDED FOR DENMARK =====
+    VR.checkExpandedForDenmark = function(dayInfo) {
         var tbl = VR.findLargestTable();
-        if (!tbl) return false;
+        if (!tbl) return;
 
         var rows = tbl.querySelectorAll('tr');
-        var inDay = false;
+        var hasDenmark = false;
 
         for (var i = 1; i < rows.length; i++) {
             var c = rows[i].querySelectorAll('td');
             if (c.length < 6) continue;
 
-            var dt = c[2] ? c[2].textContent.trim() : '';
-
-            // Track which day we're in
-            if (dt && dt.indexOf('-') > -1) {
-                inDay = (dt === dateStr);
-            }
-
-            // Only check rows for our target day
-            if (!inDay) continue;
-
+            // Check sP and eP for DK.K
             var sP = c[4] ? c[4].textContent.trim().toUpperCase() : '';
             var eP = c[5] ? c[5].textContent.trim().toUpperCase() : '';
 
             if (sP.indexOf('DK.K') > -1 || eP.indexOf('DK.K') > -1) {
-                return true;
+                hasDenmark = true;
+                break;
             }
         }
 
-        return false;
-    };
+        if (hasDenmark && !VR.srData[dayInfo.date]) {
+            var dateObj = new Date(dayInfo.year, dayInfo.month, dayInfo.day);
+            var wd = VR.WEEKDAYS_SHORT[dateObj.getDay()];
 
-    // ===== ADD SR DAY =====
-    VR.addSRDay = function(dateStr, tur, source) {
-        // Skip if already added
-        if (VR.srDataMap[dateStr]) return;
-
-        var parts = dateStr.split('-');
-        var day = parseInt(parts[0]);
-        var month = parseInt(parts[1]) - 1;
-        var year = parseInt(parts[2]);
-        var dateObj = new Date(year, month, day);
-        var wd = VR.WEEKDAYS_SHORT[dateObj.getDay()];
-
-        VR.srDataMap[dateStr] = {
-            date: dateStr,
-            dateStr: day + ' ' + VR.MONTHS_SHORT[month] + ' ' + wd,
-            day: day,
-            month: month,
-            year: year,
-            tur: tur || '—',
-            source: source
-        };
+            VR.srData[dayInfo.date] = {
+                date: dayInfo.date,
+                dateStr: dayInfo.day + ' ' + VR.MONTHS_SHORT[dayInfo.month] + ' ' + wd,
+                day: dayInfo.day,
+                month: dayInfo.month,
+                year: dayInfo.year,
+                tur: dayInfo.tur,
+                source: 'expanded'
+            };
+        }
     };
 
     console.log('VR: SR-Tillägg loaded');

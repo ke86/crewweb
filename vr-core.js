@@ -409,5 +409,41 @@
         return tbl;
     };
 
+    // ===== ROLE DETECTION =====
+    VR.detectRole = function() {
+        var bodyText = document.body.innerText || '';
+
+        // Look for "Distrikt: Lokförare" or "Distrikt: Tågvärd" pattern
+        if (bodyText.indexOf('Lokförare') > -1) {
+            VR.userRole = 'Lokförare';
+            VR.SR_RATE = 75;
+        } else if (bodyText.indexOf('Tågvärd') > -1) {
+            VR.userRole = 'Tågvärd';
+            VR.SR_RATE = 50;
+        } else {
+            VR.userRole = null;
+            VR.SR_RATE = 75; // Default to Lokförare rate
+        }
+
+        console.log('VR: Detected role: ' + VR.userRole + ', SR rate: ' + VR.SR_RATE + ' kr');
+        return VR.userRole;
+    };
+
+    // ===== SR-TILLÄGG HELPERS =====
+    VR.hasDanishFlag = function(tn) {
+        // Check if tour number has Danish flag (3rd character is even digit)
+        if (!tn || tn.length < 3) return false;
+        var c3 = tn.charAt(2);
+        if (c3 >= '0' && c3 <= '9') {
+            return parseInt(c3) % 2 === 0;
+        }
+        return false;
+    };
+
+    VR.isAndradReserv = function(tn) {
+        // Check for NNNNNN-NNNNNN format (6 digits - 6 digits)
+        return /^\d{6}-\d{6}/.test(tn);
+    };
+
     console.log('VR: Core loaded');
 })();
