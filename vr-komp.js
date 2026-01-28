@@ -247,11 +247,12 @@
     // ===== BUILD KOMP ROWS =====
     VR.buildKompRows = function(data) {
         var html = '\
-<div style="background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,0.08)">\
-<div style="display:grid;grid-template-columns:105px 1fr 120px;padding:18px 24px;background:#F8F8F8;border-bottom:1px solid #E5E5E5;font-size:18px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.8px">\
-<div>Datum</div>\
-<div>Kommentar</div>\
-<div style="text-align:right">Tid</div>\
+<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
+<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr 0.8fr;gap:8px;padding:16px 20px;background:#1C1C1E">\
+<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>\
+<div style="font-size:14px;font-weight:600;color:#fff">Kommentar</div>\
+<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Bidrag</div>\
+<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Saldo</div>\
 </div>';
 
         var maxShow = Math.min(data.length, 50);
@@ -260,42 +261,27 @@
         for (var j = 0; j < maxShow; j++) {
             var neg = data[j].b.indexOf('-') > -1;
             var bidrag = data[j].b.replace('-', '');
-            var dt = VR.formatDate(data[j].d);
-            var isFirst = (j === 0); // First item is newest
-
-            var rowStyle = isFirst
-                ? 'background:linear-gradient(135deg,rgba(52,199,89,0.08),rgba(48,209,88,0.08));'
-                : '';
-
-            html += '<div style="display:grid;grid-template-columns:105px 1fr 120px;padding:21px 24px;border-bottom:1px solid #F0F0F0;align-items:center;' + rowStyle + '">';
-
-            // Date box
-            var dateBg = isFirst ? 'linear-gradient(135deg,#34C759,#30D158)' : '#F0F5FF';
-            var dateCol = isFirst ? '#fff' : '#007AFF';
-
-            html += '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:75px;height:75px;background:' + dateBg + ';border-radius:15px">';
-            html += '<div style="font-size:27px;font-weight:700;color:' + dateCol + ';line-height:1">' + dt.day + '</div>';
-            html += '<div style="font-size:15px;font-weight:600;color:' + (isFirst ? 'rgba(255,255,255,0.8)' : '#007AFF') + ';text-transform:uppercase">' + dt.wd + '</div>';
-            html += '</div>';
-
-            // Comment with year
-            html += '<div style="padding:0 18px;min-width:0">';
-            if (data[j].k) {
-                html += '<div style="font-size:21px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + data[j].k + '</div>';
-            } else {
-                html += '<div style="font-size:20px;color:#CCC;font-style:italic">—</div>';
-            }
-            html += '<div style="font-size:17px;color:#999;margin-top:3px">' + dt.day + '/' + dt.mon + '-' + dt.year + '</div>';
-            html += '</div>';
-
-            // Time badge
-            var badgeBg = neg ? 'rgba(255,59,48,0.1)' : 'rgba(52,199,89,0.1)';
-            var badgeCol = neg ? '#FF3B30' : '#34C759';
+            var bgCol = j % 2 === 0 ? '#fff' : '#F8F8F8';
+            var bidragColor = neg ? '#FF3B30' : '#34C759';
             var sign = neg ? '−' : '+';
 
-            html += '<div style="text-align:right">';
-            html += '<div style="display:inline-block;padding:9px 18px;background:' + badgeBg + ';border-radius:12px;font-size:23px;font-weight:700;color:' + badgeCol + '">' + sign + bidrag + '</div>';
-            html += '</div>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+
+            // Datum
+            html += '<div style="font-size:15px;color:#333">' + data[j].d + '</div>';
+
+            // Kommentar
+            if (data[j].k) {
+                html += '<div style="font-size:15px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + data[j].k + '</div>';
+            } else {
+                html += '<div style="font-size:15px;color:#CCC;font-style:italic">—</div>';
+            }
+
+            // Bidrag
+            html += '<div style="font-size:15px;font-weight:600;color:' + bidragColor + ';text-align:right">' + sign + bidrag + '</div>';
+
+            // Saldo
+            html += '<div style="font-size:15px;font-weight:600;color:#333;text-align:right">' + data[j].s + '</div>';
 
             html += '</div>';
         }
