@@ -182,7 +182,7 @@
 
             html += '<div style="display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
             html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
-            html += '<div style="font-size:15px;color:#333;display:flex;align-items:center;gap:8px"><span>' + row.icon + '</span> ' + row.typeName + '</div>';
+            html += '<div style="font-size:15px;font-weight:600;color:' + typeColor + '">' + row.typeName + '</div>';
             html += '<div style="font-size:15px;font-weight:600;color:' + typeColor + ';text-align:right">' + row.time + '</div>';
             html += '</div>';
         }

@@ -142,14 +142,12 @@
         var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
 
         html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:24px;margin-bottom:4px">🌙</div>';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">' + monthNames[prevMonth] + '</div>';
+        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">' + monthNames[prevMonth] + '</div>';
         html += '<div style="font-size:24px;font-weight:700;color:#333">' + prevMonthTotal.toFixed(0) + ' kr</div>';
         html += '</div>';
 
         html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:24px;margin-bottom:4px">✨</div>';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">' + monthNames[currentMonth] + '</div>';
+        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">' + monthNames[currentMonth] + '</div>';
         html += '<div style="font-size:24px;font-weight:700;color:#AF52DE">' + currentMonthTotal.toFixed(0) + ' kr</div>';
         html += '</div>';
 
