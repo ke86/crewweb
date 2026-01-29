@@ -204,38 +204,54 @@
     VR.setDates = function(startDate, endDate) {
         console.log('VR: setDates called with', startDate, 'to', endDate);
 
-        // First try to find date inputs in #workdays
-        var container = document.getElementById('workdays');
-        console.log('VR: workdays container found:', !!container);
-
-        var inputs = container ? container.querySelectorAll('input') : document.querySelectorAll('input');
-        console.log('VR: Found', inputs.length, 'inputs');
+        // Search ENTIRE page for date inputs
+        var allInputs = document.querySelectorAll('input');
+        console.log('VR: Found', allInputs.length, 'inputs on entire page');
 
         var dateInputs = [];
 
-        // Look for inputs with date format first
-        for (var i = 0; i < inputs.length; i++) {
-            var val = inputs[i].value || '';
-            var name = inputs[i].name || inputs[i].id || '';
-            console.log('VR: Input', i, 'name:', name, 'value:', val);
+        // Look for inputs with date format value (dd-mm-yyyy)
+        for (var i = 0; i < allInputs.length; i++) {
+            var val = allInputs[i].value || '';
+            var name = allInputs[i].name || allInputs[i].id || allInputs[i].placeholder || '';
             if (val.match(/\d{1,2}-\d{2}-\d{4}/)) {
-                dateInputs.push(inputs[i]);
+                console.log('VR: Date input found by value:', name, '=', val);
+                dateInputs.push(allInputs[i]);
             }
         }
         console.log('VR: Found', dateInputs.length, 'date inputs by value pattern');
 
-        // If not found, look for any text inputs that could be date fields
-        if (dateInputs.length < 2 && container) {
-            var allInputs = container.querySelectorAll('input[type="text"], input:not([type])');
-            dateInputs = [];
-            for (var j = 0; j < allInputs.length && dateInputs.length < 2; j++) {
-                // Skip hidden or very small inputs
-                var rect = allInputs[j].getBoundingClientRect();
-                if (rect.width > 50) {
-                    dateInputs.push(allInputs[j]);
+        // If not found, look for inputs with date-related names/placeholders
+        if (dateInputs.length < 2) {
+            for (var j = 0; j < allInputs.length; j++) {
+                var inp = allInputs[j];
+                var identifier = (inp.name || '') + (inp.id || '') + (inp.placeholder || '') + (inp.className || '');
+                identifier = identifier.toLowerCase();
+                if (identifier.match(/date|datum|from|från|to|till|start|end|slut/)) {
+                    console.log('VR: Date input found by name:', inp.name || inp.id, '=', inp.value);
+                    if (dateInputs.indexOf(inp) === -1) {
+                        dateInputs.push(inp);
+                    }
                 }
             }
-            console.log('VR: Found', dateInputs.length, 'date inputs by size');
+            console.log('VR: Found', dateInputs.length, 'date inputs after name search');
+        }
+
+        // Last resort: look for visible text inputs
+        if (dateInputs.length < 2) {
+            dateInputs = [];
+            for (var k = 0; k < allInputs.length; k++) {
+                var input = allInputs[k];
+                var type = input.type || 'text';
+                if (type === 'text' || type === '') {
+                    var rect = input.getBoundingClientRect();
+                    if (rect.width > 60 && rect.height > 15) {
+                        console.log('VR: Visible text input:', input.name || input.id, 'size:', rect.width, 'x', rect.height, 'value:', input.value);
+                        dateInputs.push(input);
+                    }
+                }
+            }
+            console.log('VR: Found', dateInputs.length, 'visible text inputs');
         }
 
         if (dateInputs.length >= 2) {

@@ -68,27 +68,55 @@
         var n = 0;
         var checkInterval = setInterval(function() {
             n++;
-            var container = document.getElementById('workdays');
-            if (container) {
-                var inputs = container.querySelectorAll('input[type="text"], input:not([type])');
-                var dateInputs = [];
-                for (var i = 0; i < inputs.length; i++) {
-                    var rect = inputs[i].getBoundingClientRect();
-                    if (rect.width > 50) {
-                        dateInputs.push(inputs[i]);
-                    }
-                }
-                if (dateInputs.length >= 2) {
-                    clearInterval(checkInterval);
-                    callback();
-                    return;
+            console.log('VR: waitForDateInputs attempt', n);
+
+            // Search entire page for date inputs
+            var allInputs = document.querySelectorAll('input');
+            var dateInputs = [];
+
+            // First look for inputs with date values
+            for (var i = 0; i < allInputs.length; i++) {
+                var val = allInputs[i].value || '';
+                if (val.match(/\d{1,2}-\d{2}-\d{4}/)) {
+                    dateInputs.push(allInputs[i]);
                 }
             }
-            if (n > 20) {
+
+            // If found 2+ date inputs, we're good
+            if (dateInputs.length >= 2) {
+                console.log('VR: Found', dateInputs.length, 'date inputs, proceeding');
+                clearInterval(checkInterval);
+                callback();
+                return;
+            }
+
+            // Otherwise look for visible text inputs
+            dateInputs = [];
+            for (var j = 0; j < allInputs.length; j++) {
+                var type = allInputs[j].type || 'text';
+                if (type === 'text' || type === '') {
+                    var rect = allInputs[j].getBoundingClientRect();
+                    if (rect.width > 60 && rect.height > 15) {
+                        dateInputs.push(allInputs[j]);
+                    }
+                }
+            }
+
+            if (dateInputs.length >= 2) {
+                console.log('VR: Found', dateInputs.length, 'visible text inputs, proceeding');
+                clearInterval(checkInterval);
+                callback();
+                return;
+            }
+
+            console.log('VR: Found', dateInputs.length, 'inputs so far, waiting...');
+
+            if (n > 30) {
+                console.log('VR: Timeout waiting for date inputs, proceeding anyway');
                 clearInterval(checkInterval);
                 callback(); // Try anyway
             }
-        }, 200);
+        }, 300);
     };
 
     // ===== WAIT FOR SCHEMA DATA =====
