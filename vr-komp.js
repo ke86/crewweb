@@ -237,10 +237,10 @@
         var valueColor = isPos ? '#34C759' : '#FF3B30';
 
         return '\
-<div style="background:#fff;border-radius:16px;padding:14px;margin-bottom:12px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">\
-<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Kompsaldo</div>\
-<div style="font-size:36px;font-weight:700;color:' + valueColor + '">' + sp[0] + '<span style="font-size:24px;opacity:0.7">:' + (sp[1] || '00') + '</span></div>\
-<div style="font-size:13px;color:#8E8E93;margin-top:4px">timmar</div>\
+<div style="background:#fff;border-radius:16px;padding:18px;margin-bottom:12px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">\
+<div style="font-size:24px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Kompsaldo</div>\
+<div style="font-size:72px;font-weight:700;color:' + valueColor + '">' + sp[0] + '<span style="font-size:48px;opacity:0.7">:' + (sp[1] || '00') + '</span></div>\
+<div style="font-size:26px;color:#8E8E93;margin-top:6px">timmar</div>\
 </div>';
     };
 
@@ -248,11 +248,11 @@
     VR.buildKompRows = function(data) {
         var html = '\
 <div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr 0.8fr;gap:8px;padding:16px 20px;background:#1C1C1E">\
-<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>\
-<div style="font-size:14px;font-weight:600;color:#fff">Kommentar</div>\
-<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Bidrag</div>\
-<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Saldo</div>\
+<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr 0.8fr;gap:10px;padding:20px 24px;background:#1C1C1E">\
+<div style="font-size:28px;font-weight:600;color:#fff">Datum</div>\
+<div style="font-size:28px;font-weight:600;color:#fff">Kommentar</div>\
+<div style="font-size:28px;font-weight:600;color:#fff;text-align:right">Bidrag</div>\
+<div style="font-size:28px;font-weight:600;color:#fff;text-align:right">Saldo</div>\
 </div>';
 
         var maxShow = Math.min(data.length, 50);
@@ -265,23 +265,23 @@
             var bidragColor = neg ? '#FF3B30' : '#34C759';
             var sign = neg ? '−' : '+';
 
-            html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr 0.8fr;gap:10px;padding:18px 24px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
 
             // Datum
-            html += '<div style="font-size:15px;color:#333">' + data[j].d + '</div>';
+            html += '<div style="font-size:30px;color:#333">' + data[j].d + '</div>';
 
             // Kommentar
             if (data[j].k) {
-                html += '<div style="font-size:15px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + data[j].k + '</div>';
+                html += '<div style="font-size:30px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + data[j].k + '</div>';
             } else {
-                html += '<div style="font-size:15px;color:#CCC;font-style:italic">—</div>';
+                html += '<div style="font-size:30px;color:#CCC;font-style:italic">—</div>';
             }
 
             // Bidrag
-            html += '<div style="font-size:15px;font-weight:600;color:' + bidragColor + ';text-align:right">' + sign + bidrag + '</div>';
+            html += '<div style="font-size:30px;font-weight:600;color:' + bidragColor + ';text-align:right">' + sign + bidrag + '</div>';
 
             // Saldo
-            html += '<div style="font-size:15px;font-weight:600;color:#333;text-align:right">' + data[j].s + '</div>';
+            html += '<div style="font-size:30px;font-weight:600;color:#333;text-align:right">' + data[j].s + '</div>';
 
             html += '</div>';
         }

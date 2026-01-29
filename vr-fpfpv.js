@@ -143,35 +143,35 @@
         var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
 
         // FP Box
-        html += '<div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">FP ' + currentYear + '</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#34C759">' + yearlyFP + '<span style="font-size:18px;color:#8E8E93;font-weight:500">/' + FP_QUOTA + '</span></div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:18px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">FP ' + currentYear + '</div>';
+        html += '<div style="font-size:56px;font-weight:700;color:#34C759">' + yearlyFP + '<span style="font-size:36px;color:#8E8E93;font-weight:500">/' + FP_QUOTA + '</span></div>';
         // Progress bar
-        html += '<div style="background:#E5E5EA;border-radius:6px;height:8px;margin:10px 0;overflow:hidden">';
+        html += '<div style="background:#E5E5EA;border-radius:6px;height:12px;margin:12px 0;overflow:hidden">';
         html += '<div style="background:linear-gradient(90deg,#34C759,#30D158);height:100%;width:' + fpPercent + '%;border-radius:6px;transition:width 0.3s"></div>';
         html += '</div>';
-        html += '<div style="font-size:13px;color:#8E8E93">' + fpRemaining + ' kvar</div>';
+        html += '<div style="font-size:26px;color:#8E8E93">' + fpRemaining + ' kvar</div>';
         html += '</div>';
 
         // FPV Box
-        html += '<div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">FPV ' + currentYear + '</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#007AFF">' + yearlyFPV + '<span style="font-size:18px;color:#8E8E93;font-weight:500">/' + FPV_QUOTA + '</span></div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:18px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">FPV ' + currentYear + '</div>';
+        html += '<div style="font-size:56px;font-weight:700;color:#007AFF">' + yearlyFPV + '<span style="font-size:36px;color:#8E8E93;font-weight:500">/' + FPV_QUOTA + '</span></div>';
         // Progress bar
-        html += '<div style="background:#E5E5EA;border-radius:6px;height:8px;margin:10px 0;overflow:hidden">';
+        html += '<div style="background:#E5E5EA;border-radius:6px;height:12px;margin:12px 0;overflow:hidden">';
         html += '<div style="background:linear-gradient(90deg,#007AFF,#5856D6);height:100%;width:' + fpvPercent + '%;border-radius:6px;transition:width 0.3s"></div>';
         html += '</div>';
-        html += '<div style="font-size:13px;color:#8E8E93">' + fpvRemaining + ' kvar</div>';
+        html += '<div style="font-size:26px;color:#8E8E93">' + fpvRemaining + ' kvar</div>';
         html += '</div>';
 
         html += '</div>';
 
         html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
 
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Typ</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tid</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:10px;padding:20px 24px;background:#1C1C1E">';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff">Datum</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff">Typ</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff;text-align:right">Tid</div>';
         html += '</div>';
 
         for (var d = fpData.length - 1; d >= 0; d--) {
@@ -180,10 +180,10 @@
             var bgCol = rowIndex % 2 === 0 ? '#fff' : '#F8F8F8';
             var typeColor = row.typeName === 'FP' ? '#34C759' : '#007AFF';
 
-            html += '<div style="display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
-            html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
-            html += '<div style="font-size:15px;font-weight:600;color:' + typeColor + '">' + row.typeName + '</div>';
-            html += '<div style="font-size:15px;font-weight:600;color:' + typeColor + ';text-align:right">' + row.time + '</div>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:10px;padding:18px 24px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<div style="font-size:30px;color:#333">' + row.date + '</div>';
+            html += '<div style="font-size:30px;font-weight:600;color:' + typeColor + '">' + row.typeName + '</div>';
+            html += '<div style="font-size:30px;font-weight:600;color:' + typeColor + ';text-align:right">' + row.time + '</div>';
             html += '</div>';
         }
 
