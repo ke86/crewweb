@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.70';
+    VR.VERSION = 'V.0.71';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -550,6 +550,36 @@
         // Start Schema, Komp will load after Schema is done
         setTimeout(VR.doSchema, 100);
         // Note: fetchKompForHeader is now called from renderSchemaFromCache
+    };
+
+    // ===== UPDATE HEADER FROM CACHE =====
+    VR.updateHeaderFromCache = function() {
+        if (!VR.allSchemaData) return;
+
+        var today = VR.getTodayStr();
+        var tomorrow = VR.getTomorrowStr();
+
+        VR.todayDateStr = today;
+        VR.tomorrowDateStr = tomorrow;
+
+        var todayData = VR.allSchemaData[today];
+        var tomorrowData = VR.allSchemaData[tomorrow];
+
+        if (todayData && todayData.length > 0) {
+            var t = todayData[0];
+            VR.updateHeaderBox('vrTodayTur', t.ps, t.tn, t.pr, t.cd);
+        } else {
+            var elT = document.getElementById('vrTodayTur');
+            if (elT) { elT.textContent = '—'; elT.style.color = 'rgba(255,255,255,0.5)'; }
+        }
+
+        if (tomorrowData && tomorrowData.length > 0) {
+            var m = tomorrowData[0];
+            VR.updateHeaderBox('vrTomorrowTur', m.ps, m.tn, m.pr, m.cd);
+        } else {
+            var elM = document.getElementById('vrTomorrowTur');
+            if (elM) { elM.textContent = '—'; elM.style.color = 'rgba(255,255,255,0.5)'; }
+        }
     };
 
     // ===== INIT =====

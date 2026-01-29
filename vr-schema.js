@@ -235,6 +235,11 @@
         // Store ALL data for caching
         VR.allSchemaData = dd;
 
+        // Update header with today/tomorrow info
+        if (VR.updateHeaderFromCache) {
+            VR.updateHeaderFromCache();
+        }
+
         // Render from cache (filters by selected month)
         VR.renderSchemaFromCache();
     };
