@@ -198,10 +198,10 @@
                     dayData.isFree = true;
                     dayData.freeType = fpEntry.type;
                 } else if (isWeekend && obEntry) {
-                    // Weekend with OB: duration = OB + 1h
+                    // Weekend with OB: betald tid = OB
                     dayData.hasOB = true;
                     dayData.obMinutes = obEntry.minutes;
-                    dayData.duration = obEntry.minutes + 60;
+                    dayData.duration = obEntry.minutes;
                 } else if (!isWeekend && obEntry) {
                     // Weekday with OB: start = 06:00 - OB, end = start + 8h
                     dayData.hasOB = true;
@@ -258,7 +258,7 @@
 <div style="font-size:28px;font-weight:600;color:#fff">Datum</div>\
 <div style="font-size:28px;font-weight:600;color:#fff">Start</div>\
 <div style="font-size:28px;font-weight:600;color:#fff">Slut</div>\
-<div style="font-size:28px;font-weight:600;color:#fff">Längd</div>\
+<div style="font-size:28px;font-weight:600;color:#fff">Betald tid</div>\
 <div style="font-size:28px;font-weight:600;color:#fff;text-align:right">Förväntning</div>\
 </div>';
 
@@ -309,13 +309,13 @@
                 forvantning = 'Kommande';
                 textColor = '#999';
             } else if (day.isWeekend && day.hasOB) {
-                // Weekend with OB - only know length
+                // Weekend with OB - only know betald tid (OB)
                 startVal = '?';
                 slutVal = '?';
                 var hrs = Math.floor(day.duration / 60);
                 var mins = day.duration % 60;
-                langdVal = '~' + hrs + 'h' + (mins > 0 ? mins + 'm' : '');
-                forvantning = 'Längd';
+                langdVal = hrs + 'h' + (mins > 0 ? mins + 'm' : '');
+                forvantning = 'Betald tid';
             } else if (day.hasOB && day.startTime) {
                 // Weekday with OB - only know start time
                 startVal = day.startTime;
