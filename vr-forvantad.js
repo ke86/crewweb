@@ -227,7 +227,7 @@
 
         // Build HTML
         var html = VR.buildForvantadHeader(monthNames[target.month], target.year);
-        html += VR.buildForvantadRows(days);
+        html += VR.buildForvantadRows(days, target.month, target.year);
 
         VR.hideLoader();
         VR.showView('', '', html);
@@ -251,13 +251,19 @@
     };
 
     // ===== BUILD ROWS =====
-    VR.buildForvantadRows = function(days) {
+    VR.buildForvantadRows = function(days, month, year) {
         var html = '\
 <div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">\
-<div style="font-size:14px;font-weight:600;color:#fff">Dag</div>\
-<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Förväntning</div>\
+<div style="display:grid;grid-template-columns:85px 50px 50px 50px 1fr;gap:6px;padding:14px 16px;background:#1C1C1E">\
+<div style="font-size:12px;font-weight:600;color:#fff">Datum</div>\
+<div style="font-size:12px;font-weight:600;color:#fff">Start</div>\
+<div style="font-size:12px;font-weight:600;color:#fff">Slut</div>\
+<div style="font-size:12px;font-weight:600;color:#fff">Längd</div>\
+<div style="font-size:12px;font-weight:600;color:#fff;text-align:right">Förväntning</div>\
 </div>';
+
+        // Format month for display (1-indexed, zero-padded)
+        var monthStr = ('0' + (month + 1)).slice(-2);
 
         for (var i = 0; i < days.length; i++) {
             var day = days[i];
@@ -270,33 +276,63 @@
             // Use gray background for kommande days
             var rowBg = isKommande ? '#E8E8E8' : (weekendBg || bgCol);
 
-            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 20px;background:' + rowBg + ';border-bottom:1px solid #E5E5EA;align-items:center">';
+            html += '<div style="display:grid;grid-template-columns:85px 50px 50px 50px 1fr;gap:6px;padding:12px 16px;background:' + rowBg + ';border-bottom:1px solid #E5E5EA;align-items:center">';
 
-            // Day column
+            // Datum column - format: DD-MM-YYYY
+            var dayStr = ('0' + day.day).slice(-2);
+            var dateStr = dayStr + '-' + monthStr + '-' + year;
             var dayColor = isKommande ? '#999' : (day.isWeekend ? '#FF9500' : '#333');
-            html += '<div style="font-size:15px;font-weight:600;color:' + dayColor + '">' + day.weekday + ' ' + day.day + '</div>';
+            html += '<div style="font-size:12px;font-weight:600;color:' + dayColor + '">' + dateStr + '</div>';
 
-            // Förväntning column
+            // Determine values and colors based on type
+            var startVal = '—';
+            var slutVal = '—';
+            var langdVal = '—';
+            var forvantning = '';
+            var forvColor = '#999';
+
             if (isKommande) {
-                // Kommande - no data yet
-                html += '<div style="font-size:14px;font-weight:500;color:#999;text-align:right">Kommande</div>';
+                forvantning = 'Kommande';
+                forvColor = '#999';
             } else if (day.isFree) {
-                // FP/FPV - Ledig
-                html += '<div style="font-size:14px;font-weight:600;color:#34C759;text-align:right">Ledig</div>';
+                forvantning = 'Ledig';
+                forvColor = '#34C759';
             } else if (day.isWeekend && day.hasOB) {
-                // Weekend with OB - show Längd
+                // Weekend with OB - only have length
+                startVal = '?';
+                slutVal = '?';
                 var hrs = Math.floor(day.duration / 60);
                 var mins = day.duration % 60;
-                html += '<div style="font-size:14px;font-weight:600;color:#FF9500;text-align:right">~' + hrs + 'h' + (mins > 0 ? mins + 'm' : '') + '</div>';
+                langdVal = '~' + hrs + 'h' + (mins > 0 ? mins + 'm' : '');
+                forvantning = 'Längd';
+                forvColor = '#FF9500';
             } else if (day.hasOB && day.startTime) {
-                // Weekday with OB - show Starttid
-                html += '<div style="font-size:14px;font-weight:600;color:#007AFF;text-align:right">' + day.startTime + '</div>';
+                // Weekday with OB - have start time
+                startVal = day.startTime;
+                slutVal = day.endTime;
+                langdVal = '8h';
+                forvantning = 'Starttid';
+                forvColor = '#007AFF';
             } else if (day.startTime && day.endTime) {
-                // Weekday without OB - show Ramtid
-                html += '<div style="font-size:14px;font-weight:500;color:#666;text-align:right">06-16</div>';
-            } else {
-                html += '<div style="font-size:14px;color:#CCC;text-align:right">—</div>';
+                // Weekday without OB - ramtid
+                startVal = '06:00';
+                slutVal = '16:00';
+                langdVal = '10h';
+                forvantning = 'Ramtid';
+                forvColor = '#666';
             }
+
+            // Starttid column
+            html += '<div style="font-size:13px;color:' + (startVal === '?' || startVal === '—' ? '#999' : '#333') + '">' + startVal + '</div>';
+
+            // Sluttid column
+            html += '<div style="font-size:13px;color:' + (slutVal === '?' || slutVal === '—' ? '#999' : '#333') + '">' + slutVal + '</div>';
+
+            // Längd column
+            html += '<div style="font-size:13px;color:' + (langdVal === '—' ? '#999' : '#333') + '">' + langdVal + '</div>';
+
+            // Förväntning column
+            html += '<div style="font-size:13px;font-weight:600;color:' + forvColor + ';text-align:right">' + forvantning + '</div>';
 
             html += '</div>';
         }
