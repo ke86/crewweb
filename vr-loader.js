@@ -41,7 +41,8 @@
         'vr-schema.js',
         'vr-komp.js',
         'vr-daydetail.js',
-        'vr-forvantad.js'
+        'vr-forvantad.js',
+        'vr-statistik.js'
     ];
 
     var loaded = 0;
