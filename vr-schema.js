@@ -63,25 +63,36 @@
         }, 400);
     };
 
-    // ===== FETCH AND SHOW SCHEMA =====
-    VR.fetchAndShowSchema = function() {
-        var now = new Date();
-        VR.schemaYear = now.getFullYear();
-        VR.schemaMonth = now.getMonth();
+    // ===== WAIT FOR DATE INPUTS =====
+    VR.waitForDateInputs = function(callback) {
+        var n = 0;
+        var checkInterval = setInterval(function() {
+            n++;
+            var container = document.getElementById('workdays');
+            if (container) {
+                var inputs = container.querySelectorAll('input[type="text"], input:not([type])');
+                var dateInputs = [];
+                for (var i = 0; i < inputs.length; i++) {
+                    var rect = inputs[i].getBoundingClientRect();
+                    if (rect.width > 50) {
+                        dateInputs.push(inputs[i]);
+                    }
+                }
+                if (dateInputs.length >= 2) {
+                    clearInterval(checkInterval);
+                    callback();
+                    return;
+                }
+            }
+            if (n > 20) {
+                clearInterval(checkInterval);
+                callback(); // Try anyway
+            }
+        }, 200);
+    };
 
-        // Load wide range: 1 month before to 12 months ahead
-        var startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        var endDate = new Date(now.getFullYear() + 1, now.getMonth(), 0);
-
-        var d1 = '01-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
-        var d2 = endDate.getDate() + '-' + ('0' + (endDate.getMonth() + 1)).slice(-2) + '-' + endDate.getFullYear();
-
-        VR.setDates(d1, d2);
-        VR.updateLoader(55, 'Sätter datum...');
-        VR.clickFetch();
-        VR.updateLoader(65, 'Hämtar data...');
-
-        // Store expected date prefix to detect when new data arrives
+    // ===== WAIT FOR SCHEMA DATA =====
+    VR.waitForSchemaData = function() {
         var expectedMonth = ('0' + (VR.schemaMonth + 1)).slice(-2);
         var expectedYear = VR.schemaYear;
         var prevRowCount = document.querySelectorAll('#workdays table tr').length;
@@ -118,6 +129,33 @@
                 setTimeout(VR.renderSchema, 300);
             }
         }, 400);
+    };
+
+    // ===== FETCH AND SHOW SCHEMA =====
+    VR.fetchAndShowSchema = function() {
+        var now = new Date();
+        VR.schemaYear = now.getFullYear();
+        VR.schemaMonth = now.getMonth();
+
+        // Load wide range: 1 month before to 12 months ahead
+        var startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        var endDate = new Date(now.getFullYear() + 1, now.getMonth(), 0);
+
+        var d1 = '01-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
+        var d2 = endDate.getDate() + '-' + ('0' + (endDate.getMonth() + 1)).slice(-2) + '-' + endDate.getFullYear();
+
+        VR.updateLoader(50, 'Väntar på datumfält...');
+
+        // Wait for date inputs to be available before setting dates
+        VR.waitForDateInputs(function() {
+            VR.updateLoader(55, 'Sätter datum...');
+            VR.setDates(d1, d2);
+            VR.updateLoader(60, 'Hämtar data...');
+            setTimeout(function() {
+                VR.clickFetch();
+                VR.waitForSchemaData();
+            }, 300);
+        });
     };
 
     // ===== CHECK IF MONTH IN CACHE =====

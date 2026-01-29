@@ -339,8 +339,10 @@
             var arbetadStr = arbetadH + 'h' + (arbetadM > 0 ? ' ' + arbetadM + 'm' : '');
 
             // Format difference
+            // Negative diff = worked MORE than norm = good (green)
+            // Positive diff = worked LESS than norm = bad (red)
             var diffStr = VR.formatMinutesToTime(diffMinutes);
-            var diffColor = diffMinutes >= 0 ? '#34C759' : '#FF3B30';
+            var diffColor = diffMinutes <= 0 ? '#34C759' : '#FF3B30';
 
             html += '<div style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.08)">';
 
@@ -376,8 +378,8 @@
 
             html += '</div>';
 
-            // +/- row
-            html += '<div style="background:' + (diffMinutes >= 0 ? '#F0FDF4' : '#FEF2F2') + ';border-radius:12px;padding:14px;text-align:center;margin-top:12px">';
+            // +/- row (green for minus = over norm, red for plus = under norm)
+            html += '<div style="background:' + (diffMinutes <= 0 ? '#F0FDF4' : '#FEF2F2') + ';border-radius:12px;padding:14px;text-align:center;margin-top:12px">';
             html += '<div style="font-size:20px;color:#666">+/-</div>';
             html += '<div style="font-size:32px;font-weight:700;color:' + diffColor + '">' + diffStr + '</div>';
             html += '</div>';
