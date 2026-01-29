@@ -254,12 +254,12 @@
     VR.buildForvantadRows = function(days, month, year) {
         var html = '\
 <div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-<div style="display:grid;grid-template-columns:1.3fr 0.8fr 0.8fr 0.7fr 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">\
-<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>\
-<div style="font-size:14px;font-weight:600;color:#fff">Start</div>\
-<div style="font-size:14px;font-weight:600;color:#fff">Slut</div>\
-<div style="font-size:14px;font-weight:600;color:#fff">Längd</div>\
-<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Förväntning</div>\
+<div style="display:grid;grid-template-columns:1.3fr 0.8fr 0.8fr 0.7fr 1fr;gap:10px;padding:20px 24px;background:#1C1C1E">\
+<div style="font-size:28px;font-weight:600;color:#fff">Datum</div>\
+<div style="font-size:28px;font-weight:600;color:#fff">Start</div>\
+<div style="font-size:28px;font-weight:600;color:#fff">Slut</div>\
+<div style="font-size:28px;font-weight:600;color:#fff">Längd</div>\
+<div style="font-size:28px;font-weight:600;color:#fff;text-align:right">Förväntning</div>\
 </div>';
 
         // Format month for display (1-indexed, zero-padded)
@@ -273,30 +273,38 @@
             // Use isKommande flag from render logic
             var isKommande = day.isKommande;
 
-            // Use gray background for kommande days
-            var rowBg = isKommande ? '#E8E8E8' : (weekendBg || bgCol);
+            // Determine row background
+            var rowBg;
+            if (day.isFree) {
+                rowBg = '#34C759'; // Green background for free days
+            } else if (isKommande) {
+                rowBg = '#E8E8E8';
+            } else {
+                rowBg = weekendBg || bgCol;
+            }
 
-            html += '<div style="display:grid;grid-template-columns:1.3fr 0.8fr 0.8fr 0.7fr 1fr;gap:8px;padding:14px 20px;background:' + rowBg + ';border-bottom:1px solid #E5E5EA;align-items:center">';
+            html += '<div style="display:grid;grid-template-columns:1.3fr 0.8fr 0.8fr 0.7fr 1fr;gap:10px;padding:18px 24px;background:' + rowBg + ';border-bottom:1px solid #E5E5EA;align-items:center">';
 
             // Datum column - format: DD-MM-YYYY
             var dayStr = ('0' + day.day).slice(-2);
             var dateStr = dayStr + '-' + monthStr + '-' + year;
-            var dayColor = isKommande ? '#999' : (day.isWeekend ? '#FF9500' : '#333');
-            html += '<div style="font-size:15px;font-weight:600;color:' + dayColor + '">' + dateStr + '</div>';
+            var dayColor = day.isFree ? '#fff' : (isKommande ? '#999' : (day.isWeekend ? '#FF9500' : '#333'));
+            html += '<div style="font-size:30px;font-weight:600;color:' + dayColor + '">' + dateStr + '</div>';
 
             // Determine values and colors based on type
             var startVal = '—';
             var slutVal = '—';
             var langdVal = '—';
-            var forvantning = '';
-            var forvColor = '#999';
+            var forvantning = '—';
+            var textColor = '#333';
 
-            if (isKommande) {
+            if (day.isFree) {
+                // Free day - "Ledig" in Start column, rest empty, white text
+                startVal = 'Ledig';
+                textColor = '#fff';
+            } else if (isKommande) {
                 forvantning = 'Kommande';
-                forvColor = '#999';
-            } else if (day.isFree) {
-                forvantning = 'Ledig';
-                forvColor = '#34C759';
+                textColor = '#999';
             } else if (day.isWeekend && day.hasOB) {
                 // Weekend with OB - only have length
                 startVal = '?';
@@ -305,34 +313,35 @@
                 var mins = day.duration % 60;
                 langdVal = '~' + hrs + 'h' + (mins > 0 ? mins + 'm' : '');
                 forvantning = 'Längd';
-                forvColor = '#FF9500';
             } else if (day.hasOB && day.startTime) {
                 // Weekday with OB - have start time
                 startVal = day.startTime;
                 slutVal = day.endTime;
                 langdVal = '8h';
                 forvantning = 'Starttid';
-                forvColor = '#007AFF';
             } else if (day.startTime && day.endTime) {
                 // Weekday without OB - ramtid
                 startVal = '06:00';
                 slutVal = '16:00';
                 langdVal = '10h';
                 forvantning = 'Ramtid';
-                forvColor = '#666';
             }
 
             // Starttid column
-            html += '<div style="font-size:15px;color:' + (startVal === '?' || startVal === '—' ? '#999' : '#333') + '">' + startVal + '</div>';
+            var startColor = day.isFree ? '#fff' : (startVal === '?' || startVal === '—' ? '#999' : '#333');
+            html += '<div style="font-size:30px;font-weight:' + (day.isFree ? '700' : '400') + ';color:' + startColor + '">' + startVal + '</div>';
 
             // Sluttid column
-            html += '<div style="font-size:15px;color:' + (slutVal === '?' || slutVal === '—' ? '#999' : '#333') + '">' + slutVal + '</div>';
+            var slutColor = day.isFree ? '#fff' : (slutVal === '?' || slutVal === '—' ? '#999' : '#333');
+            html += '<div style="font-size:30px;color:' + slutColor + '">' + slutVal + '</div>';
 
             // Längd column
-            html += '<div style="font-size:15px;color:' + (langdVal === '—' ? '#999' : '#333') + '">' + langdVal + '</div>';
+            var langdColor = day.isFree ? '#fff' : (langdVal === '—' ? '#999' : '#333');
+            html += '<div style="font-size:30px;color:' + langdColor + '">' + langdVal + '</div>';
 
             // Förväntning column
-            html += '<div style="font-size:15px;font-weight:600;color:' + forvColor + ';text-align:right">' + forvantning + '</div>';
+            var forvColor = day.isFree ? '#fff' : (isKommande ? '#999' : '#333');
+            html += '<div style="font-size:30px;font-weight:600;color:' + forvColor + ';text-align:right">' + forvantning + '</div>';
 
             html += '</div>';
         }
