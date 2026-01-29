@@ -97,25 +97,20 @@
 
     // ===== PARSE ALL DATA =====
     VR.prefetchParseAllData = function() {
-        console.log('VR: Prefetch - parsing all data...');
+        console.log('VR: Prefetch - parsing OB and FP/FPV from löneredovisningar...');
 
         // Parse OB data
         VR.prefetchParseOB();
 
-        // Parse SR data
-        VR.prefetchParseSR();
-
         // Parse FP/FPV data
         VR.prefetchParseFPFPV();
 
-        // Mark as done
-        VR.prefetchStatus.running = false;
-        VR.prefetchStatus.done = true;
-
-        console.log('VR: Prefetch complete!');
         console.log('VR: OB entries:', VR.obData ? VR.obData.length : 0);
-        console.log('VR: SR entries:', VR.srData ? Object.keys(VR.srData).length : 0);
         console.log('VR: FP/FPV entries:', VR.statistikFPData ? VR.statistikFPData.length : 0);
+
+        // SR fetches from Arbetsdag - use existing VR.srData if user visited SR page
+        // Otherwise, Lön page will fetch it when needed using existing doSRTillagg logic
+        VR.prefetchFetchSR();
     };
 
     // ===== PARSE OB DATA =====
@@ -195,61 +190,95 @@
         console.log('VR: Prefetch - parsed', obData.length, 'OB entries');
     };
 
-    // ===== PARSE SR DATA =====
-    VR.prefetchParseSR = function() {
+    // ===== FETCH SR FROM ARBETSDAG PAGE =====
+    // Uses same logic as vr-srtillagg.js but runs silently
+    VR.prefetchFetchSR = function() {
+        // Check if SR already cached (from visiting SR page)
         if (VR.srData && Object.keys(VR.srData).length > 0) {
-            console.log('VR: Prefetch - SR already cached');
+            console.log('VR: Prefetch - SR already cached from SR page');
             VR.prefetchStatus.srDone = true;
+            VR.prefetchComplete();
             return;
         }
 
-        VR.srData = {};
-        var currentDate = null;
-        var allElements = document.body.querySelectorAll('*');
+        console.log('VR: Prefetch - fetching SR using vr-srtillagg logic...');
 
-        for (var i = 0; i < allElements.length; i++) {
-            var el = allElements[i];
-            var text = el.textContent || '';
+        // Navigate to Arbetsdag and use existing parsing functions
+        VR.clickFolder();
 
-            var dateMatch = text.match(/^(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i);
+        setTimeout(function() {
+            var n = 0;
+            var checkInterval = setInterval(function() {
+                n++;
+                var el = VR.findMenuItem('Arbetsdag');
 
-            if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE' && el.tagName !== 'TR' && el.tagName !== 'TD') {
-                var directText = '';
-                for (var c = 0; c < el.childNodes.length; c++) {
-                    if (el.childNodes[c].nodeType === 3) {
-                        directText += el.childNodes[c].textContent;
-                    }
+                if (el) {
+                    clearInterval(checkInterval);
+                    el.click();
+                    setTimeout(VR.prefetchWaitAndParseSR, 800);
+                } else if (n > 20) {
+                    clearInterval(checkInterval);
+                    console.log('VR: Prefetch - could not find Arbetsdag menu');
+                    VR.prefetchComplete();
                 }
-                if (directText.match(/^\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i)) {
-                    currentDate = dateMatch[1];
-                }
-            }
+            }, 400);
+        }, 600);
+    };
 
-            if (el.tagName === 'TABLE' && currentDate) {
-                var rows = el.querySelectorAll('tr');
-                for (var r = 0; r < rows.length; r++) {
-                    var cells = rows[r].querySelectorAll('td, th');
-                    if (cells.length < 2) continue;
-
-                    var col1 = cells[0] ? cells[0].textContent.trim() : '';
-
-                    // SR-tillägg (Denmark trips)
-                    if (col1.indexOf('S.Resa') > -1 && col1.indexOf('Danmark') > -1) {
-                        var dateKey = currentDate;
-                        if (!VR.srData[dateKey]) {
-                            VR.srData[dateKey] = {
-                                date: dateKey,
-                                type: 'SR',
-                                amount: VR.SR_RATE || 75
-                            };
-                        }
-                    }
+    // ===== WAIT FOR ARBETSDAG AND PARSE SR =====
+    VR.prefetchWaitAndParseSR = function() {
+        var n = 0;
+        var checkInterval = setInterval(function() {
+            n++;
+            var tbl = document.querySelector('#workdays table');
+            if (tbl || n > 30) {
+                clearInterval(checkInterval);
+                if (tbl) {
+                    // Use existing SR loading logic from vr-srtillagg.js
+                    VR.prefetchLoadSRSilent();
+                } else {
+                    console.log('VR: Prefetch - Arbetsdag page did not load');
+                    VR.prefetchComplete();
                 }
             }
-        }
+        }, 400);
+    };
 
-        VR.prefetchStatus.srDone = true;
-        console.log('VR: Prefetch - parsed', Object.keys(VR.srData).length, 'SR entries');
+    // ===== LOAD SR SILENTLY (uses existing parseSRDataSilent) =====
+    VR.prefetchLoadSRSilent = function() {
+        var now = new Date();
+        var currentMonth = now.getMonth();
+        var currentYear = now.getFullYear();
+        var prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+        // Initialize srData if not exists
+        if (!VR.srData) VR.srData = {};
+        VR.srNeedsExpansion = [];
+
+        console.log('VR: Prefetch - loading SR for', VR.MONTHS[prevMonth], 'and', VR.MONTHS[currentMonth]);
+
+        // Use existing loadSRMonthAuto from vr-srtillagg.js
+        VR.loadSRMonthAuto(prevYear, prevMonth, function() {
+            setTimeout(function() {
+                VR.loadSRMonthAuto(currentYear, currentMonth, function() {
+                    VR.prefetchStatus.srDone = true;
+                    console.log('VR: Prefetch - SR complete,', Object.keys(VR.srData).length, 'entries');
+                    VR.prefetchComplete();
+                });
+            }, 800);
+        });
+    };
+
+    // ===== PREFETCH COMPLETE =====
+    VR.prefetchComplete = function() {
+        VR.prefetchStatus.running = false;
+        VR.prefetchStatus.done = true;
+
+        console.log('VR: Prefetch complete!');
+        console.log('VR: OB entries:', VR.obData ? VR.obData.length : 0);
+        console.log('VR: SR entries:', VR.srData ? Object.keys(VR.srData).length : 0);
+        console.log('VR: FP/FPV entries:', VR.statistikFPData ? VR.statistikFPData.length : 0);
     };
 
     // ===== PARSE FP/FPV DATA =====
