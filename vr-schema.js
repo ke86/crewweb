@@ -121,40 +121,37 @@
 
     // ===== WAIT FOR SCHEMA DATA =====
     VR.waitForSchemaData = function() {
-        var expectedMonth = ('0' + (VR.schemaMonth + 1)).slice(-2);
-        var expectedYear = VR.schemaYear;
         var prevRowCount = document.querySelectorAll('#workdays table tr').length;
+        var stableCount = 0;
+        var lastRowCount = 0;
+
+        console.log('VR: waitForSchemaData - initial row count:', prevRowCount);
 
         var n = 0;
         VR.timer = setInterval(function() {
             n++;
-            VR.updateLoader(65 + n, 'Laddar schema...');
+            VR.updateLoader(65 + Math.min(n, 25), 'Laddar schema...');
 
             var rows = document.querySelectorAll('#workdays table tr');
             var rowCount = rows.length;
 
-            // Check if we have new data (row count changed or we have rows with current month)
-            var hasNewData = false;
-            if (rowCount !== prevRowCount && rowCount > 5) {
-                hasNewData = true;
-            } else if (rowCount > 5) {
-                // Check if any row contains current month's date
-                for (var r = 1; r < Math.min(rows.length, 10); r++) {
-                    var cells = rows[r].querySelectorAll('td');
-                    if (cells.length > 2) {
-                        var dt = cells[2] ? cells[2].textContent.trim() : '';
-                        if (dt && dt.indexOf('-' + expectedMonth + '-' + expectedYear) > -1) {
-                            hasNewData = true;
-                            break;
-                        }
-                    }
-                }
-            }
+            console.log('VR: waitForSchemaData attempt', n, '- rows:', rowCount);
 
-            if (hasNewData || n > 40) {
+            // Wait for row count to stabilize (same count for 3 checks)
+            if (rowCount === lastRowCount && rowCount > 10) {
+                stableCount++;
+                console.log('VR: Row count stable for', stableCount, 'checks');
+            } else {
+                stableCount = 0;
+            }
+            lastRowCount = rowCount;
+
+            // Proceed if we have stable data or timeout
+            if (stableCount >= 3 || n > 50) {
                 VR.stopTimer();
+                console.log('VR: Proceeding with', rowCount, 'rows after', n, 'attempts');
                 VR.updateLoader(95, 'Bygger vy...');
-                setTimeout(VR.renderSchema, 300);
+                setTimeout(VR.renderSchema, 500);
             }
         }, 400);
     };
@@ -304,6 +301,13 @@
 
         // Store ALL data for caching
         VR.allSchemaData = dd;
+
+        // Log what we got
+        var allDates = Object.keys(dd).sort();
+        console.log('VR: Parsed', allDates.length, 'dates from schema');
+        if (allDates.length > 0) {
+            console.log('VR: Date range:', allDates[0], 'to', allDates[allDates.length - 1]);
+        }
 
         // Update header with today/tomorrow info
         if (VR.updateHeaderFromCache) {
