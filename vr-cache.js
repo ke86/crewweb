@@ -27,20 +27,11 @@
             var cacheTime = parseInt(timestamp, 10);
             var now = Date.now();
 
-            // Check if cache is less than 24 hours old
-            if (now - cacheTime > CACHE_EXPIRY) {
-                console.log('VR: Cache expired, clearing...');
-                VR.clearCache();
-                return false;
-            }
-
-            // Also check if it's a new day (cache should refresh each day)
-            var cacheDate = new Date(cacheTime);
-            var today = new Date();
-            if (cacheDate.getDate() !== today.getDate() ||
-                cacheDate.getMonth() !== today.getMonth() ||
-                cacheDate.getFullYear() !== today.getFullYear()) {
-                console.log('VR: New day, clearing cache...');
+            // Cache is valid indefinitely since we only store past dates
+            // But clear if older than 7 days to avoid stale data buildup
+            var SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+            if (now - cacheTime > SEVEN_DAYS) {
+                console.log('VR: Cache older than 7 days, clearing...');
                 VR.clearCache();
                 return false;
             }
@@ -117,33 +108,92 @@
         }
     };
 
+    // ===== HELPER: Check if date is in the past =====
+    VR.isDateInPast = function(dateStr) {
+        // Parse dd-mm-yyyy format
+        var parts = dateStr.split('-');
+        if (parts.length !== 3) return false;
+
+        var day = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10) - 1; // 0-indexed
+        var year = parseInt(parts[2], 10);
+
+        var entryDate = new Date(year, month, day);
+        var today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+
+        return entryDate < today; // Only past dates, not today
+    };
+
+    // ===== FILTER PAST DATES ONLY =====
+    VR.filterPastDates = function(data, dateField) {
+        if (!data) return [];
+
+        if (Array.isArray(data)) {
+            return data.filter(function(entry) {
+                var dateStr = entry[dateField || 'date'];
+                return dateStr && VR.isDateInPast(dateStr);
+            });
+        } else {
+            // Object (like srData)
+            var filtered = {};
+            for (var key in data) {
+                if (data.hasOwnProperty(key)) {
+                    var entry = data[key];
+                    var dateStr = entry[dateField || 'date'] || key;
+                    if (VR.isDateInPast(dateStr)) {
+                        filtered[key] = entry;
+                    }
+                }
+            }
+            return filtered;
+        }
+    };
+
     // ===== SAVE CACHE =====
     VR.saveCache = function() {
         try {
             var saved = 0;
 
-            // Save OB data
+            // Save OB data (only past dates)
             if (VR.obData && VR.obData.length > 0) {
-                localStorage.setItem(CACHE_KEYS.ob, JSON.stringify(VR.obData));
-                saved++;
+                var pastOB = VR.filterPastDates(VR.obData, 'date');
+                if (pastOB.length > 0) {
+                    localStorage.setItem(CACHE_KEYS.ob, JSON.stringify(pastOB));
+                    saved++;
+                    console.log('VR: Cached', pastOB.length, 'OB entries (past only)');
+                }
             }
 
-            // Save SR data
+            // Save SR data (only past dates)
             if (VR.srData && Object.keys(VR.srData).length > 0) {
-                localStorage.setItem(CACHE_KEYS.sr, JSON.stringify(VR.srData));
-                saved++;
+                var pastSR = VR.filterPastDates(VR.srData, 'date');
+                var pastSRCount = Object.keys(pastSR).length;
+                if (pastSRCount > 0) {
+                    localStorage.setItem(CACHE_KEYS.sr, JSON.stringify(pastSR));
+                    saved++;
+                    console.log('VR: Cached', pastSRCount, 'SR entries (past only)');
+                }
             }
 
-            // Save Frånvaro data
+            // Save Frånvaro data (only past dates)
             if (VR.franvaroData && VR.franvaroData.length > 0) {
-                localStorage.setItem(CACHE_KEYS.franvaro, JSON.stringify(VR.franvaroData));
-                saved++;
+                var pastFranvaro = VR.filterPastDates(VR.franvaroData, 'date');
+                if (pastFranvaro.length > 0) {
+                    localStorage.setItem(CACHE_KEYS.franvaro, JSON.stringify(pastFranvaro));
+                    saved++;
+                    console.log('VR: Cached', pastFranvaro.length, 'Frånvaro entries (past only)');
+                }
             }
 
-            // Save FP/FPV data
+            // Save FP/FPV data (only past dates)
             if (VR.statistikFPData && VR.statistikFPData.length > 0) {
-                localStorage.setItem(CACHE_KEYS.fpfpv, JSON.stringify(VR.statistikFPData));
-                saved++;
+                var pastFP = VR.filterPastDates(VR.statistikFPData, 'date');
+                if (pastFP.length > 0) {
+                    localStorage.setItem(CACHE_KEYS.fpfpv, JSON.stringify(pastFP));
+                    saved++;
+                    console.log('VR: Cached', pastFP.length, 'FP/FPV entries (past only)');
+                }
             }
 
             // Save user role
