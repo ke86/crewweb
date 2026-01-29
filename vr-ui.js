@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.81';
+    VR.VERSION = 'V.0.83';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -236,8 +236,12 @@
 </div>\
 <div id="vrSaldoBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:18px;padding:16px 18px;text-align:center;cursor:pointer">\
 <div style="font-size:32px;color:rgba(255,255,255,0.5)">Saldo</div>\
-<div id="vrKompSaldo" style="font-size:44px;color:rgba(255,255,255,0.6);font-weight:600">Laddar...</div>\
+<div id="vrKompSaldo" class="vr-blink" style="font-size:44px;color:rgba(255,255,255,0.6);font-weight:600">Hämtar</div>\
 </div>\
+<style>\
+@keyframes vrBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }\
+.vr-blink { animation: vrBlink 1.5s ease-in-out infinite; }\
+</style>\
 </div>\
 </div>';
 
@@ -541,6 +545,7 @@
             el.style.color = saldo.indexOf('-') > -1 ? '#FF3B30' : '#34C759';
             el.style.fontSize = '44px';
             el.style.fontWeight = '600';
+            el.classList.remove('vr-blink'); // Stop blinking
         }
     };
 

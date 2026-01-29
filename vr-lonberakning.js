@@ -27,8 +27,119 @@
             return;
         }
 
-        // We have role, proceed to get data
+        // Check if we need to fetch OB/SR data
+        var hasOB = VR.obData && VR.obData.length > 0;
+        var hasSR = VR.srData && Object.keys(VR.srData).length > 0;
+
+        if (!hasOB || !hasSR) {
+            VR.updateLoader(15, 'Hämtar tillägg...');
+            VR.fetchTillaggForLon();
+            return;
+        }
+
+        // We have all data, proceed
         VR.collectLonData();
+    };
+
+    // ===== FETCH TILLAGG (OB + SR) =====
+    VR.fetchTillaggForLon = function() {
+        VR.updateLoader(20, 'Navigerar till löneredovisningar...');
+
+        VR.navigateToLoneredovisningar(function() {
+            VR.updateLoader(40, 'Laddar löneredovisningar...');
+            VR.setupLonePageAndFetch(VR.parseTillaggForLon);
+        });
+    };
+
+    VR.parseTillaggForLon = function() {
+        VR.updateLoader(60, 'Analyserar OB-data...');
+
+        // Parse OB data (same logic as vr-ob.js)
+        var obData = [];
+        var OB_RATES = {
+            'L.Hb': { name: 'Kvalificerad OB', rate: 54.69 },
+            'L.Storhelgstillägg': { name: 'Storhelgs OB', rate: 122.88 }
+        };
+
+        var currentDate = null;
+        var allElements = document.body.querySelectorAll('*');
+
+        for (var i = 0; i < allElements.length; i++) {
+            var el = allElements[i];
+            var text = el.textContent || '';
+
+            var dateMatch = text.match(/^(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i);
+
+            if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE' && el.tagName !== 'TR' && el.tagName !== 'TD') {
+                var directText = '';
+                for (var c = 0; c < el.childNodes.length; c++) {
+                    if (el.childNodes[c].nodeType === 3) {
+                        directText += el.childNodes[c].textContent;
+                    }
+                }
+                if (directText.match(/^\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i)) {
+                    currentDate = dateMatch[1];
+                }
+            }
+
+            if (el.tagName === 'TABLE' && currentDate) {
+                var rows = el.querySelectorAll('tr');
+                for (var r = 0; r < rows.length; r++) {
+                    var cells = rows[r].querySelectorAll('td, th');
+                    if (cells.length < 2) continue;
+
+                    var col1 = cells[0] ? cells[0].textContent.trim() : '';
+                    var col2 = cells[1] ? cells[1].textContent.trim() : '';
+
+                    if (col1.toLowerCase() === 'löneslag') continue;
+
+                    if (col1 === 'L.Hb' || col1 === 'L.Storhelgstillägg') {
+                        var timeMatch = col2.match(/(\d+):(\d+)/);
+                        var hours = 0;
+                        var minutes = 0;
+                        if (timeMatch) {
+                            hours = parseInt(timeMatch[1], 10);
+                            minutes = parseInt(timeMatch[2], 10);
+                        }
+                        var totalHours = hours + (minutes / 60);
+                        var rate = OB_RATES[col1] ? OB_RATES[col1].rate : 0;
+                        var kronor = totalHours * rate;
+
+                        obData.push({
+                            date: currentDate,
+                            type: col1,
+                            typeName: OB_RATES[col1] ? OB_RATES[col1].name : col1,
+                            time: col2,
+                            hours: totalHours,
+                            rate: rate,
+                            kronor: kronor
+                        });
+                    }
+
+                    // Also parse SR-tillägg (Denmark trips)
+                    if (col1.indexOf('S.Resa') > -1 && col1.indexOf('Danmark') > -1) {
+                        var dateKey = currentDate;
+                        if (!VR.srData[dateKey]) {
+                            // Detect role from train number if possible
+                            var c3 = '2'; // Default to Lokförare
+                            VR.srData[dateKey] = {
+                                date: dateKey,
+                                type: 'SR',
+                                amount: VR.SR_RATE || 75
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Store OB data globally
+        VR.obData = obData;
+
+        VR.updateLoader(80, 'Data hämtad!');
+
+        // Now proceed to collect and render
+        setTimeout(VR.collectLonData, 300);
     };
 
     // ===== FETCH ROLE =====
@@ -72,13 +183,13 @@
             deductions: { total: 0, details: [] }
         };
 
-        // Check if we have OB data cached
+        // Check if we have OB data cached (array)
         if (VR.obData && VR.obData.length > 0) {
             VR.calculateOBForMonth();
         }
 
-        // Check if we have SR data cached
-        if (VR.srData && VR.srData.length > 0) {
+        // Check if we have SR data cached (object with dateKey as keys)
+        if (VR.srData && Object.keys(VR.srData).length > 0) {
             VR.calculateSRForMonth();
         }
 
@@ -120,7 +231,8 @@
                 var month = parseInt(parts[1], 10) - 1;
                 var year = parseInt(parts[2], 10);
                 if (month === next.month && year === next.year) {
-                    total += entry.amount || 0;
+                    // Use kronor field from OB data
+                    total += entry.kronor || entry.amount || 0;
                     VR.lonData.ob.details.push(entry);
                 }
             }
@@ -133,18 +245,21 @@
     VR.calculateSRForMonth = function() {
         var next = VR.lonData.nextMonth;
         var total = 0;
-        var rate = VR.getSRRate(VR.userRole === 'Lokförare' ? '2' : '4');
+        var rate = VR.SR_RATE || 75; // Use global rate
 
-        for (var i = 0; i < VR.srData.length; i++) {
-            var entry = VR.srData[i];
-            var parts = entry.date.split('-');
+        // VR.srData is an object with dateKey as keys
+        var keys = Object.keys(VR.srData);
+        for (var i = 0; i < keys.length; i++) {
+            var entry = VR.srData[keys[i]];
+            var dateKey = entry.date || keys[i];
+            var parts = dateKey.split('-');
             if (parts.length === 3) {
                 var month = parseInt(parts[1], 10) - 1;
                 var year = parseInt(parts[2], 10);
                 if (month === next.month && year === next.year) {
                     var amount = rate; // kr per trip
                     total += amount;
-                    VR.lonData.sr.details.push({ date: entry.date, amount: amount });
+                    VR.lonData.sr.details.push({ date: dateKey, amount: amount });
                 }
             }
         }

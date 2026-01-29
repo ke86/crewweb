@@ -84,6 +84,9 @@
             }
         }
 
+        // Store globally for Lön calculations
+        VR.obData = obData;
+
         VR.updateLoader(98, 'Bygger vy...');
 
         var viewHtml = VR.buildOBView(obData);
