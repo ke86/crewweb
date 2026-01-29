@@ -303,10 +303,13 @@
                 startVal = 'Ledig';
                 textColor = '#fff';
             } else if (isKommande) {
+                startVal = '?';
+                slutVal = '?';
+                langdVal = '?';
                 forvantning = 'Kommande';
                 textColor = '#999';
             } else if (day.isWeekend && day.hasOB) {
-                // Weekend with OB - only have length
+                // Weekend with OB - only know length
                 startVal = '?';
                 slutVal = '?';
                 var hrs = Math.floor(day.duration / 60);
@@ -314,16 +317,16 @@
                 langdVal = '~' + hrs + 'h' + (mins > 0 ? mins + 'm' : '');
                 forvantning = 'Längd';
             } else if (day.hasOB && day.startTime) {
-                // Weekday with OB - have start time
+                // Weekday with OB - only know start time
                 startVal = day.startTime;
-                slutVal = day.endTime;
-                langdVal = '8h';
+                slutVal = '?';
+                langdVal = '?';
                 forvantning = 'Starttid';
             } else if (day.startTime && day.endTime) {
-                // Weekday without OB - ramtid
+                // Weekday without OB - only know ramtid (06:00-16:00)
                 startVal = '06:00';
                 slutVal = '16:00';
-                langdVal = '10h';
+                langdVal = '?';
                 forvantning = 'Ramtid';
             }
 
@@ -336,7 +339,7 @@
             html += '<div style="font-size:30px;color:' + slutColor + '">' + slutVal + '</div>';
 
             // Längd column
-            var langdColor = day.isFree ? '#fff' : (langdVal === '—' ? '#999' : '#333');
+            var langdColor = day.isFree ? '#fff' : (langdVal === '—' || langdVal === '?' ? '#999' : '#333');
             html += '<div style="font-size:30px;color:' + langdColor + '">' + langdVal + '</div>';
 
             // Förväntning column
