@@ -442,18 +442,18 @@
         // Summary boxes (like OB)
         html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
 
-        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:24px;margin-bottom:4px">🇩🇰</div>';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">' + monthNames[prevMonth] + '</div>';
-        html += '<div style="font-size:14px;color:#666;margin-bottom:2px">' + prevMonthData.length + ' dagar</div>';
-        html += '<div style="font-size:24px;font-weight:700;color:#333">' + prevTotal + ' kr</div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:18px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:36px;margin-bottom:6px">🇩🇰</div>';
+        html += '<div style="font-size:24px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">' + monthNames[prevMonth] + '</div>';
+        html += '<div style="font-size:28px;color:#666;margin-bottom:4px">' + prevMonthData.length + ' dagar</div>';
+        html += '<div style="font-size:48px;font-weight:700;color:#333">' + prevTotal + ' kr</div>';
         html += '</div>';
 
-        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:24px;margin-bottom:4px">🇩🇰</div>';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">' + monthNames[currentMonth] + '</div>';
-        html += '<div style="font-size:14px;color:#666;margin-bottom:2px">' + currentMonthData.length + ' dagar</div>';
-        html += '<div style="font-size:24px;font-weight:700;color:#C41E3A">' + currentTotal + ' kr</div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:18px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:36px;margin-bottom:6px">🇩🇰</div>';
+        html += '<div style="font-size:24px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">' + monthNames[currentMonth] + '</div>';
+        html += '<div style="font-size:28px;color:#666;margin-bottom:4px">' + currentMonthData.length + ' dagar</div>';
+        html += '<div style="font-size:48px;font-weight:700;color:#C41E3A">' + currentTotal + ' kr</div>';
         html += '</div>';
 
         html += '</div>';
@@ -484,10 +484,10 @@
         var html = '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
 
         // Header
-        html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Tur</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Kr</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr;gap:10px;padding:20px 24px;background:#1C1C1E">';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff">Datum</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff">Tur</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff;text-align:right">Kr</div>';
         html += '</div>';
 
         // Sort by date descending
@@ -500,19 +500,19 @@
             var bgCol = i % 2 === 0 ? '#fff' : '#F8F8F8';
             var sourceIcon = row.source === 'tour' ? ' 🇩🇰' : (row.source === 'expanded' ? ' 📍' : '');
 
-            html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
-            html += '<div style="font-size:15px;color:#333">' + row.dateStr + '</div>';
-            html += '<div style="font-size:15px;color:#333">' + row.tur + sourceIcon + '</div>';
-            html += '<div style="font-size:15px;font-weight:600;color:#C41E3A;text-align:right">' + rate + ' kr</div>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr;gap:10px;padding:18px 24px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<div style="font-size:30px;color:#333">' + row.dateStr + '</div>';
+            html += '<div style="font-size:30px;color:#333">' + row.tur + sourceIcon + '</div>';
+            html += '<div style="font-size:30px;font-weight:600;color:#C41E3A;text-align:right">' + rate + ' kr</div>';
             html += '</div>';
         }
 
         // Total row
         var total = allData.length * rate;
-        html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr;gap:8px;padding:16px 20px;background:#F0F0F5;border-top:2px solid #E5E5EA">';
-        html += '<div style="font-size:16px;font-weight:700;color:#333">Totalt</div>';
-        html += '<div style="font-size:16px;color:#666">' + allData.length + ' dagar</div>';
-        html += '<div style="font-size:16px;font-weight:700;color:#C41E3A;text-align:right">' + total + ' kr</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1.5fr 0.8fr;gap:10px;padding:20px 24px;background:#F0F0F5;border-top:2px solid #E5E5EA">';
+        html += '<div style="font-size:32px;font-weight:700;color:#333">Totalt</div>';
+        html += '<div style="font-size:32px;color:#666">' + allData.length + ' dagar</div>';
+        html += '<div style="font-size:32px;font-weight:700;color:#C41E3A;text-align:right">' + total + ' kr</div>';
         html += '</div>';
 
         html += '</div>';

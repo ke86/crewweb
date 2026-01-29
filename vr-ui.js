@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.65';
+    VR.VERSION = 'V.0.67';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -17,7 +17,7 @@
     };
 
     VR.getHeaderHeight = function() {
-        return VR.isMobile() ? '180px' : '140px';
+        return VR.isMobile() ? '220px' : '180px';
     };
 
     // ===== LOADER =====
@@ -120,12 +120,12 @@
 
         var menuItems = [
             { icon: '📅', label: 'Schema', action: 'doSchema', color: '#007AFF' },
-            { icon: '🔮', label: 'Förväntat', action: 'doForvantad', color: '#9B59B6' },
+            { icon: '🇩🇰', label: 'SR-Tillägg', action: 'doSRTillagg', color: '#C41E3A' },
             { icon: '⏰', label: 'Komp', action: 'doKomp', color: '#34C759' },
             { icon: '🌙', label: 'OB', action: 'doOB', color: '#AF52DE' },
             { icon: '🏠', label: 'Frånvaro', action: 'doFranvaro', color: '#FF6B6B' },
             { icon: '🏖️', label: 'FP/FPV', action: 'doFPFPV', color: '#FF2D55' },
-            { icon: '🇩🇰', label: 'SR-Tillägg', action: 'doSRTillagg', color: '#C41E3A' },
+            { icon: '🔮', label: 'Förväntat', action: 'doForvantad', color: '#9B59B6' },
             { icon: '👤', label: 'Anställddata', action: 'doAnstallddata', color: '#5AC8FA' }
         ];
 
@@ -218,23 +218,23 @@
         var headerH = VR.getHeaderHeight();
 
         h.style.cssText = 'position:fixed;top:0;left:0;right:0;height:' + headerH +
-            ';background:rgba(0,0,0,0.95);backdrop-filter:blur(20px);z-index:9999999;padding:18px 20px;font-family:-apple-system,BlinkMacSystemFont,sans-serif';
+            ';background:rgba(0,0,0,0.95);backdrop-filter:blur(20px);z-index:9999999;padding:24px 24px;font-family:-apple-system,BlinkMacSystemFont,sans-serif';
 
         h.innerHTML = '\
-<div style="display:flex;gap:14px;align-items:center;height:100%">\
-<button id="vrMenuBtn" style="background:rgba(255,255,255,0.1);color:#fff;border:none;width:70px;height:70px;border-radius:18px;font-size:32px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">☰</button>\
-<div style="flex:1;display:flex;gap:12px">\
-<div id="vrTodayBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;text-align:center;cursor:pointer">\
-<div style="font-size:16px;color:rgba(255,255,255,0.5)">Idag</div>\
-<div id="vrTodayTur" style="font-size:22px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">...</div>\
+<div style="display:flex;gap:16px;align-items:center;height:100%">\
+<button id="vrMenuBtn" style="background:rgba(255,255,255,0.1);color:#fff;border:none;width:90px;height:90px;border-radius:22px;font-size:44px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">☰</button>\
+<div style="flex:1;display:flex;gap:14px">\
+<div id="vrTodayBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:18px;padding:16px 18px;text-align:center;cursor:pointer">\
+<div style="font-size:32px;color:rgba(255,255,255,0.5)">Idag</div>\
+<div id="vrTodayTur" style="font-size:44px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">...</div>\
 </div>\
-<div id="vrTomorrowBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;text-align:center;cursor:pointer">\
-<div style="font-size:16px;color:rgba(255,255,255,0.5)">Imorgon</div>\
-<div id="vrTomorrowTur" style="font-size:22px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">...</div>\
+<div id="vrTomorrowBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:18px;padding:16px 18px;text-align:center;cursor:pointer">\
+<div style="font-size:32px;color:rgba(255,255,255,0.5)">Imorgon</div>\
+<div id="vrTomorrowTur" style="font-size:44px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">...</div>\
 </div>\
-<div id="vrSaldoBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;text-align:center;cursor:pointer">\
-<div style="font-size:16px;color:rgba(255,255,255,0.5)">Saldo 🔄</div>\
-<div id="vrKompSaldo" style="font-size:18px;color:rgba(255,255,255,0.6);font-weight:600">Laddar...</div>\
+<div id="vrSaldoBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:18px;padding:16px 18px;text-align:center;cursor:pointer">\
+<div style="font-size:32px;color:rgba(255,255,255,0.5)">Saldo 🔄</div>\
+<div id="vrKompSaldo" style="font-size:36px;color:rgba(255,255,255,0.6);font-weight:600">Laddar...</div>\
 </div>\
 </div>\
 </div>';

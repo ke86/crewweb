@@ -172,10 +172,10 @@
         var html = '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
 
         // Header
-        html += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Namn</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:center">Giltig från</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:center">Giltig till</div>';
+        html += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;padding:20px 24px;background:#1C1C1E">';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff">Namn</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff;text-align:center">Giltig från</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff;text-align:center">Giltig till</div>';
         html += '</div>';
 
         // Rows
@@ -206,17 +206,17 @@
             if (isExpired) tillColor = '#FF3B30';
             else if (isExpiringSoon) tillColor = '#FF9500';
 
-            html += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
-            html += '<div style="font-size:15px;color:#333;font-weight:500">' + kval.namn + '</div>';
-            html += '<div style="font-size:15px;color:#666;text-align:center">' + (kval.giltigFran || '-') + '</div>';
-            html += '<div style="font-size:15px;color:' + tillColor + ';text-align:center;font-weight:' + (isExpired || isExpiringSoon ? '600' : '400') + '">' + (kval.giltigTill || '-') + '</div>';
+            html += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;padding:18px 24px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<div style="font-size:30px;color:#333;font-weight:500">' + kval.namn + '</div>';
+            html += '<div style="font-size:30px;color:#666;text-align:center">' + (kval.giltigFran || '-') + '</div>';
+            html += '<div style="font-size:30px;color:' + tillColor + ';text-align:center;font-weight:' + (isExpired || isExpiringSoon ? '600' : '400') + '">' + (kval.giltigTill || '-') + '</div>';
             html += '</div>';
         }
 
         html += '</div>';
 
         // Summary
-        html += '<div style="margin-top:16px;padding:12px 20px;text-align:center;color:#8E8E93;font-size:14px">';
+        html += '<div style="margin-top:16px;padding:12px 20px;text-align:center;color:#8E8E93;font-size:28px">';
         html += kvalifikationer.length + ' kvalifikationer';
         html += '</div>';
 

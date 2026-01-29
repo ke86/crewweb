@@ -169,26 +169,26 @@
         var buildMonthSummary = function(data) {
             var keys = Object.keys(data);
             if (keys.length === 0) {
-                return '<div style="font-size:14px;color:#8E8E93">Ingen frånvaro</div>';
+                return '<div style="font-size:28px;color:#8E8E93">Ingen frånvaro</div>';
             }
             var html = '';
             for (var k = 0; k < keys.length; k++) {
                 var type = keys[k];
                 var info = data[type];
-                html += '<div style="font-size:14px;color:#333;margin-bottom:4px"><strong>' + type + '</strong>: ' + info.count + ' (' + formatTime(info.minutes) + ')</div>';
+                html += '<div style="font-size:28px;color:#333;margin-bottom:6px"><strong>' + type + '</strong>: ' + info.count + ' (' + formatTime(info.minutes) + ')</div>';
             }
             return html;
         };
 
         var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
 
-        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">' + monthNames[prevMonth] + '</div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:18px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">' + monthNames[prevMonth] + '</div>';
         html += buildMonthSummary(prevMonthData);
         html += '</div>';
 
-        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">' + monthNames[currentMonth] + '</div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:18px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">' + monthNames[currentMonth] + '</div>';
         html += buildMonthSummary(currentMonthData);
         html += '</div>';
 
@@ -196,10 +196,10 @@
 
         html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
 
-        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Frånvaro-typ</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tid</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:10px;padding:20px 24px;background:#1C1C1E">';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff">Datum</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff">Frånvaro-typ</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff;text-align:right">Tid</div>';
         html += '</div>';
 
         for (var d = franvaroData.length - 1; d >= 0; d--) {
@@ -207,10 +207,10 @@
             var rowIndex = franvaroData.length - 1 - d;
             var bgCol = rowIndex % 2 === 0 ? '#fff' : '#F8F8F8';
 
-            html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
-            html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
-            html += '<div style="font-size:15px;color:#333">' + row.typeName + '</div>';
-            html += '<div style="font-size:15px;font-weight:600;color:#FF6B6B;text-align:right">' + row.time + '</div>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:10px;padding:18px 24px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<div style="font-size:30px;color:#333">' + row.date + '</div>';
+            html += '<div style="font-size:30px;color:#333">' + row.typeName + '</div>';
+            html += '<div style="font-size:30px;font-weight:600;color:#FF6B6B;text-align:right">' + row.time + '</div>';
             html += '</div>';
         }
 
