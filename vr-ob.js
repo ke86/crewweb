@@ -141,25 +141,25 @@
 
         var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
 
-        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">' + monthNames[prevMonth] + '</div>';
-        html += '<div style="font-size:24px;font-weight:700;color:#333">' + prevMonthTotal.toFixed(0) + ' kr</div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:18px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">' + monthNames[prevMonth] + '</div>';
+        html += '<div style="font-size:48px;font-weight:700;color:#333">' + prevMonthTotal.toFixed(0) + ' kr</div>';
         html += '</div>';
 
-        html += '<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:12px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">' + monthNames[currentMonth] + '</div>';
-        html += '<div style="font-size:24px;font-weight:700;color:#AF52DE">' + currentMonthTotal.toFixed(0) + ' kr</div>';
+        html += '<div style="background:#fff;border-radius:16px;padding:18px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">' + monthNames[currentMonth] + '</div>';
+        html += '<div style="font-size:48px;font-weight:700;color:#AF52DE">' + currentMonthTotal.toFixed(0) + ' kr</div>';
         html += '</div>';
 
         html += '</div>';
 
         html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
 
-        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff">OB-typ</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Antal</div>';
-        html += '<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Kr</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:10px;padding:20px 24px;background:#1C1C1E">';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff">Datum</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff">OB-typ</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff;text-align:right">Antal</div>';
+        html += '<div style="font-size:28px;font-weight:600;color:#fff;text-align:right">Kr</div>';
         html += '</div>';
 
         for (var d = obData.length - 1; d >= 0; d--) {
@@ -167,19 +167,19 @@
             var rowIndex = obData.length - 1 - d;
             var bgCol = rowIndex % 2 === 0 ? '#fff' : '#F8F8F8';
 
-            html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:8px;padding:14px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
-            html += '<div style="font-size:15px;color:#333">' + row.date + '</div>';
-            html += '<div style="font-size:15px;color:#333">' + row.typeName + '</div>';
-            html += '<div style="font-size:15px;color:#333;text-align:right">' + row.time + '</div>';
-            html += '<div style="font-size:15px;font-weight:600;color:#AF52DE;text-align:right">' + row.kronor.toFixed(2) + '</div>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:10px;padding:18px 24px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+            html += '<div style="font-size:30px;color:#333">' + row.date + '</div>';
+            html += '<div style="font-size:30px;color:#333">' + row.typeName + '</div>';
+            html += '<div style="font-size:30px;color:#333;text-align:right">' + row.time + '</div>';
+            html += '<div style="font-size:30px;font-weight:600;color:#AF52DE;text-align:right">' + row.kronor.toFixed(2) + '</div>';
             html += '</div>';
         }
 
-        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:8px;padding:16px 20px;background:#F0F0F5;border-top:2px solid #E5E5EA">';
-        html += '<div style="font-size:16px;font-weight:700;color:#333">Totalt</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:10px;padding:20px 24px;background:#F0F0F5;border-top:2px solid #E5E5EA">';
+        html += '<div style="font-size:32px;font-weight:700;color:#333">Totalt</div>';
         html += '<div></div>';
-        html += '<div style="font-size:16px;font-weight:600;color:#333;text-align:right">' + grandTotalHours.toFixed(1) + ' h</div>';
-        html += '<div style="font-size:16px;font-weight:700;color:#AF52DE;text-align:right">' + grandTotalKr.toFixed(2) + ' kr</div>';
+        html += '<div style="font-size:32px;font-weight:600;color:#333;text-align:right">' + grandTotalHours.toFixed(1) + ' h</div>';
+        html += '<div style="font-size:32px;font-weight:700;color:#AF52DE;text-align:right">' + grandTotalKr.toFixed(2) + ' kr</div>';
         html += '</div>';
 
         html += '</div>';
