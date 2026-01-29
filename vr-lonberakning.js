@@ -369,19 +369,16 @@
         var grossTotal = salary + data.ob.total + data.sr.total + data.overtime.totalKr;
         var netTotal = grossTotal - data.deductions.total;
 
+        // Format short month name (e.g. "Feb 2025")
+        var shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
+        var payoutMonthShort = shortMonths[data.payoutInfo.payoutMonth] + ' ' + data.payoutInfo.payoutYear;
+
         var html = '';
 
-        // Header with role and month
-        html += '<div style="background:linear-gradient(135deg,#34C759,#30D158);border-radius:24px;padding:28px;margin-bottom:16px;text-align:center;color:#fff;box-shadow:0 6px 20px rgba(52,199,89,0.3)">';
-        html += '<div style="font-size:24px;opacity:0.9;margin-bottom:8px">Lön utbetalas</div>';
-        html += '<div style="font-size:36px;font-weight:700;margin-bottom:8px">' + data.payoutInfo.payoutName + '</div>';
-        html += '<div style="font-size:18px;opacity:0.7;margin-bottom:8px">För arbete i ' + data.payoutInfo.workName + '</div>';
-        html += '<div style="font-size:20px;opacity:0.8">' + (data.role === 'Lokförare' ? '🚂' : '🎫') + ' ' + data.role + '</div>';
-        html += '</div>';
-
-        // Net total box (after deductions)
+        // Net total box with month
         html += '<div style="background:#fff;border-radius:24px;padding:28px;margin-bottom:16px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:22px;color:#666;margin-bottom:8px">Bruttolön (uppskattad)</div>';
+        html += '<div style="font-size:28px;font-weight:700;color:#007AFF;margin-bottom:12px">' + payoutMonthShort + '</div>';
+        html += '<div style="font-size:18px;color:#666;margin-bottom:8px">Bruttolön (uppskattad)</div>';
         html += '<div style="font-size:48px;font-weight:700;color:#333">' + VR.formatKr(netTotal) + '</div>';
         if (data.deductions.total > 0) {
             html += '<div style="font-size:16px;color:#FF3B30;margin-top:8px">Efter avdrag: -' + VR.formatKr(data.deductions.total) + '</div>';
@@ -429,15 +426,6 @@
         html += '<div style="font-size:32px;font-weight:700;color:#34C759">' + VR.formatKr(netTotal) + '</div>';
         html += '</div>';
 
-        html += '</div>';
-
-        // Info box
-        html += '<div style="background:#FFF3E0;border-radius:16px;padding:20px;margin-top:16px">';
-        html += '<div style="font-size:18px;color:#E65100;font-weight:600;margin-bottom:8px">ℹ️ Information</div>';
-        html += '<div style="font-size:16px;color:#F57C00;line-height:1.5">';
-        html += 'Detta är en uppskattning baserad på hämtad data. ';
-        html += 'Frånvaroavdrag beräknas som månadslön/175 × frånvarotimmar.';
-        html += '</div>';
         html += '</div>';
 
         // Hourly rates info
