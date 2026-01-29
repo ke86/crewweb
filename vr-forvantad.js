@@ -254,16 +254,10 @@
     VR.buildForvantadRows = function(days) {
         var html = '\
 <div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-<div style="display:grid;grid-template-columns:70px 100px 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">\
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">\
 <div style="font-size:14px;font-weight:600;color:#fff">Dag</div>\
-<div style="font-size:14px;font-weight:600;color:#fff">Tid</div>\
-<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tidslinje (03-18)</div>\
+<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Förväntning</div>\
 </div>';
-
-        // Timeline constants (03:00 to 18:00 = 15 hours = 900 minutes)
-        var timelineStart = 3 * 60; // 03:00
-        var timelineEnd = 18 * 60;  // 18:00
-        var timelineRange = timelineEnd - timelineStart;
 
         for (var i = 0; i < days.length; i++) {
             var day = days[i];
@@ -276,75 +270,33 @@
             // Use gray background for kommande days
             var rowBg = isKommande ? '#E8E8E8' : (weekendBg || bgCol);
 
-            html += '<div style="display:grid;grid-template-columns:70px 100px 1fr;gap:8px;padding:14px 20px;background:' + rowBg + ';border-bottom:1px solid #E5E5EA;align-items:center">';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 20px;background:' + rowBg + ';border-bottom:1px solid #E5E5EA;align-items:center">';
 
             // Day column
             var dayColor = isKommande ? '#999' : (day.isWeekend ? '#FF9500' : '#333');
             html += '<div style="font-size:15px;font-weight:600;color:' + dayColor + '">' + day.weekday + ' ' + day.day + '</div>';
 
-            // Time/info column (moved before timeline)
+            // Förväntning column
             if (isKommande) {
-                html += '<div style="font-size:13px;font-weight:500;color:#999">Kommande</div>';
+                // Kommande - no data yet
+                html += '<div style="font-size:14px;font-weight:500;color:#999;text-align:right">Kommande</div>';
             } else if (day.isFree) {
-                html += '<div style="font-size:13px;font-weight:600;color:#34C759">Ledig</div>';
+                // FP/FPV - Ledig
+                html += '<div style="font-size:14px;font-weight:600;color:#34C759;text-align:right">Ledig</div>';
             } else if (day.isWeekend && day.hasOB) {
+                // Weekend with OB - show Längd
                 var hrs = Math.floor(day.duration / 60);
                 var mins = day.duration % 60;
-                html += '<div style="font-size:13px;color:#FF9500">~' + hrs + 'h' + (mins > 0 ? mins + 'm' : '') + '</div>';
+                html += '<div style="font-size:14px;font-weight:600;color:#FF9500;text-align:right">~' + hrs + 'h' + (mins > 0 ? mins + 'm' : '') + '</div>';
+            } else if (day.hasOB && day.startTime) {
+                // Weekday with OB - show Starttid
+                html += '<div style="font-size:14px;font-weight:600;color:#007AFF;text-align:right">' + day.startTime + '</div>';
             } else if (day.startTime && day.endTime) {
-                html += '<div style="font-size:13px;color:#007AFF">' + day.startTime + '-' + day.endTime + '</div>';
+                // Weekday without OB - show Ramtid
+                html += '<div style="font-size:14px;font-weight:500;color:#666;text-align:right">06-16</div>';
             } else {
-                html += '<div style="font-size:13px;color:#CCC">—</div>';
+                html += '<div style="font-size:14px;color:#CCC;text-align:right">—</div>';
             }
-
-            // Timeline column
-            html += '<div style="position:relative;height:24px;background:' + (isKommande ? '#D0D0D0' : '#E5E5EA') + ';border-radius:6px;overflow:hidden">';
-
-            if (isKommande) {
-                // Kommande - gray bar with "?" text
-                html += '<div style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center">';
-                html += '<span style="font-size:11px;font-weight:500;color:#888">?</span>';
-                html += '</div>';
-            } else if (day.isFree) {
-                // Free day - full green bar (both FP and FPV are green)
-                html += '<div style="position:absolute;left:0;right:0;top:0;bottom:0;background:#34C759;display:flex;align-items:center;justify-content:center">';
-                html += '<span style="font-size:12px;font-weight:600;color:#fff">' + day.freeType + '</span>';
-                html += '</div>';
-            } else if (day.isWeekend && day.hasOB) {
-                // Weekend - centered bar (unknown start), show duration
-                var durationPercent = Math.min(100, (day.duration / timelineRange) * 100);
-                var leftPos = (100 - durationPercent) / 2; // Center it
-                html += '<div style="position:absolute;left:' + leftPos + '%;width:' + durationPercent + '%;top:2px;bottom:2px;background:linear-gradient(90deg,#FF9500,#FF6B00);border-radius:4px;opacity:0.8"></div>';
-            } else if (day.startTime && day.endTime) {
-                // Weekday with known times
-                var startParts = day.startTime.split(':');
-                var endParts = day.endTime.split(':');
-                var startMin = parseInt(startParts[0], 10) * 60 + parseInt(startParts[1], 10);
-                var endMin = parseInt(endParts[0], 10) * 60 + parseInt(endParts[1], 10);
-
-                // Clamp to timeline range
-                startMin = Math.max(timelineStart, Math.min(timelineEnd, startMin));
-                endMin = Math.max(timelineStart, Math.min(timelineEnd, endMin));
-
-                var leftPercent = ((startMin - timelineStart) / timelineRange) * 100;
-                var widthPercent = ((endMin - startMin) / timelineRange) * 100;
-
-                html += '<div style="position:absolute;left:' + leftPercent + '%;width:' + widthPercent + '%;top:2px;bottom:2px;background:linear-gradient(90deg,#007AFF,#5856D6);border-radius:4px"></div>';
-            }
-
-            // Time markers (only show if not kommande)
-            if (!isKommande) {
-                html += '<div style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:0 4px;pointer-events:none">';
-                html += '<span style="font-size:9px;color:#8E8E93">03</span>';
-                html += '<span style="font-size:9px;color:#8E8E93">06</span>';
-                html += '<span style="font-size:9px;color:#8E8E93">09</span>';
-                html += '<span style="font-size:9px;color:#8E8E93">12</span>';
-                html += '<span style="font-size:9px;color:#8E8E93">15</span>';
-                html += '<span style="font-size:9px;color:#8E8E93">18</span>';
-                html += '</div>';
-            }
-
-            html += '</div>';
 
             html += '</div>';
         }
