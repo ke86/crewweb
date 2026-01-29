@@ -379,10 +379,13 @@
         html += '<div style="font-size:20px;opacity:0.8">' + (data.role === 'Lokförare' ? '🚂' : '🎫') + ' ' + data.role + '</div>';
         html += '</div>';
 
-        // Gross total box
+        // Net total box (after deductions)
         html += '<div style="background:#fff;border-radius:24px;padding:28px;margin-bottom:16px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.08)">';
         html += '<div style="font-size:22px;color:#666;margin-bottom:8px">Bruttolön (uppskattad)</div>';
-        html += '<div style="font-size:48px;font-weight:700;color:#333">' + VR.formatKr(grossTotal) + '</div>';
+        html += '<div style="font-size:48px;font-weight:700;color:#333">' + VR.formatKr(netTotal) + '</div>';
+        if (data.deductions.total > 0) {
+            html += '<div style="font-size:16px;color:#FF3B30;margin-top:8px">Efter avdrag: -' + VR.formatKr(data.deductions.total) + '</div>';
+        }
         html += '</div>';
 
         // Breakdown list
@@ -423,7 +426,7 @@
         // Total
         html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0">';
         html += '<div style="font-size:28px;font-weight:700;color:#333">Summa</div>';
-        html += '<div style="font-size:32px;font-weight:700;color:#34C759">' + VR.formatKr(grossTotal) + '</div>';
+        html += '<div style="font-size:32px;font-weight:700;color:#34C759">' + VR.formatKr(netTotal) + '</div>';
         html += '</div>';
 
         html += '</div>';
@@ -432,8 +435,8 @@
         html += '<div style="background:#FFF3E0;border-radius:16px;padding:20px;margin-top:16px">';
         html += '<div style="font-size:18px;color:#E65100;font-weight:600;margin-bottom:8px">ℹ️ Information</div>';
         html += '<div style="font-size:16px;color:#F57C00;line-height:1.5">';
-        html += 'Detta är en uppskattning. OB och SR-tillägg baseras på schemalagda turer. ';
-        html += 'Övertid och avdrag kommer läggas till i framtida versioner.';
+        html += 'Detta är en uppskattning baserad på hämtad data. ';
+        html += 'Frånvaroavdrag beräknas som månadslön/175 × frånvarotimmar.';
         html += '</div>';
         html += '</div>';
 

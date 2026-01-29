@@ -22,13 +22,21 @@
             return;
         }
 
-        // Check if we already have all data cached
+        // Try to load from localStorage first
+        if (VR.loadCache && VR.loadCache()) {
+            console.log('VR: Data loaded from localStorage cache!');
+            VR.prefetchStatus.done = true;
+            return;
+        }
+
+        // Check if we already have all data in memory
         var hasOB = VR.obData && VR.obData.length > 0;
         var hasSR = VR.srData && Object.keys(VR.srData).length > 0;
         var hasFP = VR.statistikFPData && VR.statistikFPData.length > 0;
+        var hasFranvaro = VR.franvaroData && VR.franvaroData.length > 0;
 
-        if (hasOB && hasSR && hasFP) {
-            console.log('VR: All data already cached, skipping prefetch');
+        if (hasOB && hasSR && hasFP && hasFranvaro) {
+            console.log('VR: All data already in memory, skipping prefetch');
             VR.prefetchStatus.done = true;
             return;
         }
@@ -369,6 +377,11 @@
     VR.prefetchComplete = function() {
         VR.prefetchStatus.running = false;
         VR.prefetchStatus.done = true;
+
+        // Save to localStorage for next session
+        if (VR.saveCache) {
+            VR.saveCache();
+        }
 
         console.log('VR: Prefetch complete!');
         console.log('VR: OB entries:', VR.obData ? VR.obData.length : 0);

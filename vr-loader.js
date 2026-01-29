@@ -31,6 +31,7 @@
     // Modules to load in order
     var modules = [
         'vr-core.js',
+        'vr-cache.js',      // Cache module - load early
         'vr-ui.js',
         'vr-lone.js',
         'vr-ob.js',
