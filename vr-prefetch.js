@@ -97,15 +97,19 @@
 
     // ===== PARSE ALL DATA =====
     VR.prefetchParseAllData = function() {
-        console.log('VR: Prefetch - parsing OB and FP/FPV from löneredovisningar...');
+        console.log('VR: Prefetch - parsing OB, Frånvaro and FP/FPV from löneredovisningar...');
 
         // Parse OB data
         VR.prefetchParseOB();
+
+        // Parse Frånvaro data (same page as OB)
+        VR.prefetchParseFranvaro();
 
         // Parse FP/FPV data
         VR.prefetchParseFPFPV();
 
         console.log('VR: OB entries:', VR.obData ? VR.obData.length : 0);
+        console.log('VR: Frånvaro entries:', VR.franvaroData ? VR.franvaroData.length : 0);
         console.log('VR: FP/FPV entries:', VR.statistikFPData ? VR.statistikFPData.length : 0);
 
         // SR fetches from Arbetsdag - use existing VR.srData if user visited SR page
@@ -188,6 +192,97 @@
         VR.obData = obData;
         VR.prefetchStatus.obDone = true;
         console.log('VR: Prefetch - parsed', obData.length, 'OB entries');
+    };
+
+    // ===== PARSE FRÅNVARO DATA =====
+    VR.prefetchParseFranvaro = function() {
+        if (VR.franvaroData && VR.franvaroData.length > 0) {
+            console.log('VR: Prefetch - Frånvaro already cached');
+            return;
+        }
+
+        var franvaroData = [];
+        var FRANVARO_TYPES = {
+            'L.Föräldraledig >5 dagar': { name: 'Föräldraledig, lång', icon: '👶' },
+            'L.Föräldraledig>5 dagar': { name: 'Föräldraledig, lång', icon: '👶' },
+            'L.Föräldraledig <5 dagar': { name: 'Föräldraledig, kort', icon: '👶' },
+            'L.Föräldraledig<5 dagar': { name: 'Föräldraledig, kort', icon: '👶' },
+            'L.Vård av barn': { name: 'VAB', icon: '🏥' }
+        };
+
+        var currentDate = null;
+        var allElements = document.body.querySelectorAll('*');
+
+        for (var i = 0; i < allElements.length; i++) {
+            var el = allElements[i];
+            var text = el.textContent || '';
+
+            var dateMatch = text.match(/^(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i);
+
+            if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE' && el.tagName !== 'TR' && el.tagName !== 'TD') {
+                var directText = '';
+                for (var c = 0; c < el.childNodes.length; c++) {
+                    if (el.childNodes[c].nodeType === 3) {
+                        directText += el.childNodes[c].textContent;
+                    }
+                }
+                if (directText.match(/^\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i)) {
+                    currentDate = dateMatch[1];
+                }
+            }
+
+            if (el.tagName === 'TABLE' && currentDate) {
+                var rows = el.querySelectorAll('tr');
+                for (var r = 0; r < rows.length; r++) {
+                    var cells = rows[r].querySelectorAll('td, th');
+                    if (cells.length < 2) continue;
+
+                    var col1 = cells[0] ? cells[0].textContent.trim() : '';
+                    var col2 = cells[1] ? cells[1].textContent.trim() : '';
+
+                    if (col1.toLowerCase() === 'löneslag') continue;
+
+                    var matchedInfo = null;
+
+                    for (var typeKey in FRANVARO_TYPES) {
+                        if (col1.indexOf(typeKey) > -1 || col1 === typeKey) {
+                            matchedInfo = FRANVARO_TYPES[typeKey];
+                            break;
+                        }
+                    }
+
+                    if (!matchedInfo) {
+                        if (col1.indexOf('Föräldraledig') > -1 && col1.indexOf('>5') > -1) {
+                            matchedInfo = { name: 'Föräldraledig, lång', icon: '👶' };
+                        } else if (col1.indexOf('Föräldraledig') > -1 && col1.indexOf('<5') > -1) {
+                            matchedInfo = { name: 'Föräldraledig, kort', icon: '👶' };
+                        } else if (col1.indexOf('Vård av barn') > -1) {
+                            matchedInfo = { name: 'VAB', icon: '🏥' };
+                        }
+                    }
+
+                    if (matchedInfo) {
+                        var timeMatch = col2.match(/(\d+):(\d+)/);
+                        var minutes = 0;
+                        if (timeMatch) {
+                            minutes = parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10);
+                        }
+
+                        franvaroData.push({
+                            date: currentDate,
+                            originalType: col1,
+                            typeName: matchedInfo.name,
+                            icon: matchedInfo.icon,
+                            time: col2,
+                            minutes: minutes
+                        });
+                    }
+                }
+            }
+        }
+
+        VR.franvaroData = franvaroData;
+        console.log('VR: Prefetch - parsed', franvaroData.length, 'Frånvaro entries');
     };
 
     // ===== FETCH SR FROM ARBETSDAG PAGE =====

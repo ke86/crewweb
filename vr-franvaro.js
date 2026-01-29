@@ -4,6 +4,9 @@
 
     var VR = window.VR;
 
+    // Storage for frånvaro data (globally accessible)
+    VR.franvaroData = [];
+
     // ===== FRÅNVARO FUNCTIONALITY =====
     VR.doFranvaro = function() {
         VR.stopTimer();
@@ -86,17 +89,29 @@
                     }
 
                     if (matchedInfo) {
+                        // Parse time to minutes
+                        var timeMatch = col2.match(/(\d+):(\d+)/);
+                        var minutes = 0;
+                        if (timeMatch) {
+                            minutes = parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10);
+                        }
+
                         franvaroData.push({
                             date: currentDate,
                             originalType: col1,
                             typeName: matchedInfo.name,
                             icon: matchedInfo.icon,
-                            time: col2
+                            time: col2,
+                            minutes: minutes
                         });
                     }
                 }
             }
         }
+
+        // Store globally for Lön calculations
+        VR.franvaroData = franvaroData;
+        console.log('VR: Parsed', franvaroData.length, 'frånvaro entries');
 
         VR.updateLoader(98, 'Bygger vy...');
 

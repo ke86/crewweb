@@ -175,11 +175,17 @@
     VR.collectLonData = function() {
         VR.updateLoader(20, 'Samlar data...');
 
+        // Get payout info (work month = nuvarande, payout month = nästa)
+        var payoutInfo = VR.getPayoutMonthInfo();
+
         // Initialize lon data object
         VR.lonData = {
             role: VR.userRole,
             baseSalary: VR.SALARIES[VR.userRole] || 46188,
-            nextMonth: VR.getNextMonth(),
+            payoutInfo: payoutInfo,
+            // For calculations, use WORK month (current month)
+            targetMonth: payoutInfo.workMonth,
+            targetYear: payoutInfo.workYear,
             ob: { total: 0, details: [] },
             sr: { total: 0, details: [] },
             overtime: { kvalificerad: 0, enkel: 0, totalKr: 0 },
@@ -201,39 +207,54 @@
             VR.calculateOvertimeForMonth();
         }
 
+        // Calculate frånvaro deductions
+        if (VR.franvaroData && VR.franvaroData.length > 0) {
+            VR.calculateFranvaroForMonth();
+        }
+
         VR.updateLoader(80, 'Bygger vy...');
         setTimeout(VR.renderLon, 300);
     };
 
-    // ===== GET NEXT MONTH =====
-    VR.getNextMonth = function() {
+    // ===== GET PAYOUT MONTH INFO =====
+    // Lön som betalas ut nästa månad är för arbete DENNA månad
+    // Ex: Det är januari 29 → Februari-lönen är för januari-arbete
+    VR.getPayoutMonthInfo = function() {
         var now = new Date();
-        var nextMonth = now.getMonth() + 1;
-        var nextYear = now.getFullYear();
-        if (nextMonth > 11) {
-            nextMonth = 0;
-            nextYear++;
+        var workMonth = now.getMonth(); // Månaden vi arbetar (nuvarande)
+        var workYear = now.getFullYear();
+        var payoutMonth = workMonth + 1; // Månaden lönen betalas ut
+        var payoutYear = workYear;
+        if (payoutMonth > 11) {
+            payoutMonth = 0;
+            payoutYear++;
         }
         return {
-            month: nextMonth,
-            year: nextYear,
-            name: VR.MONTHS[nextMonth] + ' ' + nextYear
+            workMonth: workMonth,        // Månaden arbetet utförs (0-11)
+            workYear: workYear,
+            payoutMonth: payoutMonth,    // Månaden lönen betalas ut (0-11)
+            payoutYear: payoutYear,
+            payoutName: VR.MONTHS[payoutMonth] + ' ' + payoutYear,
+            workName: VR.MONTHS[workMonth] + ' ' + workYear
         };
     };
 
     // ===== CALCULATE OB FOR MONTH =====
     VR.calculateOBForMonth = function() {
-        var next = VR.lonData.nextMonth;
+        var targetMonth = VR.lonData.targetMonth;
+        var targetYear = VR.lonData.targetYear;
         var total = 0;
+
+        console.log('VR: Calculating OB for', VR.MONTHS[targetMonth], targetYear);
 
         for (var i = 0; i < VR.obData.length; i++) {
             var entry = VR.obData[i];
-            // Parse date
+            // Parse date (dd-mm-yyyy)
             var parts = entry.date.split('-');
             if (parts.length === 3) {
                 var month = parseInt(parts[1], 10) - 1;
                 var year = parseInt(parts[2], 10);
-                if (month === next.month && year === next.year) {
+                if (month === targetMonth && year === targetYear) {
                     // Use kronor field from OB data
                     total += entry.kronor || entry.amount || 0;
                     VR.lonData.ob.details.push(entry);
@@ -241,14 +262,19 @@
             }
         }
 
+        console.log('VR: OB total for', VR.MONTHS[targetMonth], ':', total, 'kr');
         VR.lonData.ob.total = total;
     };
 
     // ===== CALCULATE SR FOR MONTH =====
     VR.calculateSRForMonth = function() {
-        var next = VR.lonData.nextMonth;
+        var targetMonth = VR.lonData.targetMonth;
+        var targetYear = VR.lonData.targetYear;
         var total = 0;
-        var rate = VR.SR_RATE || 75; // Use global rate
+        var rate = VR.detectedSRRate || VR.SR_RATE || 75; // Use detected rate first
+
+        console.log('VR: Calculating SR for', VR.MONTHS[targetMonth], targetYear, 'rate:', rate);
+        console.log('VR: srData keys:', Object.keys(VR.srData));
 
         // VR.srData is an object with dateKey as keys
         var keys = Object.keys(VR.srData);
@@ -259,7 +285,7 @@
             if (parts.length === 3) {
                 var month = parseInt(parts[1], 10) - 1;
                 var year = parseInt(parts[2], 10);
-                if (month === next.month && year === next.year) {
+                if (month === targetMonth && year === targetYear) {
                     var amount = rate; // kr per trip
                     total += amount;
                     VR.lonData.sr.details.push({ date: dateKey, amount: amount });
@@ -267,12 +293,12 @@
             }
         }
 
+        console.log('VR: SR total for', VR.MONTHS[targetMonth], ':', total, 'kr,', VR.lonData.sr.details.length, 'dagar');
         VR.lonData.sr.total = total;
     };
 
     // ===== CALCULATE OVERTIME =====
     VR.calculateOvertimeForMonth = function() {
-        var next = VR.lonData.nextMonth;
         var salary = VR.lonData.baseSalary;
 
         // Calculate hourly rates
@@ -282,6 +308,51 @@
         // For now, just placeholder - will implement when we have overtime data
         VR.lonData.overtime.kvalRate = kvalRate;
         VR.lonData.overtime.enkelRate = enkelRate;
+    };
+
+    // ===== CALCULATE FRÅNVARO (DEDUCTIONS) =====
+    VR.calculateFranvaroForMonth = function() {
+        var targetMonth = VR.lonData.targetMonth;
+        var targetYear = VR.lonData.targetYear;
+        var salary = VR.lonData.baseSalary;
+
+        // Frånvaroavdrag = månadslön / 175 * frånvarotimmar
+        var hourlyDeduction = salary / 175;
+
+        var totalMinutes = 0;
+        var details = [];
+
+        console.log('VR: Calculating Frånvaro for', VR.MONTHS[targetMonth], targetYear);
+        console.log('VR: franvaroData entries:', VR.franvaroData.length);
+
+        for (var i = 0; i < VR.franvaroData.length; i++) {
+            var entry = VR.franvaroData[i];
+            var parts = entry.date.split('-');
+            if (parts.length === 3) {
+                var month = parseInt(parts[1], 10) - 1;
+                var year = parseInt(parts[2], 10);
+                if (month === targetMonth && year === targetYear) {
+                    totalMinutes += entry.minutes || 0;
+                    details.push({
+                        date: entry.date,
+                        type: entry.typeName,
+                        time: entry.time,
+                        minutes: entry.minutes
+                    });
+                }
+            }
+        }
+
+        var totalHours = totalMinutes / 60;
+        var totalDeduction = hourlyDeduction * totalHours;
+
+        console.log('VR: Frånvaro total:', totalMinutes, 'min =', totalHours.toFixed(2), 'h =', Math.round(totalDeduction), 'kr');
+
+        VR.lonData.deductions.total = totalDeduction;
+        VR.lonData.deductions.details = details;
+        VR.lonData.deductions.totalMinutes = totalMinutes;
+        VR.lonData.deductions.totalHours = totalHours;
+        VR.lonData.deductions.hourlyRate = hourlyDeduction;
     };
 
     // ===== FORMAT CURRENCY =====
@@ -302,8 +373,9 @@
 
         // Header with role and month
         html += '<div style="background:linear-gradient(135deg,#34C759,#30D158);border-radius:24px;padding:28px;margin-bottom:16px;text-align:center;color:#fff;box-shadow:0 6px 20px rgba(52,199,89,0.3)">';
-        html += '<div style="font-size:24px;opacity:0.9;margin-bottom:8px">Beräknad lön</div>';
-        html += '<div style="font-size:36px;font-weight:700;margin-bottom:8px">' + data.nextMonth.name + '</div>';
+        html += '<div style="font-size:24px;opacity:0.9;margin-bottom:8px">Lön utbetalas</div>';
+        html += '<div style="font-size:36px;font-weight:700;margin-bottom:8px">' + data.payoutInfo.payoutName + '</div>';
+        html += '<div style="font-size:18px;opacity:0.7;margin-bottom:8px">För arbete i ' + data.payoutInfo.workName + '</div>';
         html += '<div style="font-size:20px;opacity:0.8">' + (data.role === 'Lokförare' ? '🚂' : '🎫') + ' ' + data.role + '</div>';
         html += '</div>';
 
@@ -337,11 +409,12 @@
         // Overtime
         html += VR.buildLonRow('⏱️', 'Övertid', 'Kommer snart', '#999');
 
-        // Deductions
+        // Deductions (Frånvaro)
         if (data.deductions.total > 0) {
-            html += VR.buildLonRow('📉', 'Avdrag', '-' + VR.formatKr(data.deductions.total), '#FF3B30');
+            var dedLabel = 'Frånvaroavdrag (' + data.deductions.details.length + 'd)';
+            html += VR.buildLonRow('🏥', dedLabel, '-' + VR.formatKr(data.deductions.total), '#FF3B30');
         } else {
-            html += VR.buildLonRow('📉', 'Frånvaroavdrag', 'Ingen', '#999');
+            html += VR.buildLonRow('🏥', 'Frånvaroavdrag', 'Ingen data', '#999');
         }
 
         // Divider
