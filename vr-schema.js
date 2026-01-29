@@ -365,6 +365,11 @@
                 VR.kompLoaded = true;
                 setTimeout(VR.fetchKompForHeader, 1000);
             }
+
+            // Start background prefetch of OB/SR/FP data (after komp loads)
+            if (VR.prefetchAllData && !VR.prefetchStatus.done) {
+                setTimeout(VR.prefetchAllData, 3000);
+            }
         }, 400);
     };
 

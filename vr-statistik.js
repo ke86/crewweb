@@ -19,6 +19,14 @@
             return;
         }
 
+        // Check if FP/FPV data is cached (from prefetch)
+        if (VR.statistikFPData && VR.statistikFPData.length > 0) {
+            console.log('VR: Statistik - using cached FP/FPV data');
+            VR.updateLoader(80, 'Data från cache...');
+            VR.renderStatistik();
+            return;
+        }
+
         // Schema loaded, now get FP/FPV data
         VR.updateLoader(50, 'Hämtar FP/FPV...');
         VR.loadFPFPVForStatistik();

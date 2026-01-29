@@ -43,7 +43,8 @@
         'vr-daydetail.js',
         'vr-forvantad.js',
         'vr-statistik.js',
-        'vr-lonberakning.js'
+        'vr-lonberakning.js',
+        'vr-prefetch.js'
     ];
 
     var loaded = 0;

@@ -31,14 +31,17 @@
         var hasOB = VR.obData && VR.obData.length > 0;
         var hasSR = VR.srData && Object.keys(VR.srData).length > 0;
 
-        if (!hasOB || !hasSR) {
-            VR.updateLoader(15, 'Hämtar tillägg...');
-            VR.fetchTillaggForLon();
+        if (hasOB && hasSR) {
+            // Data is cached, proceed immediately
+            console.log('VR: Lön - using cached OB/SR data');
+            VR.updateLoader(50, 'Data från cache...');
+            VR.collectLonData();
             return;
         }
 
-        // We have all data, proceed
-        VR.collectLonData();
+        // Need to fetch data
+        VR.updateLoader(15, 'Hämtar tillägg...');
+        VR.fetchTillaggForLon();
     };
 
     // ===== FETCH TILLAGG (OB + SR) =====
