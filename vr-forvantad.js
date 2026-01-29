@@ -155,6 +155,10 @@
                           'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
         var weekdayNames = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
 
+        // Calculate days from today
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         // Build day data
         var days = [];
 
@@ -164,6 +168,10 @@
             var isWeekend = (weekday === 0 || weekday === 6);
             var weekdayName = weekdayNames[weekday];
 
+            // Calculate days from today
+            var daysFromToday = Math.floor((date - today) / (1000 * 60 * 60 * 24));
+            var isBeyond52 = daysFromToday > 52;
+
             // Check if FP/FPV
             var fpEntry = VR.forvantadFP.find(function(f) { return f.day === d; });
             var obEntry = VR.forvantadOB[d];
@@ -172,34 +180,46 @@
                 day: d,
                 weekday: weekdayName,
                 isWeekend: isWeekend,
-                isFree: !!fpEntry,
-                freeType: fpEntry ? fpEntry.type : null,
-                hasOB: !!obEntry,
-                obMinutes: obEntry ? obEntry.minutes : 0,
-                obSaldo: obEntry ? obEntry.saldo : null,
+                isFree: false,
+                freeType: null,
+                hasOB: false,
+                obMinutes: 0,
+                obSaldo: null,
                 startTime: null,
                 endTime: null,
-                duration: null
+                duration: null,
+                isKommande: isBeyond52
             };
 
-            if (fpEntry) {
-                // Free day - no calculation needed
-            } else if (isWeekend && obEntry) {
-                // Weekend with OB: duration = OB + 1h
-                dayData.duration = obEntry.minutes + 60;
-            } else if (!isWeekend && obEntry) {
-                // Weekday with OB: start = 06:00 - OB, end = start + 8h
-                var startMinutes = 6 * 60 - obEntry.minutes; // 06:00 in minutes minus OB
-                var endMinutes = startMinutes + 8 * 60; // +8 hours
-
-                dayData.startTime = VR.minutesToTime(startMinutes);
-                dayData.endTime = VR.minutesToTime(endMinutes);
-                dayData.duration = 8 * 60;
-            } else if (!isWeekend && !obEntry && !fpEntry) {
-                // Weekday without OB: standard 06:00-16:00
-                dayData.startTime = '06:00';
-                dayData.endTime = '16:00';
-                dayData.duration = 10 * 60;
+            // Only process if within 52 days
+            if (!isBeyond52) {
+                if (fpEntry) {
+                    // Free day
+                    dayData.isFree = true;
+                    dayData.freeType = fpEntry.type;
+                } else if (isWeekend && obEntry) {
+                    // Weekend with OB: duration = OB + 1h
+                    dayData.hasOB = true;
+                    dayData.obMinutes = obEntry.minutes;
+                    dayData.duration = obEntry.minutes + 60;
+                } else if (!isWeekend && obEntry) {
+                    // Weekday with OB: start = 06:00 - OB, end = start + 8h
+                    dayData.hasOB = true;
+                    dayData.obMinutes = obEntry.minutes;
+                    var startMinutes = 6 * 60 - obEntry.minutes;
+                    var endMinutes = startMinutes + 8 * 60;
+                    dayData.startTime = VR.minutesToTime(startMinutes);
+                    dayData.endTime = VR.minutesToTime(endMinutes);
+                    dayData.duration = 8 * 60;
+                } else if (!isWeekend) {
+                    // Weekday without OB: standard 06:00-16:00
+                    dayData.startTime = '06:00';
+                    dayData.endTime = '16:00';
+                    dayData.duration = 10 * 60;
+                } else {
+                    // Weekend without OB - should have OB, mark as kommande
+                    dayData.isKommande = true;
+                }
             }
 
             days.push(dayData);
@@ -250,20 +270,20 @@
             var bgCol = i % 2 === 0 ? '#fff' : '#F8F8F8';
             var weekendBg = day.isWeekend ? 'rgba(255,149,0,0.05)' : '';
 
-            // Check if no info (no FP/FPV, no OB, and weekend OR no startTime)
-            var noInfo = !day.isFree && !day.hasOB && !day.startTime;
+            // Use isKommande flag from render logic
+            var isKommande = day.isKommande;
 
-            // Use gray background for no-info days
-            var rowBg = noInfo ? '#E8E8E8' : (weekendBg || bgCol);
+            // Use gray background for kommande days
+            var rowBg = isKommande ? '#E8E8E8' : (weekendBg || bgCol);
 
             html += '<div style="display:grid;grid-template-columns:70px 100px 1fr;gap:8px;padding:14px 20px;background:' + rowBg + ';border-bottom:1px solid #E5E5EA;align-items:center">';
 
             // Day column
-            var dayColor = noInfo ? '#999' : (day.isWeekend ? '#FF9500' : '#333');
+            var dayColor = isKommande ? '#999' : (day.isWeekend ? '#FF9500' : '#333');
             html += '<div style="font-size:15px;font-weight:600;color:' + dayColor + '">' + day.weekday + ' ' + day.day + '</div>';
 
             // Time/info column (moved before timeline)
-            if (noInfo) {
+            if (isKommande) {
                 html += '<div style="font-size:13px;font-weight:500;color:#999">Kommande</div>';
             } else if (day.isFree) {
                 html += '<div style="font-size:13px;font-weight:600;color:#34C759">Ledig</div>';
@@ -278,10 +298,10 @@
             }
 
             // Timeline column
-            html += '<div style="position:relative;height:24px;background:' + (noInfo ? '#D0D0D0' : '#E5E5EA') + ';border-radius:6px;overflow:hidden">';
+            html += '<div style="position:relative;height:24px;background:' + (isKommande ? '#D0D0D0' : '#E5E5EA') + ';border-radius:6px;overflow:hidden">';
 
-            if (noInfo) {
-                // No info - gray bar with "Kommande" text
+            if (isKommande) {
+                // Kommande - gray bar with "?" text
                 html += '<div style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center">';
                 html += '<span style="font-size:11px;font-weight:500;color:#888">?</span>';
                 html += '</div>';
@@ -312,8 +332,8 @@
                 html += '<div style="position:absolute;left:' + leftPercent + '%;width:' + widthPercent + '%;top:2px;bottom:2px;background:linear-gradient(90deg,#007AFF,#5856D6);border-radius:4px"></div>';
             }
 
-            // Time markers (only show if not noInfo)
-            if (!noInfo) {
+            // Time markers (only show if not kommande)
+            if (!isKommande) {
                 html += '<div style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:0 4px;pointer-events:none">';
                 html += '<span style="font-size:9px;color:#8E8E93">03</span>';
                 html += '<span style="font-size:9px;color:#8E8E93">06</span>';
