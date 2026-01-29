@@ -202,20 +202,42 @@
     };
 
     VR.setDates = function(startDate, endDate) {
-        var inputs = document.querySelectorAll('input');
+        // First try to find date inputs in #workdays
+        var container = document.getElementById('workdays');
+        var inputs = container ? container.querySelectorAll('input[type="text"], input:not([type])') : document.querySelectorAll('input');
         var dateInputs = [];
+
+        // Look for inputs with date format first
         for (var i = 0; i < inputs.length; i++) {
             var val = inputs[i].value || '';
-            if (val.match(/\d{2}-\d{2}-\d{4}/)) {
+            if (val.match(/\d{1,2}-\d{2}-\d{4}/)) {
                 dateInputs.push(inputs[i]);
             }
         }
+
+        // If not found, look for any text inputs that could be date fields
+        if (dateInputs.length < 2 && container) {
+            var allInputs = container.querySelectorAll('input[type="text"], input:not([type])');
+            dateInputs = [];
+            for (var j = 0; j < allInputs.length && dateInputs.length < 2; j++) {
+                // Skip hidden or very small inputs
+                var rect = allInputs[j].getBoundingClientRect();
+                if (rect.width > 50) {
+                    dateInputs.push(allInputs[j]);
+                }
+            }
+        }
+
         if (dateInputs.length >= 2) {
             dateInputs[0].value = startDate;
             dateInputs[0].dispatchEvent(new Event('change', { bubbles: true }));
+            dateInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
             dateInputs[1].value = endDate;
             dateInputs[1].dispatchEvent(new Event('change', { bubbles: true }));
+            dateInputs[1].dispatchEvent(new Event('input', { bubbles: true }));
+            return true;
         }
+        return false;
     };
 
     VR.clickFetch = function() {
