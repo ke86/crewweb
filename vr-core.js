@@ -202,18 +202,27 @@
     };
 
     VR.setDates = function(startDate, endDate) {
+        console.log('VR: setDates called with', startDate, 'to', endDate);
+
         // First try to find date inputs in #workdays
         var container = document.getElementById('workdays');
-        var inputs = container ? container.querySelectorAll('input[type="text"], input:not([type])') : document.querySelectorAll('input');
+        console.log('VR: workdays container found:', !!container);
+
+        var inputs = container ? container.querySelectorAll('input') : document.querySelectorAll('input');
+        console.log('VR: Found', inputs.length, 'inputs');
+
         var dateInputs = [];
 
         // Look for inputs with date format first
         for (var i = 0; i < inputs.length; i++) {
             var val = inputs[i].value || '';
+            var name = inputs[i].name || inputs[i].id || '';
+            console.log('VR: Input', i, 'name:', name, 'value:', val);
             if (val.match(/\d{1,2}-\d{2}-\d{4}/)) {
                 dateInputs.push(inputs[i]);
             }
         }
+        console.log('VR: Found', dateInputs.length, 'date inputs by value pattern');
 
         // If not found, look for any text inputs that could be date fields
         if (dateInputs.length < 2 && container) {
@@ -226,17 +235,30 @@
                     dateInputs.push(allInputs[j]);
                 }
             }
+            console.log('VR: Found', dateInputs.length, 'date inputs by size');
         }
 
         if (dateInputs.length >= 2) {
+            console.log('VR: Setting input 0 from', dateInputs[0].value, 'to', startDate);
+            console.log('VR: Setting input 1 from', dateInputs[1].value, 'to', endDate);
+
+            // Clear and set with focus to trigger any React/Angular handlers
+            dateInputs[0].focus();
             dateInputs[0].value = startDate;
-            dateInputs[0].dispatchEvent(new Event('change', { bubbles: true }));
             dateInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+            dateInputs[0].dispatchEvent(new Event('change', { bubbles: true }));
+            dateInputs[0].blur();
+
+            dateInputs[1].focus();
             dateInputs[1].value = endDate;
-            dateInputs[1].dispatchEvent(new Event('change', { bubbles: true }));
             dateInputs[1].dispatchEvent(new Event('input', { bubbles: true }));
+            dateInputs[1].dispatchEvent(new Event('change', { bubbles: true }));
+            dateInputs[1].blur();
+
+            console.log('VR: After setting - input 0:', dateInputs[0].value, 'input 1:', dateInputs[1].value);
             return true;
         }
+        console.log('VR: Failed to find date inputs');
         return false;
     };
 

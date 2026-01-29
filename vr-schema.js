@@ -137,19 +137,23 @@
         VR.schemaYear = now.getFullYear();
         VR.schemaMonth = now.getMonth();
 
-        // Load wide range: 1 month before to 12 months ahead
-        var startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        var endDate = new Date(now.getFullYear() + 1, now.getMonth(), 0);
+        // Load wide range: 1.5 months back to 12 months ahead
+        // E.g., from Dec 14 to Dec 31 next year
+        var startDate = new Date(now.getFullYear(), now.getMonth() - 1, 14);
+        var endDate = new Date(now.getFullYear(), 11, 31); // Dec 31 this year
 
-        var d1 = '01-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
+        var d1 = startDate.getDate() + '-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
         var d2 = endDate.getDate() + '-' + ('0' + (endDate.getMonth() + 1)).slice(-2) + '-' + endDate.getFullYear();
+
+        console.log('VR: Setting dates from ' + d1 + ' to ' + d2);
 
         VR.updateLoader(50, 'Väntar på datumfält...');
 
         // Wait for date inputs to be available before setting dates
         VR.waitForDateInputs(function() {
-            VR.updateLoader(55, 'Sätter datum...');
-            VR.setDates(d1, d2);
+            VR.updateLoader(55, 'Sätter datum ' + d1 + '...');
+            var success = VR.setDates(d1, d2);
+            console.log('VR: setDates result: ' + success);
             VR.updateLoader(60, 'Hämtar data...');
             setTimeout(function() {
                 VR.clickFetch();
