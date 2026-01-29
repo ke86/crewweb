@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.67';
+    VR.VERSION = 'V.0.68';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -233,7 +233,7 @@
 <div id="vrTomorrowTur" style="font-size:44px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">...</div>\
 </div>\
 <div id="vrSaldoBox" style="flex:1;background:rgba(255,255,255,0.1);border-radius:18px;padding:16px 18px;text-align:center;cursor:pointer">\
-<div style="font-size:32px;color:rgba(255,255,255,0.5)">Saldo 🔄</div>\
+<div style="font-size:32px;color:rgba(255,255,255,0.5)">Saldo</div>\
 <div id="vrKompSaldo" style="font-size:36px;color:rgba(255,255,255,0.6);font-weight:600">Laddar...</div>\
 </div>\
 </div>\
