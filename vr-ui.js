@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.78';
+    VR.VERSION = 'V.0.79';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -377,7 +377,7 @@
         if (saldoEl) {
             saldoEl.textContent = 'Hämtar...';
             saldoEl.style.color = 'rgba(255,255,255,0.6)';
-            saldoEl.style.fontSize = '18px';
+            saldoEl.style.fontSize = '28px';
         }
 
         // Check if already on balances page
@@ -404,7 +404,7 @@
                 setTimeout(VR.selectKompForHeader, 1500);
             } else if (saldoEl) {
                 saldoEl.textContent = 'Tryck 🔄';
-                saldoEl.style.fontSize = '16px';
+                saldoEl.style.fontSize = '28px';
             }
         }, 800);
     };
@@ -538,8 +538,8 @@
         if (el) {
             el.textContent = saldo + ' tim';
             el.style.color = saldo.indexOf('-') > -1 ? '#FF3B30' : '#34C759';
-            el.style.fontSize = '22px';
-            el.style.fontWeight = '700';
+            el.style.fontSize = '44px';
+            el.style.fontWeight = '600';
         }
     };
 
