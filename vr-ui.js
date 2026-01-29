@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.79';
+    VR.VERSION = 'V.0.80';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -536,7 +536,7 @@
 
         var el = document.getElementById('vrKompSaldo');
         if (el) {
-            el.textContent = saldo + ' tim';
+            el.textContent = saldo;
             el.style.color = saldo.indexOf('-') > -1 ? '#FF3B30' : '#34C759';
             el.style.fontSize = '44px';
             el.style.fontWeight = '600';
