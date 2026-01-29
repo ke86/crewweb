@@ -234,10 +234,10 @@
     VR.buildForvantadRows = function(days) {
         var html = '\
 <div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-<div style="display:grid;grid-template-columns:70px 1fr 100px;gap:8px;padding:16px 20px;background:#1C1C1E">\
+<div style="display:grid;grid-template-columns:70px 100px 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">\
 <div style="font-size:14px;font-weight:600;color:#fff">Dag</div>\
-<div style="font-size:14px;font-weight:600;color:#fff">Tidslinje (03-18)</div>\
-<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tid</div>\
+<div style="font-size:14px;font-weight:600;color:#fff">Tid</div>\
+<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Tidslinje (03-18)</div>\
 </div>';
 
         // Timeline constants (03:00 to 18:00 = 15 hours = 900 minutes)
@@ -250,16 +250,42 @@
             var bgCol = i % 2 === 0 ? '#fff' : '#F8F8F8';
             var weekendBg = day.isWeekend ? 'rgba(255,149,0,0.05)' : '';
 
-            html += '<div style="display:grid;grid-template-columns:70px 1fr 100px;gap:8px;padding:14px 20px;background:' + (weekendBg || bgCol) + ';border-bottom:1px solid #E5E5EA;align-items:center">';
+            // Check if no info (no FP/FPV, no OB, and weekend OR no startTime)
+            var noInfo = !day.isFree && !day.hasOB && !day.startTime;
+
+            // Use gray background for no-info days
+            var rowBg = noInfo ? '#E8E8E8' : (weekendBg || bgCol);
+
+            html += '<div style="display:grid;grid-template-columns:70px 100px 1fr;gap:8px;padding:14px 20px;background:' + rowBg + ';border-bottom:1px solid #E5E5EA;align-items:center">';
 
             // Day column
-            var dayColor = day.isWeekend ? '#FF9500' : '#333';
+            var dayColor = noInfo ? '#999' : (day.isWeekend ? '#FF9500' : '#333');
             html += '<div style="font-size:15px;font-weight:600;color:' + dayColor + '">' + day.weekday + ' ' + day.day + '</div>';
 
-            // Timeline column
-            html += '<div style="position:relative;height:24px;background:#E5E5EA;border-radius:6px;overflow:hidden">';
+            // Time/info column (moved before timeline)
+            if (noInfo) {
+                html += '<div style="font-size:13px;font-weight:500;color:#999">Kommande</div>';
+            } else if (day.isFree) {
+                html += '<div style="font-size:13px;font-weight:600;color:#34C759">Ledig</div>';
+            } else if (day.isWeekend && day.hasOB) {
+                var hrs = Math.floor(day.duration / 60);
+                var mins = day.duration % 60;
+                html += '<div style="font-size:13px;color:#FF9500">~' + hrs + 'h' + (mins > 0 ? mins + 'm' : '') + '</div>';
+            } else if (day.startTime && day.endTime) {
+                html += '<div style="font-size:13px;color:#007AFF">' + day.startTime + '-' + day.endTime + '</div>';
+            } else {
+                html += '<div style="font-size:13px;color:#CCC">—</div>';
+            }
 
-            if (day.isFree) {
+            // Timeline column
+            html += '<div style="position:relative;height:24px;background:' + (noInfo ? '#D0D0D0' : '#E5E5EA') + ';border-radius:6px;overflow:hidden">';
+
+            if (noInfo) {
+                // No info - gray bar with "Kommande" text
+                html += '<div style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center">';
+                html += '<span style="font-size:11px;font-weight:500;color:#888">?</span>';
+                html += '</div>';
+            } else if (day.isFree) {
                 // Free day - full green bar (both FP and FPV are green)
                 html += '<div style="position:absolute;left:0;right:0;top:0;bottom:0;background:#34C759;display:flex;align-items:center;justify-content:center">';
                 html += '<span style="font-size:12px;font-weight:600;color:#fff">' + day.freeType + '</span>';
@@ -286,30 +312,19 @@
                 html += '<div style="position:absolute;left:' + leftPercent + '%;width:' + widthPercent + '%;top:2px;bottom:2px;background:linear-gradient(90deg,#007AFF,#5856D6);border-radius:4px"></div>';
             }
 
-            // Time markers
-            html += '<div style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:0 4px;pointer-events:none">';
-            html += '<span style="font-size:9px;color:#8E8E93">03</span>';
-            html += '<span style="font-size:9px;color:#8E8E93">06</span>';
-            html += '<span style="font-size:9px;color:#8E8E93">09</span>';
-            html += '<span style="font-size:9px;color:#8E8E93">12</span>';
-            html += '<span style="font-size:9px;color:#8E8E93">15</span>';
-            html += '<span style="font-size:9px;color:#8E8E93">18</span>';
-            html += '</div>';
-
-            html += '</div>';
-
-            // Time/info column
-            if (day.isFree) {
-                html += '<div style="font-size:13px;font-weight:600;color:#34C759;text-align:right">Ledig</div>';
-            } else if (day.isWeekend && day.hasOB) {
-                var hrs = Math.floor(day.duration / 60);
-                var mins = day.duration % 60;
-                html += '<div style="font-size:13px;color:#FF9500;text-align:right">~' + hrs + 'h' + (mins > 0 ? mins + 'm' : '') + '</div>';
-            } else if (day.startTime && day.endTime) {
-                html += '<div style="font-size:13px;color:#007AFF;text-align:right">' + day.startTime + '-' + day.endTime + '</div>';
-            } else {
-                html += '<div style="font-size:13px;color:#CCC;text-align:right">—</div>';
+            // Time markers (only show if not noInfo)
+            if (!noInfo) {
+                html += '<div style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:0 4px;pointer-events:none">';
+                html += '<span style="font-size:9px;color:#8E8E93">03</span>';
+                html += '<span style="font-size:9px;color:#8E8E93">06</span>';
+                html += '<span style="font-size:9px;color:#8E8E93">09</span>';
+                html += '<span style="font-size:9px;color:#8E8E93">12</span>';
+                html += '<span style="font-size:9px;color:#8E8E93">15</span>';
+                html += '<span style="font-size:9px;color:#8E8E93">18</span>';
+                html += '</div>';
             }
+
+            html += '</div>';
 
             html += '</div>';
         }
