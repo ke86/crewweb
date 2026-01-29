@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.80';
+    VR.VERSION = 'V.0.81';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -127,6 +127,7 @@
             { icon: '🏖️', label: 'FP/FPV', action: 'doFPFPV', color: '#FF2D55' },
             { icon: '🔮', label: 'Förväntat', action: 'doForvantad', color: '#9B59B6' },
             { icon: '📊', label: 'Statistik', action: 'doStatistik', color: '#FF9500' },
+            { icon: '💰', label: 'Lön', action: 'doLon', color: '#4CAF50' },
             { icon: '👤', label: 'Anställddata', action: 'doAnstallddata', color: '#5AC8FA' }
         ];
 
