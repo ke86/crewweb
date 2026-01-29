@@ -254,12 +254,12 @@
     VR.buildForvantadRows = function(days, month, year) {
         var html = '\
 <div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">\
-<div style="display:grid;grid-template-columns:85px 50px 50px 50px 1fr;gap:6px;padding:14px 16px;background:#1C1C1E">\
-<div style="font-size:12px;font-weight:600;color:#fff">Datum</div>\
-<div style="font-size:12px;font-weight:600;color:#fff">Start</div>\
-<div style="font-size:12px;font-weight:600;color:#fff">Slut</div>\
-<div style="font-size:12px;font-weight:600;color:#fff">Längd</div>\
-<div style="font-size:12px;font-weight:600;color:#fff;text-align:right">Förväntning</div>\
+<div style="display:grid;grid-template-columns:1.3fr 0.8fr 0.8fr 0.7fr 1fr;gap:8px;padding:16px 20px;background:#1C1C1E">\
+<div style="font-size:14px;font-weight:600;color:#fff">Datum</div>\
+<div style="font-size:14px;font-weight:600;color:#fff">Start</div>\
+<div style="font-size:14px;font-weight:600;color:#fff">Slut</div>\
+<div style="font-size:14px;font-weight:600;color:#fff">Längd</div>\
+<div style="font-size:14px;font-weight:600;color:#fff;text-align:right">Förväntning</div>\
 </div>';
 
         // Format month for display (1-indexed, zero-padded)
@@ -276,13 +276,13 @@
             // Use gray background for kommande days
             var rowBg = isKommande ? '#E8E8E8' : (weekendBg || bgCol);
 
-            html += '<div style="display:grid;grid-template-columns:85px 50px 50px 50px 1fr;gap:6px;padding:12px 16px;background:' + rowBg + ';border-bottom:1px solid #E5E5EA;align-items:center">';
+            html += '<div style="display:grid;grid-template-columns:1.3fr 0.8fr 0.8fr 0.7fr 1fr;gap:8px;padding:14px 20px;background:' + rowBg + ';border-bottom:1px solid #E5E5EA;align-items:center">';
 
             // Datum column - format: DD-MM-YYYY
             var dayStr = ('0' + day.day).slice(-2);
             var dateStr = dayStr + '-' + monthStr + '-' + year;
             var dayColor = isKommande ? '#999' : (day.isWeekend ? '#FF9500' : '#333');
-            html += '<div style="font-size:12px;font-weight:600;color:' + dayColor + '">' + dateStr + '</div>';
+            html += '<div style="font-size:15px;font-weight:600;color:' + dayColor + '">' + dateStr + '</div>';
 
             // Determine values and colors based on type
             var startVal = '—';
@@ -323,16 +323,16 @@
             }
 
             // Starttid column
-            html += '<div style="font-size:13px;color:' + (startVal === '?' || startVal === '—' ? '#999' : '#333') + '">' + startVal + '</div>';
+            html += '<div style="font-size:15px;color:' + (startVal === '?' || startVal === '—' ? '#999' : '#333') + '">' + startVal + '</div>';
 
             // Sluttid column
-            html += '<div style="font-size:13px;color:' + (slutVal === '?' || slutVal === '—' ? '#999' : '#333') + '">' + slutVal + '</div>';
+            html += '<div style="font-size:15px;color:' + (slutVal === '?' || slutVal === '—' ? '#999' : '#333') + '">' + slutVal + '</div>';
 
             // Längd column
-            html += '<div style="font-size:13px;color:' + (langdVal === '—' ? '#999' : '#333') + '">' + langdVal + '</div>';
+            html += '<div style="font-size:15px;color:' + (langdVal === '—' ? '#999' : '#333') + '">' + langdVal + '</div>';
 
             // Förväntning column
-            html += '<div style="font-size:13px;font-weight:600;color:' + forvColor + ';text-align:right">' + forvantning + '</div>';
+            html += '<div style="font-size:15px;font-weight:600;color:' + forvColor + ';text-align:right">' + forvantning + '</div>';
 
             html += '</div>';
         }
