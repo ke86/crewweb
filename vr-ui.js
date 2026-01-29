@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.54';
+    VR.VERSION = 'V.0.55';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -120,6 +120,7 @@
 
         var menuItems = [
             { icon: '📅', label: 'Schema', action: 'doSchema', color: '#007AFF' },
+            { icon: '🔮', label: 'Förväntat', action: 'doForvantad', color: '#9B59B6' },
             { icon: '⏰', label: 'Komp', action: 'doKomp', color: '#34C759' },
             { icon: '🌙', label: 'OB', action: 'doOB', color: '#AF52DE' },
             { icon: '🏠', label: 'Frånvaro', action: 'doFranvaro', color: '#FF6B6B' },

@@ -40,7 +40,8 @@
         'vr-anstalld.js',
         'vr-schema.js',
         'vr-komp.js',
-        'vr-daydetail.js'
+        'vr-daydetail.js',
+        'vr-forvantad.js'
     ];
 
     var loaded = 0;
