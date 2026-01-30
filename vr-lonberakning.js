@@ -439,9 +439,9 @@
         html += '<div style="font-size:15px;color:#666">' + VR.BURIAL_FEE.toFixed(2) + '%</div>';
         html += '</div>';
 
-        // Total tax rate
-        html += '<div style="text-align:center;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:12px">';
-        html += '<div style="font-size:14px;color:rgba(255,255,255,0.8)">Total skattesats</div>';
+        // Total tax rate (app theme colors - dark blue like menu)
+        html += '<div style="text-align:center;padding:12px;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:12px">';
+        html += '<div style="font-size:14px;color:rgba(255,255,255,0.7)">Total skattesats</div>';
         html += '<div id="vrTaxRateDisplay" style="font-size:28px;font-weight:700;color:#fff">' + taxRate.toFixed(2) + '%</div>';
         html += '</div>';
 

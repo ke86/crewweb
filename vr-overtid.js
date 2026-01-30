@@ -8,8 +8,10 @@
     // Kvalificerad: Lön / 72
     // Enkel: Lön / 92
     VR.OVERTIME_TYPES = {
-        'L.Komp+ 2,0': { name: 'Kvalificerad (2,0)', divisor: 72 },
-        'L.Komp+ 1,5': { name: 'Enkel (1,5)', divisor: 92 }
+        'L.Övertid kvalificerad': { name: 'Kval. övertid', divisor: 72 },
+        'L.Förseningsövertid Kval': { name: 'Kval. försening', divisor: 72 },
+        'L.Övertid enkel': { name: 'Enkel övertid', divisor: 92 },
+        'L.Förseningsövertid enkel': { name: 'Enkel försening', divisor: 92 }
     };
 
     // Global storage
@@ -68,10 +70,8 @@
 
                     // Check for overtime types
                     var overtimeInfo = null;
-                    if (col1 === 'L.Komp+ 2,0') {
-                        overtimeInfo = VR.OVERTIME_TYPES['L.Komp+ 2,0'];
-                    } else if (col1 === 'L.Komp+ 1,5') {
-                        overtimeInfo = VR.OVERTIME_TYPES['L.Komp+ 1,5'];
+                    if (VR.OVERTIME_TYPES[col1]) {
+                        overtimeInfo = VR.OVERTIME_TYPES[col1];
                     }
 
                     if (overtimeInfo) {
