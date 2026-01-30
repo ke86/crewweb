@@ -202,8 +202,8 @@
             VR.calculateSRForMonth();
         }
 
-        // Calculate overtime from schema if available
-        if (VR.allSchemaData) {
+        // Calculate overtime from overtidData if available
+        if (VR.overtidData && VR.overtidData.length > 0) {
             VR.calculateOvertimeForMonth();
         }
 
@@ -299,15 +299,38 @@
 
     // ===== CALCULATE OVERTIME =====
     VR.calculateOvertimeForMonth = function() {
+        var targetMonth = VR.lonData.targetMonth;
+        var targetYear = VR.lonData.targetYear;
         var salary = VR.lonData.baseSalary;
 
         // Calculate hourly rates
         var kvalRate = salary / 72;
         var enkelRate = salary / 92;
-
-        // For now, just placeholder - will implement when we have overtime data
         VR.lonData.overtime.kvalRate = kvalRate;
         VR.lonData.overtime.enkelRate = enkelRate;
+
+        var total = 0;
+        var details = [];
+
+        console.log('VR: Calculating Övertid for', VR.MONTHS[targetMonth], targetYear);
+
+        for (var i = 0; i < VR.overtidData.length; i++) {
+            var entry = VR.overtidData[i];
+            // Parse date (dd-mm-yyyy)
+            var parts = entry.date.split('-');
+            if (parts.length === 3) {
+                var month = parseInt(parts[1], 10) - 1;
+                var year = parseInt(parts[2], 10);
+                if (month === targetMonth && year === targetYear) {
+                    total += entry.kronor || 0;
+                    details.push(entry);
+                }
+            }
+        }
+
+        console.log('VR: Övertid total for', VR.MONTHS[targetMonth], ':', Math.round(total), 'kr,', details.length, 'poster');
+        VR.lonData.overtime.totalKr = total;
+        VR.lonData.overtime.details = details;
     };
 
     // ===== CALCULATE FRÅNVARO (DEDUCTIONS) =====
@@ -407,7 +430,12 @@
         }
 
         // Overtime
-        html += VR.buildLonRow('⏱️', 'Övertid', 'Kommer snart', '#999');
+        if (data.overtime.totalKr > 0) {
+            var otLabel = 'Övertid (' + data.overtime.details.length + ')';
+            html += VR.buildLonRow('⏱️', otLabel, '+' + VR.formatKr(data.overtime.totalKr), '#FF9500');
+        } else {
+            html += VR.buildLonRow('⏱️', 'Övertid', 'Ingen data', '#999');
+        }
 
         // Deductions (Frånvaro)
         if (data.deductions.total > 0) {

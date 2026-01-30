@@ -35,6 +35,7 @@
         'vr-ui.js',
         'vr-lone.js',
         'vr-ob.js',
+        'vr-overtid.js',    // Övertid module
         'vr-franvaro.js',
         'vr-fpfpv.js',
         'vr-srtillagg.js',

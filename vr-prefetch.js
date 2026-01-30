@@ -10,7 +10,8 @@
         done: false,
         obDone: false,
         srDone: false,
-        fpDone: false
+        fpDone: false,
+        overtidDone: false
     };
 
     // ===== MAIN PREFETCH FUNCTION =====
@@ -34,8 +35,9 @@
         var hasSR = VR.srData && Object.keys(VR.srData).length > 0;
         var hasFP = VR.statistikFPData && VR.statistikFPData.length > 0;
         var hasFranvaro = VR.franvaroData && VR.franvaroData.length > 0;
+        var hasOvertid = VR.overtidData && VR.overtidData.length > 0;
 
-        if (hasOB && hasSR && hasFP && hasFranvaro) {
+        if (hasOB && hasSR && hasFP && hasFranvaro && hasOvertid) {
             console.log('VR: All data already in memory, skipping prefetch');
             VR.prefetchStatus.done = true;
             return;
@@ -105,10 +107,13 @@
 
     // ===== PARSE ALL DATA =====
     VR.prefetchParseAllData = function() {
-        console.log('VR: Prefetch - parsing OB, Frånvaro and FP/FPV from löneredovisningar...');
+        console.log('VR: Prefetch - parsing OB, Övertid, Frånvaro and FP/FPV from löneredovisningar...');
 
         // Parse OB data
         VR.prefetchParseOB();
+
+        // Parse Övertid data (same page as OB)
+        VR.prefetchParseOvertid();
 
         // Parse Frånvaro data (same page as OB)
         VR.prefetchParseFranvaro();
@@ -117,6 +122,7 @@
         VR.prefetchParseFPFPV();
 
         console.log('VR: OB entries:', VR.obData ? VR.obData.length : 0);
+        console.log('VR: Övertid entries:', VR.overtidData ? VR.overtidData.length : 0);
         console.log('VR: Frånvaro entries:', VR.franvaroData ? VR.franvaroData.length : 0);
         console.log('VR: FP/FPV entries:', VR.statistikFPData ? VR.statistikFPData.length : 0);
 
@@ -200,6 +206,92 @@
         VR.obData = obData;
         VR.prefetchStatus.obDone = true;
         console.log('VR: Prefetch - parsed', obData.length, 'OB entries');
+    };
+
+    // ===== PARSE ÖVERTID DATA =====
+    VR.prefetchParseOvertid = function() {
+        if (VR.overtidData && VR.overtidData.length > 0) {
+            console.log('VR: Prefetch - Övertid already cached');
+            VR.prefetchStatus.overtidDone = true;
+            return;
+        }
+
+        var overtidData = [];
+        var salary = VR.SALARIES ? VR.SALARIES[VR.userRole] || 46188 : 46188;
+        var OVERTIME_TYPES = {
+            'L.Komp+ 2,0': { name: 'Kvalificerad (2,0)', divisor: 72 },
+            'L.Komp+ 1,5': { name: 'Enkel (1,5)', divisor: 92 }
+        };
+
+        var currentDate = null;
+        var allElements = document.body.querySelectorAll('*');
+
+        for (var i = 0; i < allElements.length; i++) {
+            var el = allElements[i];
+            var text = el.textContent || '';
+
+            var dateMatch = text.match(/^(\d{1,2}-\d{2}-\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i);
+
+            if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE' && el.tagName !== 'TR' && el.tagName !== 'TD') {
+                var directText = '';
+                for (var c = 0; c < el.childNodes.length; c++) {
+                    if (el.childNodes[c].nodeType === 3) {
+                        directText += el.childNodes[c].textContent;
+                    }
+                }
+                if (directText.match(/^\d{1,2}-\d{2}-\d{4}\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)/i)) {
+                    currentDate = dateMatch[1];
+                }
+            }
+
+            if (el.tagName === 'TABLE' && currentDate) {
+                var rows = el.querySelectorAll('tr');
+                for (var r = 0; r < rows.length; r++) {
+                    var cells = rows[r].querySelectorAll('td, th');
+                    if (cells.length < 2) continue;
+
+                    var col1 = cells[0] ? cells[0].textContent.trim() : '';
+                    var col2 = cells[1] ? cells[1].textContent.trim() : '';
+
+                    if (col1.toLowerCase() === 'löneslag') continue;
+
+                    var overtimeInfo = null;
+                    if (col1 === 'L.Komp+ 2,0') {
+                        overtimeInfo = OVERTIME_TYPES['L.Komp+ 2,0'];
+                    } else if (col1 === 'L.Komp+ 1,5') {
+                        overtimeInfo = OVERTIME_TYPES['L.Komp+ 1,5'];
+                    }
+
+                    if (overtimeInfo) {
+                        var timeMatch = col2.match(/(\d+):(\d+)/);
+                        var hours = 0;
+                        var minutes = 0;
+                        if (timeMatch) {
+                            hours = parseInt(timeMatch[1], 10);
+                            minutes = parseInt(timeMatch[2], 10);
+                        }
+                        var totalHours = hours + (minutes / 60);
+                        var rate = salary / overtimeInfo.divisor;
+                        var kronor = totalHours * rate;
+
+                        overtidData.push({
+                            date: currentDate,
+                            type: col1,
+                            typeName: overtimeInfo.name,
+                            time: col2,
+                            hours: totalHours,
+                            rate: rate,
+                            divisor: overtimeInfo.divisor,
+                            kronor: kronor
+                        });
+                    }
+                }
+            }
+        }
+
+        VR.overtidData = overtidData;
+        VR.prefetchStatus.overtidDone = true;
+        console.log('VR: Prefetch - parsed', overtidData.length, 'Övertid entries');
     };
 
     // ===== PARSE FRÅNVARO DATA =====

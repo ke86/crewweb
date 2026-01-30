@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.93';
+    VR.VERSION = 'V.0.94';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -123,6 +123,7 @@
             { icon: '🇩🇰', label: 'SR-Tillägg', action: 'doSRTillagg', color: '#C41E3A' },
             { icon: '⏰', label: 'Komp', action: 'doKomp', color: '#34C759' },
             { icon: '🌙', label: 'OB', action: 'doOB', color: '#AF52DE' },
+            { icon: '⏱️', label: 'Övertid', action: 'doOvertid', color: '#FF9500' },
             { icon: '🏠', label: 'Frånvaro', action: 'doFranvaro', color: '#FF6B6B' },
             { icon: '🏖️', label: 'FP/FPV', action: 'doFPFPV', color: '#FF2D55' },
             { icon: '🔮', label: 'Förväntat', action: 'doForvantad', color: '#9B59B6' },
