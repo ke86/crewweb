@@ -12,6 +12,63 @@
     VR.WEEKDAYS = ['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag'];
     VR.WEEKDAYS_SHORT = ['Sön','Mån','Tis','Ons','Tor','Fre','Lör'];
 
+    // ===== MUNICIPALITY TAX RATES (Skåne) =====
+    VR.MUNICIPALITIES = [
+        { name: 'Bjuv', tax: 32.17 },
+        { name: 'Bromölla', tax: 33.74 },
+        { name: 'Burlöv', tax: 31.27 },
+        { name: 'Båstad', tax: 31.41 },
+        { name: 'Eslöv', tax: 31.72 },
+        { name: 'Helsingborg', tax: 31.39 },
+        { name: 'Hässleholm', tax: 32.38 },
+        { name: 'Höganäs', tax: 30.91 },
+        { name: 'Hörby', tax: 32.26 },
+        { name: 'Höör', tax: 32.63 },
+        { name: 'Klippan', tax: 31.93 },
+        { name: 'Kristianstad', tax: 32.64 },
+        { name: 'Kävlinge', tax: 29.59 },
+        { name: 'Landskrona', tax: 32.42 },
+        { name: 'Lomma', tax: 30.82 },
+        { name: 'Lund', tax: 32.42 },
+        { name: 'Malmö', tax: 32.42 },
+        { name: 'Osby', tax: 33.32 },
+        { name: 'Perstorp', tax: 32.87 },
+        { name: 'Simrishamn', tax: 31.70 },
+        { name: 'Sjöbo', tax: 31.52 },
+        { name: 'Skurup', tax: 31.87 },
+        { name: 'Staffanstorp', tax: 30.12 },
+        { name: 'Svalöv', tax: 31.67 },
+        { name: 'Svedala', tax: 31.42 },
+        { name: 'Tomelilla', tax: 31.97 },
+        { name: 'Trelleborg', tax: 31.77 },
+        { name: 'Vellinge', tax: 29.68 },
+        { name: 'Ystad', tax: 31.47 },
+        { name: 'Åstorp', tax: 31.92 },
+        { name: 'Ängelholm', tax: 31.17 },
+        { name: 'Örkelljunga', tax: 30.24 },
+        { name: 'Östra Göinge', tax: 32.97 }
+    ];
+
+    // Tax constants
+    VR.CHURCH_TAX = 1.0;        // Kyrkskatt %
+    VR.BURIAL_FEE = 0.29;       // Begravningsavgift %
+
+    // Tax settings (defaults)
+    VR.taxSettings = {
+        municipality: 'Malmö',
+        churchTax: true
+    };
+
+    // Get total tax rate
+    VR.getTotalTaxRate = function() {
+        var muni = VR.MUNICIPALITIES.find(function(m) {
+            return m.name === VR.taxSettings.municipality;
+        });
+        var muniTax = muni ? muni.tax : 32.42;
+        var churchTax = VR.taxSettings.churchTax ? VR.CHURCH_TAX : 0;
+        return muniTax + churchTax + VR.BURIAL_FEE;
+    };
+
     // ===== DATE HELPERS =====
     VR.formatDate = function(dateStr) {
         var p = dateStr.split('-');

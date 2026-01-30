@@ -392,20 +392,73 @@
         var grossTotal = salary + data.ob.total + data.sr.total + data.overtime.totalKr;
         var netTotal = grossTotal - data.deductions.total;
 
+        // Calculate tax
+        var taxRate = VR.getTotalTaxRate();
+        var taxAmount = netTotal * (taxRate / 100);
+        var netAfterTax = netTotal - taxAmount;
+
         // Format short month name (e.g. "Feb 2025")
         var shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
         var payoutMonthShort = shortMonths[data.payoutInfo.payoutMonth] + ' ' + data.payoutInfo.payoutYear;
 
         var html = '';
 
-        // Net total box with month
-        html += '<div style="background:#fff;border-radius:24px;padding:28px;margin-bottom:16px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:28px;font-weight:700;color:#007AFF;margin-bottom:12px">' + payoutMonthShort + '</div>';
-        html += '<div style="font-size:18px;color:#666;margin-bottom:8px">Bruttolön (uppskattad)</div>';
-        html += '<div style="font-size:48px;font-weight:700;color:#333">' + VR.formatKr(netTotal) + '</div>';
-        if (data.deductions.total > 0) {
-            html += '<div style="font-size:16px;color:#FF3B30;margin-top:8px">Efter avdrag: -' + VR.formatKr(data.deductions.total) + '</div>';
+        // Two-column layout: Tax settings + Salary box
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">';
+
+        // LEFT: Tax settings box
+        html += '<div style="background:#fff;border-radius:24px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:18px;font-weight:700;color:#333;margin-bottom:16px">💼 Skatt</div>';
+
+        // Municipality dropdown
+        html += '<div style="margin-bottom:12px">';
+        html += '<div style="font-size:14px;color:#666;margin-bottom:6px">Kommun</div>';
+        html += '<select id="vrMunicipality" style="width:100%;padding:10px;font-size:16px;border:2px solid #E5E5E5;border-radius:12px;background:#F8F8F8;color:#333">';
+        for (var i = 0; i < VR.MUNICIPALITIES.length; i++) {
+            var m = VR.MUNICIPALITIES[i];
+            var selected = m.name === VR.taxSettings.municipality ? ' selected' : '';
+            html += '<option value="' + m.name + '"' + selected + '>' + m.name + ' (' + m.tax.toFixed(2) + '%)</option>';
         }
+        html += '</select>';
+        html += '</div>';
+
+        // Church tax toggle
+        var churchChecked = VR.taxSettings.churchTax ? ' checked' : '';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:10px;background:#F8F8F8;border-radius:12px">';
+        html += '<div style="font-size:15px;color:#333">⛪ Kyrkskatt (' + VR.CHURCH_TAX.toFixed(1) + '%)</div>';
+        html += '<label style="position:relative;width:50px;height:28px">';
+        html += '<input type="checkbox" id="vrChurchTax"' + churchChecked + ' style="opacity:0;width:0;height:0">';
+        html += '<span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:' + (VR.taxSettings.churchTax ? '#34C759' : '#ccc') + ';border-radius:28px;transition:0.3s"></span>';
+        html += '<span style="position:absolute;height:22px;width:22px;left:' + (VR.taxSettings.churchTax ? '25px' : '3px') + ';bottom:3px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 2px 4px rgba(0,0,0,0.2)"></span>';
+        html += '</label>';
+        html += '</div>';
+
+        // Burial fee (always on)
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:#F0F0F5;border-radius:12px;margin-bottom:12px">';
+        html += '<div style="font-size:15px;color:#666">⚱️ Begravningsavgift</div>';
+        html += '<div style="font-size:15px;color:#666">' + VR.BURIAL_FEE.toFixed(2) + '%</div>';
+        html += '</div>';
+
+        // Total tax rate
+        html += '<div style="text-align:center;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:12px">';
+        html += '<div style="font-size:14px;color:rgba(255,255,255,0.8)">Total skattesats</div>';
+        html += '<div id="vrTaxRateDisplay" style="font-size:28px;font-weight:700;color:#fff">' + taxRate.toFixed(2) + '%</div>';
+        html += '</div>';
+
+        html += '</div>';
+
+        // RIGHT: Salary box
+        html += '<div style="background:#fff;border-radius:24px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.08);text-align:center;display:flex;flex-direction:column;justify-content:center">';
+        html += '<div style="font-size:28px;font-weight:700;color:#007AFF;margin-bottom:8px">' + payoutMonthShort + '</div>';
+        html += '<div style="font-size:14px;color:#666;margin-bottom:4px">Bruttolön</div>';
+        html += '<div style="font-size:32px;font-weight:700;color:#333;margin-bottom:8px">' + VR.formatKr(netTotal) + '</div>';
+        html += '<div style="font-size:14px;color:#FF3B30;margin-bottom:8px">Skatt: -' + VR.formatKr(taxAmount) + '</div>';
+        html += '<div style="border-top:2px solid #E5E5E5;padding-top:12px;margin-top:4px">';
+        html += '<div style="font-size:14px;color:#666">Nettolön</div>';
+        html += '<div id="vrNetSalary" style="font-size:36px;font-weight:700;color:#34C759">' + VR.formatKr(netAfterTax) + '</div>';
+        html += '</div>';
+        html += '</div>';
+
         html += '</div>';
 
         // Breakdown list
@@ -467,10 +520,58 @@
 
         VR.updateLoader(100, 'Klar!');
 
+        // Store netTotal for recalculation
+        VR.lonData.netTotal = netTotal;
+
         setTimeout(function() {
             VR.hideLoader();
             VR.showView('', '', html);
+
+            // Add event listeners for tax settings
+            VR.setupTaxListeners();
         }, 300);
+    };
+
+    // ===== SETUP TAX LISTENERS =====
+    VR.setupTaxListeners = function() {
+        var muniSelect = document.getElementById('vrMunicipality');
+        var churchCheck = document.getElementById('vrChurchTax');
+
+        if (muniSelect) {
+            muniSelect.addEventListener('change', function() {
+                VR.taxSettings.municipality = this.value;
+                VR.updateTaxDisplay();
+            });
+        }
+
+        if (churchCheck) {
+            churchCheck.addEventListener('change', function() {
+                VR.taxSettings.churchTax = this.checked;
+                VR.updateTaxDisplay();
+
+                // Update toggle visual
+                var toggle = this.parentElement;
+                var bg = toggle.querySelector('span:first-of-type');
+                var knob = toggle.querySelector('span:last-of-type');
+                if (bg) bg.style.background = this.checked ? '#34C759' : '#ccc';
+                if (knob) knob.style.left = this.checked ? '25px' : '3px';
+            });
+        }
+    };
+
+    // ===== UPDATE TAX DISPLAY =====
+    VR.updateTaxDisplay = function() {
+        var netTotal = VR.lonData.netTotal || 0;
+        var taxRate = VR.getTotalTaxRate();
+        var taxAmount = netTotal * (taxRate / 100);
+        var netAfterTax = netTotal - taxAmount;
+
+        // Update displays
+        var rateEl = document.getElementById('vrTaxRateDisplay');
+        var netEl = document.getElementById('vrNetSalary');
+
+        if (rateEl) rateEl.textContent = taxRate.toFixed(2) + '%';
+        if (netEl) netEl.textContent = VR.formatKr(netAfterTax);
     };
 
     // ===== BUILD LON ROW =====
