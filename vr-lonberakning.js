@@ -155,9 +155,10 @@
                 for (var j = 0; j < entries.length; j++) {
                     var tn = entries[j].tn;
                     if (tn && tn.length >= 3) {
-                        var c3 = tn.charAt(2);
-                        VR.userRole = VR.getRoleFromTrain(c3);
-                        if (VR.userRole) {
+                        // Use VR.getRoleFromTour which expects full tour number
+                        var role = VR.getRoleFromTour(tn);
+                        if (role) {
+                            VR.userRole = role;
                             VR.collectLonData();
                             return;
                         }
@@ -171,19 +172,22 @@
         VR.collectLonData();
     };
 
+    // ===== MONTH OFFSET FOR NAVIGATION =====
+    VR.lonMonthOffset = 0; // 0 = current month, -1 = previous month, etc.
+
     // ===== COLLECT DATA =====
     VR.collectLonData = function() {
         VR.updateLoader(20, 'Samlar data...');
 
-        // Get payout info (work month = nuvarande, payout month = nästa)
-        var payoutInfo = VR.getPayoutMonthInfo();
+        // Get payout info with offset
+        var payoutInfo = VR.getPayoutMonthInfo(VR.lonMonthOffset);
 
         // Initialize lon data object
         VR.lonData = {
             role: VR.userRole,
             baseSalary: VR.SALARIES[VR.userRole] || 46188,
             payoutInfo: payoutInfo,
-            // For calculations, use WORK month (current month)
+            // For calculations, use WORK month
             targetMonth: payoutInfo.workMonth,
             targetYear: payoutInfo.workYear,
             ob: { total: 0, details: [] },
@@ -219,10 +223,23 @@
     // ===== GET PAYOUT MONTH INFO =====
     // Lön som betalas ut nästa månad är för arbete DENNA månad
     // Ex: Det är januari 29 → Februari-lönen är för januari-arbete
-    VR.getPayoutMonthInfo = function() {
+    // offset: 0 = current, -1 = previous month, etc.
+    VR.getPayoutMonthInfo = function(offset) {
+        offset = offset || 0;
         var now = new Date();
-        var workMonth = now.getMonth(); // Månaden vi arbetar (nuvarande)
+        var workMonth = now.getMonth() + offset; // Månaden vi arbetar
         var workYear = now.getFullYear();
+
+        // Handle year wrapping for negative months
+        while (workMonth < 0) {
+            workMonth += 12;
+            workYear--;
+        }
+        while (workMonth > 11) {
+            workMonth -= 12;
+            workYear++;
+        }
+
         var payoutMonth = workMonth + 1; // Månaden lönen betalas ut
         var payoutYear = workYear;
         if (payoutMonth > 11) {
@@ -235,8 +252,44 @@
             payoutMonth: payoutMonth,    // Månaden lönen betalas ut (0-11)
             payoutYear: payoutYear,
             payoutName: VR.MONTHS[payoutMonth] + ' ' + payoutYear,
-            workName: VR.MONTHS[workMonth] + ' ' + workYear
+            workName: VR.MONTHS[workMonth] + ' ' + workYear,
+            offset: offset
         };
+    };
+
+    // ===== NAVIGATE MONTH =====
+    VR.navigateLonMonth = function(direction) {
+        VR.lonMonthOffset += direction;
+        // Limit to max 12 months back, and not future
+        if (VR.lonMonthOffset > 0) VR.lonMonthOffset = 0;
+        if (VR.lonMonthOffset < -12) VR.lonMonthOffset = -12;
+
+        // Recalculate without showing loader
+        VR.recalculateLonData();
+    };
+
+    // ===== RECALCULATE DATA (for month navigation) =====
+    VR.recalculateLonData = function() {
+        var payoutInfo = VR.getPayoutMonthInfo(VR.lonMonthOffset);
+
+        VR.lonData = {
+            role: VR.userRole,
+            baseSalary: VR.SALARIES[VR.userRole] || 46188,
+            payoutInfo: payoutInfo,
+            targetMonth: payoutInfo.workMonth,
+            targetYear: payoutInfo.workYear,
+            ob: { total: 0, details: [] },
+            sr: { total: 0, details: [] },
+            overtime: { kvalificerad: 0, enkel: 0, totalKr: 0 },
+            deductions: { total: 0, details: [] }
+        };
+
+        if (VR.obData && VR.obData.length > 0) VR.calculateOBForMonth();
+        if (VR.srData && Object.keys(VR.srData).length > 0) VR.calculateSRForMonth();
+        if (VR.overtidData && VR.overtidData.length > 0) VR.calculateOvertimeForMonth();
+        if (VR.franvaroData && VR.franvaroData.length > 0) VR.calculateFranvaroForMonth();
+
+        VR.renderLon();
     };
 
     // ===== CALCULATE OB FOR MONTH =====
@@ -449,7 +502,19 @@
 
         // RIGHT: Salary box
         html += '<div style="background:#fff;border-radius:24px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.08);text-align:center;display:flex;flex-direction:column;justify-content:center">';
-        html += '<div style="font-size:28px;font-weight:700;color:#007AFF;margin-bottom:8px">' + payoutMonthShort + '</div>';
+
+        // Month navigation header
+        var canGoBack = VR.lonMonthOffset > -12;
+        var canGoForward = VR.lonMonthOffset < 0;
+        var prevStyle = canGoBack ? 'cursor:pointer;color:#007AFF' : 'cursor:default;color:#ccc';
+        var nextStyle = canGoForward ? 'cursor:pointer;color:#007AFF' : 'cursor:default;color:#ccc';
+
+        html += '<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:8px">';
+        html += '<span id="vrLonPrev" style="font-size:28px;' + prevStyle + '">◀</span>';
+        html += '<div style="font-size:28px;font-weight:700;color:#007AFF">' + payoutMonthShort + '</div>';
+        html += '<span id="vrLonNext" style="font-size:28px;' + nextStyle + '">▶</span>';
+        html += '</div>';
+
         html += '<div style="font-size:14px;color:#666;margin-bottom:4px">Bruttolön</div>';
         html += '<div style="font-size:32px;font-weight:700;color:#333;margin-bottom:8px">' + VR.formatKr(netTotal) + '</div>';
         html += '<div style="font-size:14px;color:#FF3B30;margin-bottom:8px">Skatt: -' + VR.formatKr(taxAmount) + '</div>';
@@ -527,9 +592,32 @@
             VR.hideLoader();
             VR.showView('', '', html);
 
-            // Add event listeners for tax settings
+            // Add event listeners for tax settings and navigation
             VR.setupTaxListeners();
+            VR.setupMonthNavListeners();
         }, 300);
+    };
+
+    // ===== SETUP MONTH NAVIGATION LISTENERS =====
+    VR.setupMonthNavListeners = function() {
+        var prevBtn = document.getElementById('vrLonPrev');
+        var nextBtn = document.getElementById('vrLonNext');
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function() {
+                if (VR.lonMonthOffset > -12) {
+                    VR.navigateLonMonth(-1);
+                }
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function() {
+                if (VR.lonMonthOffset < 0) {
+                    VR.navigateLonMonth(1);
+                }
+            });
+        }
     };
 
     // ===== SETUP TAX LISTENERS =====
