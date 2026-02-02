@@ -667,20 +667,42 @@
         setTimeout(function() {
             VR.hideLoader();
 
-            // Show success message
-            VR.showPreloadSuccess();
+            // FIRST: Open Schema view
+            console.log('VR: Opening Schema view after preload');
+            if (typeof VR.doSchema === 'function') {
+                VR.doSchema();
+            }
+
+            // THEN: Show success popup on top (after small delay to let view render)
+            setTimeout(function() {
+                VR.showPreloadSuccess();
+            }, 300);
         }, 500);
     };
 
     VR.showPreloadSuccess = function() {
+        // Collect stats about what was preloaded
+        var schemaCount = VR.allSchemaData ? Object.keys(VR.allSchemaData).length : 0;
+        var obCount = VR.obData ? VR.obData.length : 0;
+        var srCount = VR.srData ? Object.keys(VR.srData).length : 0;
+        var fpCount = VR.statistikFPData ? VR.statistikFPData.length : 0;
+
         var popup = document.createElement('div');
         popup.id = 'vrPreloadSuccess';
-        popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:32px 48px;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:99999;text-align:center';
+        popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:36px 48px;border-radius:24px;box-shadow:0 12px 48px rgba(0,0,0,0.5);z-index:999999999;text-align:center;backdrop-filter:blur(4px)';
+
+        var statsHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;text-align:left">';
+        statsHtml += '<div style="background:rgba(255,255,255,0.1);padding:12px 16px;border-radius:12px"><div style="font-size:14px;color:rgba(255,255,255,0.6)">Schema</div><div style="font-size:22px;font-weight:700">' + schemaCount + ' dagar</div></div>';
+        statsHtml += '<div style="background:rgba(255,255,255,0.1);padding:12px 16px;border-radius:12px"><div style="font-size:14px;color:rgba(255,255,255,0.6)">OB-poster</div><div style="font-size:22px;font-weight:700">' + obCount + ' st</div></div>';
+        statsHtml += '<div style="background:rgba(255,255,255,0.1);padding:12px 16px;border-radius:12px"><div style="font-size:14px;color:rgba(255,255,255,0.6)">SR-tillägg</div><div style="font-size:22px;font-weight:700">' + srCount + ' dagar</div></div>';
+        statsHtml += '<div style="background:rgba(255,255,255,0.1);padding:12px 16px;border-radius:12px"><div style="font-size:14px;color:rgba(255,255,255,0.6)">FP/FPV</div><div style="font-size:22px;font-weight:700">' + fpCount + ' st</div></div>';
+        statsHtml += '</div>';
+
         popup.innerHTML = '\
 <div style="font-size:60px;margin-bottom:16px">✅</div>\
-<div style="font-size:24px;font-weight:700;margin-bottom:8px">Data förladdad!</div>\
-<div style="font-size:18px;color:rgba(255,255,255,0.7)">All historisk data är nu cachad</div>\
-<div style="margin-top:20px;font-size:14px;color:rgba(255,255,255,0.5)">Tryck för att stänga</div>';
+<div style="font-size:26px;font-weight:700;margin-bottom:8px">Data förladdad!</div>\
+<div style="font-size:16px;color:rgba(255,255,255,0.7)">All historisk data är nu cachad</div>' + statsHtml + '\
+<div style="margin-top:24px;font-size:14px;color:rgba(255,255,255,0.5)">Tryck för att stänga</div>';
 
         popup.onclick = function() {
             popup.remove();
@@ -690,21 +712,7 @@
 
         setTimeout(function() {
             if (popup.parentNode) popup.remove();
-        }, 3000);
-
-        // Restore previous view after popup closes
-        setTimeout(function() {
-            if (VR.preloadReturnView && typeof VR[VR.preloadReturnView] === 'function') {
-                console.log('VR: Restoring view after preload:', VR.preloadReturnView);
-                VR[VR.preloadReturnView]();
-            } else {
-                // Default: show Schema
-                if (typeof VR.doSchema === 'function') {
-                    VR.doSchema();
-                }
-            }
-            VR.preloadReturnView = null;
-        }, 500);
+        }, 5000);
     };
 
     console.log('VR: Cache loaded');

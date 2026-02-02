@@ -270,7 +270,8 @@
 
             users.forEach(function(user) {
                 // Get all days for this user in this month
-                var monthPrefix = ('0' + (month + 1)).slice(-2) + '-' + year;
+                // Date format is DD-MM-YYYY, so we match -MM-YYYY suffix
+                var monthSuffix = '-' + ('0' + (month + 1)).slice(-2) + '-' + year;
 
                 VR.firebaseDb.collection('schedules')
                     .doc(user.anstNr)
@@ -279,8 +280,8 @@
                     .then(function(snapshot) {
                         snapshot.forEach(function(doc) {
                             var dateStr = doc.id;
-                            // Check if this date is in the target month
-                            if (dateStr.indexOf(monthPrefix) > -1) {
+                            // Check if this date is in the target month (ends with -MM-YYYY)
+                            if (dateStr.indexOf(monthSuffix) > -1) {
                                 if (!allSchedules[dateStr]) {
                                     allSchedules[dateStr] = [];
                                 }

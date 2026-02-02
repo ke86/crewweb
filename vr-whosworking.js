@@ -414,7 +414,7 @@
 
             if (uploadBtn) {
                 uploadBtn.onclick = function() {
-                    VR.uploadMySchedule();
+                    VR.showUploadConfirmation();
                 };
             }
 
@@ -535,24 +535,66 @@
         });
     };
 
-    // ===== UPLOAD MY SCHEDULE =====
-    VR.uploadMySchedule = function() {
-        // Check if we have schema data
+    // ===== UPLOAD CONFIRMATION =====
+    VR.showUploadConfirmation = function() {
+        // Check if we have schema data first
         if (!VR.allSchemaData || Object.keys(VR.allSchemaData).length === 0) {
             VR.showUploadError('Du har inget schema laddat. Gå till Schema först för att ladda ditt schema.');
             return;
         }
 
+        var dayCount = Object.keys(VR.allSchemaData).length;
+
+        var overlay = document.createElement('div');
+        overlay.id = 'vrUploadOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:999999999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+
+        var modal = document.createElement('div');
+        modal.style.cssText = 'background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:24px;padding:36px;max-width:340px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.5);margin:20px';
+
+        modal.innerHTML = '<div style="font-size:56px;margin-bottom:20px">📤</div>' +
+            '<div style="font-size:24px;font-weight:700;color:#fff;margin-bottom:14px">Ladda upp schema?</div>' +
+            '<div style="font-size:17px;color:rgba(255,255,255,0.7);margin-bottom:28px;line-height:1.5">Ditt schema med <strong style="color:#34C759">' + dayCount + ' dagar</strong> kommer att delas med dina kollegor.</div>' +
+            '<div style="display:flex;gap:14px;justify-content:center">' +
+            '<button id="vrUploadCancel" style="flex:1;padding:16px 24px;border-radius:14px;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:18px;font-weight:600;cursor:pointer">Nej</button>' +
+            '<button id="vrUploadConfirm" style="flex:1;padding:16px 24px;border-radius:14px;border:none;background:linear-gradient(180deg,#34C759 0%,#28a745 100%);color:#fff;font-size:18px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(52,199,89,0.4)">Ja</button>' +
+            '</div>';
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        setTimeout(function() {
+            var cancelBtn = document.getElementById('vrUploadCancel');
+            var confirmBtn = document.getElementById('vrUploadConfirm');
+
+            if (cancelBtn) {
+                cancelBtn.onclick = function() {
+                    overlay.remove();
+                };
+            }
+
+            if (confirmBtn) {
+                confirmBtn.onclick = function() {
+                    overlay.remove();
+                    VR.uploadMySchedule();
+                };
+            }
+
+            overlay.onclick = function(e) {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            };
+        }, 50);
+    };
+
+    // ===== UPLOAD MY SCHEDULE =====
+    VR.uploadMySchedule = function() {
         // Check if we have user data
         var user = VR.getFirebaseUser();
         if (!user || !user.anstNr) {
-            // Try to auto-register
-            if (VR.anstNr && VR.anstNamn) {
-                VR.setFirebaseUser(VR.anstNr, VR.anstNamn);
-            } else {
-                VR.showUploadError('Kunde inte hitta dina anställningsuppgifter. Gå till Anställddata först.');
-                return;
-            }
+            VR.showUploadError('Kunde inte hitta dina anställningsuppgifter. Ladda upp ditt schema från Schema-vyn först.');
+            return;
         }
 
         VR.showLoader('Laddar upp');
@@ -873,7 +915,7 @@
 
             if (uploadBtn) {
                 uploadBtn.onclick = function() {
-                    VR.uploadMySchedule();
+                    VR.showUploadConfirmation();
                 };
             }
 
