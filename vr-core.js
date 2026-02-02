@@ -669,6 +669,49 @@
         return null;
     };
 
+    // ===== ROLE FROM CACHE (priority) =====
+    VR.getRoleFromCache = function() {
+        try {
+            var cached = localStorage.getItem('vr_anstalld_cache');
+            if (!cached) return null;
+
+            var data = JSON.parse(cached);
+            if (!data || !data.kvalifikationer) return null;
+
+            // Search for Lokförare or Tågvärd in kvalifikationer
+            for (var i = 0; i < data.kvalifikationer.length; i++) {
+                var namn = (data.kvalifikationer[i].namn || '').toLowerCase();
+                if (namn.indexOf('lokförare') > -1 || namn === 'lokförare') {
+                    return 'Lokförare';
+                }
+                if (namn.indexOf('tågvärd') > -1 || namn === 'tågvärd') {
+                    return 'Tågvärd';
+                }
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    // ===== SMART ROLE DETECTION =====
+    // 1. Check cached anställddata first
+    // 2. Fallback to tour number if not found
+    VR.getRole = function(tourNumber) {
+        // Priority 1: Check cache
+        var cachedRole = VR.getRoleFromCache();
+        if (cachedRole) {
+            return cachedRole;
+        }
+
+        // Priority 2: Fallback to tour number
+        if (tourNumber) {
+            return VR.getRoleFromTour(tourNumber);
+        }
+
+        return null;
+    };
+
     VR.isDenmarkTour = function(tn) {
         if (!tn || tn.length < 4) return false;
         // If 4th char is 8 or 9, it's Reserv - no Denmark flag

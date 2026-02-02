@@ -147,7 +147,16 @@
 
     // ===== FETCH ROLE =====
     VR.fetchRoleForLon = function() {
-        // Try to get role from schema data first
+        // Priority 1: Try to get role from cached anställddata
+        var cachedRole = VR.getRoleFromCache ? VR.getRoleFromCache() : null;
+        if (cachedRole) {
+            console.log('VR: Role from cache:', cachedRole);
+            VR.userRole = cachedRole;
+            VR.collectLonData();
+            return;
+        }
+
+        // Priority 2: Try to get role from schema data (tour number)
         if (VR.allSchemaData) {
             var dates = Object.keys(VR.allSchemaData);
             for (var i = 0; i < dates.length; i++) {
@@ -155,9 +164,9 @@
                 for (var j = 0; j < entries.length; j++) {
                     var tn = entries[j].tn;
                     if (tn && tn.length >= 3) {
-                        // Use VR.getRoleFromTour which expects full tour number
                         var role = VR.getRoleFromTour(tn);
                         if (role) {
+                            console.log('VR: Role from tour number:', role);
                             VR.userRole = role;
                             VR.collectLonData();
                             return;
@@ -168,6 +177,7 @@
         }
 
         // Default to Lokförare if can't detect
+        console.log('VR: Role defaulting to Lokförare');
         VR.userRole = 'Lokförare';
         VR.collectLonData();
     };

@@ -271,5 +271,332 @@
         return status;
     };
 
+    // ===== PRELOAD CACHE KEY =====
+    VR.PRELOAD_CACHE_KEY = 'vr_preload_timestamp';
+
+    // ===== GET PRELOAD TIMESTAMP =====
+    VR.getPreloadTimestamp = function() {
+        try {
+            var ts = localStorage.getItem(VR.PRELOAD_CACHE_KEY);
+            return ts ? parseInt(ts, 10) : null;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    // ===== FORMAT PRELOAD DATE =====
+    VR.formatPreloadDate = function() {
+        var ts = VR.getPreloadTimestamp();
+        if (!ts) return null;
+
+        var d = new Date(ts);
+        var day = d.getDate();
+        var mon = VR.MONTHS_SHORT[d.getMonth()];
+        var hours = ('0' + d.getHours()).slice(-2);
+        var mins = ('0' + d.getMinutes()).slice(-2);
+
+        return day + ' ' + mon + ' kl ' + hours + ':' + mins;
+    };
+
+    // ===== PRELOAD ALL DATA =====
+    // Loads all historical data (before today) and caches it
+    VR.doPreloadAll = function() {
+        VR.stopTimer();
+        VR.closeOverlay();
+        VR.closeMenu();
+
+        VR.showLoader('Förladdar data');
+        VR.updateLoader(5, 'Startar...');
+
+        VR.preloadStep = 0;
+        VR.preloadTotal = 5; // Anställd, Schema, OB, Komp, Lön
+
+        // Step 1: Anställddata
+        VR.preloadAnstalld();
+    };
+
+    VR.preloadAnstalld = function() {
+        VR.updateLoader(10, 'Laddar Anställddata...');
+
+        // Navigate to Anställddata
+        VR.clickFolder();
+
+        setTimeout(function() {
+            var n = 0;
+            VR.timer = setInterval(function() {
+                n++;
+                var el = VR.findMenuItem('Anställddata');
+                if (el) {
+                    VR.stopTimer();
+                    el.click();
+                    VR.waitForPreloadAnstalld();
+                } else if (n > 15) {
+                    VR.stopTimer();
+                    // Skip to next step
+                    VR.preloadSchema();
+                }
+            }, 400);
+        }, 500);
+    };
+
+    VR.waitForPreloadAnstalld = function() {
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+            var empData = document.getElementById('EmployeeData');
+
+            if (empData || n > 10) {
+                VR.stopTimer();
+                VR.updateLoader(20, 'Sparar Anställddata...');
+
+                // Parse and cache anställddata
+                if (empData) {
+                    VR.parseAndCacheAnstalld();
+                }
+
+                setTimeout(VR.preloadSchema, 500);
+            }
+        }, 400);
+    };
+
+    VR.parseAndCacheAnstalld = function() {
+        var kvalifikationer = [];
+        var tables = document.querySelectorAll('table');
+
+        for (var t = 0; t < tables.length; t++) {
+            var table = tables[t];
+            var headerRow = table.querySelector('tr');
+            if (!headerRow) continue;
+
+            var headers = headerRow.querySelectorAll('th, td');
+            var hasNamn = false;
+            var hasGiltigFran = false;
+
+            for (var h = 0; h < headers.length; h++) {
+                var headerText = headers[h].textContent.trim().toLowerCase();
+                if (headerText === 'namn') hasNamn = true;
+                if (headerText.indexOf('giltig från') > -1) hasGiltigFran = true;
+            }
+
+            if (hasNamn && hasGiltigFran) {
+                var rows = table.querySelectorAll('tr');
+                for (var r = 1; r < rows.length; r++) {
+                    var cells = rows[r].querySelectorAll('td');
+                    if (cells.length >= 2) {
+                        var namn = cells[0] ? cells[0].textContent.trim() : '';
+                        var giltigFran = cells[1] ? cells[1].textContent.trim() : '';
+                        var giltigTill = cells[2] ? cells[2].textContent.trim() : '';
+
+                        if (!namn || namn.toLowerCase() === 'namn') continue;
+                        if (namn.toLowerCase() === 'lokförare') continue;
+                        if (namn.length === 1 && /^[A-Z]$/.test(namn)) continue;
+
+                        kvalifikationer.push({
+                            namn: namn,
+                            giltigFran: giltigFran,
+                            giltigTill: giltigTill
+                        });
+                    }
+                }
+            }
+        }
+
+        if (kvalifikationer.length > 0 && VR.saveAnstalldCache) {
+            VR.saveAnstalldCache(kvalifikationer);
+            console.log('VR: Preload cached', kvalifikationer.length, 'kvalifikationer');
+        }
+    };
+
+    VR.preloadSchema = function() {
+        VR.updateLoader(30, 'Laddar Schema...');
+
+        VR.clickFolder();
+
+        setTimeout(function() {
+            var n = 0;
+            VR.timer = setInterval(function() {
+                n++;
+                var el = VR.findMenuItem('Schema');
+                if (el) {
+                    VR.stopTimer();
+                    el.click();
+                    VR.waitForPreloadSchema();
+                } else if (n > 15) {
+                    VR.stopTimer();
+                    VR.preloadOB();
+                }
+            }, 400);
+        }, 500);
+    };
+
+    VR.waitForPreloadSchema = function() {
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+
+            // Look for schema table
+            var tables = document.querySelectorAll('table');
+            var hasData = false;
+            for (var i = 0; i < tables.length; i++) {
+                if (tables[i].querySelectorAll('tr').length > 5) {
+                    hasData = true;
+                    break;
+                }
+            }
+
+            if (hasData || n > 15) {
+                VR.stopTimer();
+                VR.updateLoader(40, 'Schema laddat...');
+
+                // Schema data is already cached by prefetch module
+                // Just ensure it's loaded
+                if (VR.prefetchAllData) {
+                    VR.prefetchAllData();
+                }
+
+                setTimeout(VR.preloadOB, 1000);
+            }
+        }, 400);
+    };
+
+    VR.preloadOB = function() {
+        VR.updateLoader(50, 'Laddar OB...');
+
+        VR.clickFolder();
+
+        setTimeout(function() {
+            var n = 0;
+            VR.timer = setInterval(function() {
+                n++;
+                var el = VR.findMenuItem('Ersättningsspecifikation');
+                if (el) {
+                    VR.stopTimer();
+                    el.click();
+                    VR.waitForPreloadOB();
+                } else if (n > 15) {
+                    VR.stopTimer();
+                    VR.preloadKomp();
+                }
+            }, 400);
+        }, 500);
+    };
+
+    VR.waitForPreloadOB = function() {
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+
+            var tables = document.querySelectorAll('table');
+            var hasData = false;
+            for (var i = 0; i < tables.length; i++) {
+                if (tables[i].querySelectorAll('tr').length > 3) {
+                    hasData = true;
+                    break;
+                }
+            }
+
+            if (hasData || n > 20) {
+                VR.stopTimer();
+                VR.updateLoader(60, 'OB laddat...');
+
+                // Parse OB data
+                if (VR.parseOBData) {
+                    VR.parseOBData();
+                }
+
+                setTimeout(VR.preloadKomp, 500);
+            }
+        }, 400);
+    };
+
+    VR.preloadKomp = function() {
+        VR.updateLoader(70, 'Laddar Komp...');
+
+        VR.clickFolder();
+
+        setTimeout(function() {
+            var n = 0;
+            VR.timer = setInterval(function() {
+                n++;
+                var el = VR.findMenuItem('Tidbank');
+                if (el) {
+                    VR.stopTimer();
+                    el.click();
+                    VR.waitForPreloadKomp();
+                } else if (n > 15) {
+                    VR.stopTimer();
+                    VR.preloadFinish();
+                }
+            }, 400);
+        }, 500);
+    };
+
+    VR.waitForPreloadKomp = function() {
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+
+            // Look for komp data
+            var pageText = document.body.textContent || '';
+            var hasKomp = pageText.indexOf('Saldo') > -1 || pageText.indexOf('timmar') > -1;
+
+            if (hasKomp || n > 15) {
+                VR.stopTimer();
+                VR.updateLoader(85, 'Komp laddat...');
+
+                // Parse komp saldo
+                if (VR.parseKompSaldo) {
+                    VR.parseKompSaldo();
+                }
+
+                setTimeout(VR.preloadFinish, 500);
+            }
+        }, 400);
+    };
+
+    VR.preloadFinish = function() {
+        VR.updateLoader(95, 'Sparar cache...');
+
+        // Save all data to cache
+        VR.saveCache();
+
+        // Save preload timestamp
+        try {
+            localStorage.setItem(VR.PRELOAD_CACHE_KEY, Date.now().toString());
+        } catch (e) {
+            console.log('VR: Error saving preload timestamp');
+        }
+
+        VR.updateLoader(100, 'Klar!');
+
+        setTimeout(function() {
+            VR.hideLoader();
+
+            // Show success message
+            VR.showPreloadSuccess();
+        }, 500);
+    };
+
+    VR.showPreloadSuccess = function() {
+        var popup = document.createElement('div');
+        popup.id = 'vrPreloadSuccess';
+        popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:32px 48px;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:99999;text-align:center';
+        popup.innerHTML = '\
+<div style="font-size:60px;margin-bottom:16px">✅</div>\
+<div style="font-size:24px;font-weight:700;margin-bottom:8px">Data förladdad!</div>\
+<div style="font-size:18px;color:rgba(255,255,255,0.7)">All historisk data är nu cachad</div>\
+<div style="margin-top:20px;font-size:14px;color:rgba(255,255,255,0.5)">Tryck för att stänga</div>';
+
+        popup.onclick = function() {
+            popup.remove();
+        };
+
+        document.body.appendChild(popup);
+
+        setTimeout(function() {
+            if (popup.parentNode) popup.remove();
+        }, 3000);
+    };
+
     console.log('VR: Cache loaded');
 })();

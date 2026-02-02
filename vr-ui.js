@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.1.02';
+    VR.VERSION = 'V.1.04';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -156,8 +156,18 @@
 
         menuHTML += '</div>';
 
-        // Close button at bottom
+        // Preload button and close button at bottom
+        var preloadDate = VR.formatPreloadDate ? VR.formatPreloadDate() : null;
+        var preloadText = preloadDate ? 'Senast: ' + preloadDate : 'Ej körd';
+
         menuHTML += '<div style="padding:20px 24px;border-top:1px solid rgba(255,255,255,0.1)">\
+            <div class="vrMenuItem" data-action="doPreloadAll" style="display:flex;align-items:center;gap:18px;padding:16px 20px;cursor:pointer;background:rgba(255,255,255,0.08);border-radius:16px;margin-bottom:12px">\
+                <div style="width:50px;height:50px;border-radius:14px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:26px">⚡</div>\
+                <div>\
+                    <div style="font-size:20px;font-weight:600;color:#fff">Förladda data</div>\
+                    <div style="font-size:14px;color:rgba(255,255,255,0.5);margin-top:2px">' + preloadText + '</div>\
+                </div>\
+            </div>\
             <div class="vrMenuItem" data-action="cleanup" style="display:flex;align-items:center;gap:18px;padding:16px 20px;cursor:pointer;background:rgba(255,59,48,0.2);border-radius:16px">\
                 <div style="width:50px;height:50px;border-radius:14px;background:#FF3B30;display:flex;align-items:center;justify-content:center;font-size:26px">✕</div>\
                 <div style="font-size:22px;font-weight:600;color:#FF3B30">Stäng app</div>\
