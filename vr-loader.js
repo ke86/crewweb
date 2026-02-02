@@ -46,7 +46,6 @@
         'vr-forvantad.js',
         'vr-statistik.js',
         'vr-lonberakning.js',
-        'vr-prefetch.js',
         'vr-firebase.js',   // Firebase integration
         'vr-whosworking.js' // Who's working today
     ];

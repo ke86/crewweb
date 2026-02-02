@@ -79,11 +79,11 @@
     VR.fetchSchemaForStatistik = function() {
         var now = new Date();
 
-        // Load wide range: 12 months back
-        var startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+        // Load from 14 Dec 2025 to end of current month
+        var startDate = new Date(2025, 11, 14); // 14 Dec 2025
         var endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-        var d1 = '01-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
+        var d1 = startDate.getDate() + '-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
         var d2 = endDate.getDate() + '-' + ('0' + (endDate.getMonth() + 1)).slice(-2) + '-' + endDate.getFullYear();
 
         VR.setDates(d1, d2);

@@ -162,9 +162,9 @@
         VR.schemaYear = now.getFullYear();
         VR.schemaMonth = now.getMonth();
 
-        // Load wide range: 3 months back to end of year
-        // E.g., from Nov 1 to Dec 31 this year (if current month is Feb)
-        var startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+        // Load from 14 Dec 2025 to end of current year
+        // Current month is displayed (1st to last day)
+        var startDate = new Date(2025, 11, 14); // 14 Dec 2025
         var endDate = new Date(now.getFullYear(), 11, 31); // Dec 31 this year
 
         var d1 = startDate.getDate() + '-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
@@ -229,11 +229,11 @@
         VR.showLoader('Byter månad...');
         VR.updateLoader(30, 'Hämtar ny data...');
 
-        // Load wide range around target month (6 months before, 12 months ahead)
-        var startDate = new Date(VR.schemaYear, VR.schemaMonth - 6, 1);
+        // Load from 14 Dec 2025 to end of target year
+        var startDate = new Date(2025, 11, 14); // Always start from 14 Dec 2025
         var endDate = new Date(VR.schemaYear, VR.schemaMonth + 13, 0);
 
-        var d1 = '01-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
+        var d1 = startDate.getDate() + '-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
         var d2 = endDate.getDate() + '-' + ('0' + (endDate.getMonth() + 1)).slice(-2) + '-' + endDate.getFullYear();
 
         VR.setDates(d1, d2);
@@ -370,11 +370,6 @@
             if (!VR.kompLoaded && VR.fetchKompForHeader) {
                 VR.kompLoaded = true;
                 setTimeout(VR.fetchKompForHeader, 1000);
-            }
-
-            // Start background prefetch of OB/SR/FP data (after komp loads)
-            if (VR.prefetchAllData && !VR.prefetchStatus.done) {
-                setTimeout(VR.prefetchAllData, 3000);
             }
         }, 400);
     };
