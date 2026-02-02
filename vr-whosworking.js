@@ -72,9 +72,11 @@
             return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:12px;font-weight:700;padding:2px 6px;border-radius:5px">' + text + '</span>';
         } else if (size === 'small') {
             return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:14px;font-weight:700;padding:3px 8px;border-radius:6px">' + text + '</span>';
+        } else if (size === 'medium') {
+            return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:18px;font-weight:700;padding:6px 14px;border-radius:8px">' + text + '</span>';
         }
         // Default/large
-        return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:18px;font-weight:700;padding:4px 10px;border-radius:8px">' + text + '</span>';
+        return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:22px;font-weight:700;padding:8px 16px;border-radius:10px">' + text + '</span>';
     };
 
     VR.getFPTypeText = function(ps) {
@@ -295,10 +297,32 @@
         // Schedules list
         html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
 
+        // Add test persons if less than 3 people (for demo purposes)
+        if (schedules.length > 0 && schedules.length < 3) {
+            schedules.push({
+                anstNr: 'TEST001',
+                namn: 'Anna Testsson',
+                tur: '1124',
+                tid: '06:00-15:00',
+                ps: 'ARB',
+                isFriday: false,
+                isTest: true
+            });
+            schedules.push({
+                anstNr: 'TEST002',
+                namn: 'Erik Demoberg',
+                tur: '1133',
+                tid: '14:00-22:30',
+                ps: 'ARB',
+                isFriday: false,
+                isTest: true
+            });
+        }
+
         if (schedules.length === 0) {
-            html += '<div style="padding:40px;text-align:center">';
-            html += '<div style="font-size:50px;margin-bottom:16px">📭</div>';
-            html += '<div style="font-size:22px;color:#888">Inga kollegor har laddat upp schema ännu</div>';
+            html += '<div style="padding:50px;text-align:center">';
+            html += '<div style="font-size:60px;margin-bottom:20px">📭</div>';
+            html += '<div style="font-size:26px;color:#888">Inga kollegor har laddat upp schema ännu</div>';
             html += '</div>';
         } else {
             // NEW SORTING: Working (by start time) -> Fridag (alphabetically) -> No data
@@ -328,21 +352,22 @@
 
             for (var i = 0; i < schedules.length; i++) {
                 var s = schedules[i];
-                var bgCol = i % 2 === 0 ? '#fff' : '#F8F8F8';
+                var bgCol = i % 2 === 0 ? '#fff' : '#F5F5F7';
 
-                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
+                // BIGGER ROW - 100% larger for mobile
+                html += '<div style="display:flex;align-items:center;padding:24px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA;gap:12px">';
 
                 if (s.noData) {
-                    // No data row
-                    html += '<div style="flex:1;font-size:20px;font-weight:600;color:#999">' + (s.namn || 'Okänd') + '</div>';
-                    html += '<div style="font-size:16px;color:#999">Ej laddat</div>';
+                    // No data row - BIGGER
+                    html += '<div style="flex:1;font-size:24px;font-weight:600;color:#999">' + (s.namn || 'Okänd') + '</div>';
+                    html += '<div style="font-size:20px;color:#999">Ej laddat</div>';
                 } else if (s.isFriday) {
-                    // Fridag row - NEW LAYOUT with FP/FP-V badge
-                    html += '<div style="flex:1;font-size:20px;font-weight:600;color:#333">' + (s.namn || 'Okänd') + '</div>';
-                    html += '<div style="font-size:16px;color:#16A34A;margin-right:12px">Ledig</div>';
-                    html += VR.getFPBadgeHtml(s.ps, 'small');
+                    // Fridag row - BIGGER with FP/FP-V badge
+                    html += '<div style="flex:1;font-size:24px;font-weight:700;color:#333">' + (s.namn || 'Okänd') + '</div>';
+                    html += '<div style="font-size:20px;color:#16A34A;margin-right:8px">Ledig</div>';
+                    html += VR.getFPBadgeHtml(s.ps, 'medium');
                 } else {
-                    // Working row - show tour info or time
+                    // Working row - NEW LAYOUT: Namn | Tid | Ikon | Turnr - BIGGER
                     var turVal = s.tur || '';
                     var tidVal = s.tid || '';
                     var c3 = turVal.length >= 3 ? turVal.charAt(2) : '';
@@ -355,15 +380,19 @@
                     if (c3 === '1' || c3 === '3') flagIcon = '🇸🇪';
                     else if (c3 === '2' || c3 === '4') flagIcon = '🇩🇰';
 
-                    html += '<div style="flex:1;font-size:20px;font-weight:600;color:#333">' + (s.namn || 'Okänd') + '</div>';
+                    // Namn (flex:1)
+                    html += '<div style="flex:1;font-size:24px;font-weight:700;color:#1a1a2e">' + (s.namn || 'Okänd') + '</div>';
 
                     if (turVal || tidVal) {
-                        html += '<div style="font-size:16px;color:#666;min-width:90px;text-align:center">' + tidVal + '</div>';
-                        html += '<div style="font-size:20px;min-width:50px;text-align:center">' + roleIcon + ' ' + flagIcon + '</div>';
-                        html += '<div style="font-size:16px;font-weight:600;color:#333;min-width:60px;text-align:right">' + turVal + '</div>';
+                        // Tid - BIG and prominent
+                        html += '<div style="font-size:22px;font-weight:700;color:#333;min-width:110px;text-align:center">' + tidVal + '</div>';
+                        // Ikoner
+                        html += '<div style="font-size:26px;min-width:60px;text-align:center">' + roleIcon + flagIcon + '</div>';
+                        // Turnr
+                        html += '<div style="font-size:20px;font-weight:600;color:#666;min-width:55px;text-align:right">' + turVal + '</div>';
                     } else {
                         // No tur or tid - show ps if available
-                        html += '<div style="font-size:16px;color:#666">' + (s.ps || 'Ingen info') + '</div>';
+                        html += '<div style="font-size:20px;color:#666">' + (s.ps || 'Ingen info') + '</div>';
                     }
                 }
 
