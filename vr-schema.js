@@ -162,9 +162,9 @@
         VR.schemaYear = now.getFullYear();
         VR.schemaMonth = now.getMonth();
 
-        // Load wide range: 1.5 months back to 12 months ahead
-        // E.g., from Dec 14 to Dec 31 next year
-        var startDate = new Date(now.getFullYear(), now.getMonth() - 1, 14);
+        // Load wide range: 3 months back to end of year
+        // E.g., from Nov 1 to Dec 31 this year (if current month is Feb)
+        var startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
         var endDate = new Date(now.getFullYear(), 11, 31); // Dec 31 this year
 
         var d1 = startDate.getDate() + '-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
