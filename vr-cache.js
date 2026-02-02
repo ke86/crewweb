@@ -629,73 +629,15 @@
 
     // ===== PRELOAD LÖN (föregående månad) =====
     VR.preloadLon = function() {
-        VR.updateLoader(75, 'Beräknar föregående lön...');
-
-        // Check if already cached
-        if (VR.getPayoutMonthInfo && VR.getLonFromCache) {
-            var payoutInfo = VR.getPayoutMonthInfo(-1);
-            var cached = VR.getLonFromCache(payoutInfo.workYear, payoutInfo.workMonth);
-            if (cached) {
-                console.log('VR: Lön already cached for prev month');
-                // Next: Schema (last step before finish)
-                setTimeout(VR.preloadSchemaLast, 300);
-                return;
-            }
-        }
+        VR.updateLoader(85, 'Beräknar föregående lön...');
 
         // Calculate previous month's lön silently (without rendering)
         if (VR.calculateLonForPreload) {
             VR.calculateLonForPreload(-1);
         }
 
-        // Next: Schema (last step before finish)
-        setTimeout(VR.preloadSchemaLast, 500);
-    };
-
-    // ===== PRELOAD SCHEMA LAST (so it stays visible) =====
-    VR.preloadSchemaLast = function() {
-        VR.updateLoader(85, 'Laddar Schema...');
-
-        VR.clickFolder();
-
-        setTimeout(function() {
-            var n = 0;
-            VR.timer = setInterval(function() {
-                n++;
-                var el = VR.findMenuItem('Schema/arbetsdag');
-                if (el) {
-                    VR.stopTimer();
-                    el.click();
-                    VR.waitForPreloadSchemaLast();
-                } else if (n > 15) {
-                    VR.stopTimer();
-                    VR.preloadFinish();
-                }
-            }, 400);
-        }, 500);
-    };
-
-    VR.waitForPreloadSchemaLast = function() {
-        var n = 0;
-        VR.timer = setInterval(function() {
-            n++;
-            var workdays = document.getElementById('workdays');
-
-            if (workdays || n > 20) {
-                VR.stopTimer();
-                VR.updateLoader(92, 'Schema laddat...');
-
-                // Parse schema
-                if (VR.parseSchemaTable) {
-                    var tbl = workdays ? workdays.querySelector('table') : null;
-                    if (tbl) {
-                        VR.parseSchemaTable(tbl);
-                    }
-                }
-
-                setTimeout(VR.preloadFinish, 500);
-            }
-        }, 400);
+        // Go directly to finish (Schema will be loaded via doSchema at the end)
+        setTimeout(VR.preloadFinish, 500);
     };
 
     VR.preloadFinish = function() {

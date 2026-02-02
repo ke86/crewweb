@@ -341,9 +341,11 @@
                     html += '<div style="flex:1;font-size:20px;font-weight:600;color:#333">' + (s.namn || 'Okänd') + '</div>';
                     html += '<div style="font-size:16px;color:#16A34A;margin-right:12px">Ledig</div>';
                     html += VR.getFPBadgeHtml(s.ps, 'small');
-                } else if (s.tur) {
-                    // Working row - NEW LAYOUT: Name | Time | Icons | Tour
-                    var c3 = s.tur.length >= 3 ? s.tur.charAt(2) : '';
+                } else {
+                    // Working row - show tour info or time
+                    var turVal = s.tur || '';
+                    var tidVal = s.tid || '';
+                    var c3 = turVal.length >= 3 ? turVal.charAt(2) : '';
                     var roleIcon = '';
                     var flagIcon = '';
 
@@ -354,12 +356,15 @@
                     else if (c3 === '2' || c3 === '4') flagIcon = '🇩🇰';
 
                     html += '<div style="flex:1;font-size:20px;font-weight:600;color:#333">' + (s.namn || 'Okänd') + '</div>';
-                    html += '<div style="font-size:16px;color:#666;min-width:90px;text-align:center">' + (s.tid || '') + '</div>';
-                    html += '<div style="font-size:20px;min-width:50px;text-align:center">' + roleIcon + ' ' + flagIcon + '</div>';
-                    html += '<div style="font-size:16px;font-weight:600;color:#333;min-width:60px;text-align:right">' + s.tur + '</div>';
-                } else {
-                    // Unknown type
-                    html += '<div style="flex:1;font-size:20px;font-weight:600;color:#333">' + (s.namn || 'Okänd') + '</div>';
+
+                    if (turVal || tidVal) {
+                        html += '<div style="font-size:16px;color:#666;min-width:90px;text-align:center">' + tidVal + '</div>';
+                        html += '<div style="font-size:20px;min-width:50px;text-align:center">' + roleIcon + ' ' + flagIcon + '</div>';
+                        html += '<div style="font-size:16px;font-weight:600;color:#333;min-width:60px;text-align:right">' + turVal + '</div>';
+                    } else {
+                        // No tur or tid - show ps if available
+                        html += '<div style="font-size:16px;color:#666">' + (s.ps || 'Ingen info') + '</div>';
+                    }
                 }
 
                 html += '</div>';
@@ -594,28 +599,49 @@
         var anstNr = null;
         var namn = null;
 
-        try {
-            // Look for anställningsnummer in inputs/labels
-            var allElements = document.querySelectorAll('input, span, div, label, td');
-            for (var i = 0; i < allElements.length; i++) {
-                var el = allElements[i];
-                var text = el.textContent || el.value || '';
+        // Words to exclude from name matching (these are not person names)
+        var excludeWords = ['lokförare', 'tågvärd', 'malmö', 'stockholm', 'göteborg', 'distrikt', 'avdelning', 'enhet'];
 
-                // Look for anställningsnummer pattern (6 digits)
-                if (!anstNr) {
-                    var anstMatch = text.match(/(?:Anst|Anställ)[^\d]*(\d{6})/i);
-                    if (anstMatch) {
-                        anstNr = anstMatch[1];
+        try {
+            // SPECIFIC: Look for "Anställds namn" label and get next sibling or nearby input
+            var allLabels = document.querySelectorAll('label, span, div, td');
+            for (var i = 0; i < allLabels.length; i++) {
+                var el = allLabels[i];
+                var text = (el.textContent || '').trim();
+
+                // Look for "Anställds namn" label
+                if (!namn && text.toLowerCase().indexOf('anställds namn') > -1) {
+                    // Try to find the value - check next sibling, parent's next child, or nearby input
+                    var nextEl = el.nextElementSibling;
+                    if (nextEl) {
+                        var nextVal = (nextEl.value || nextEl.textContent || '').trim();
+                        if (nextVal && nextVal.length > 3 && !VR.isExcludedName(nextVal, excludeWords)) {
+                            namn = nextVal;
+                        }
+                    }
+                    // Also check for input inside or after
+                    var nearbyInput = el.parentElement ? el.parentElement.querySelector('input') : null;
+                    if (!namn && nearbyInput && nearbyInput.value) {
+                        var inputVal = nearbyInput.value.trim();
+                        if (inputVal && !VR.isExcludedName(inputVal, excludeWords)) {
+                            namn = inputVal;
+                        }
                     }
                 }
 
-                // Look for name pattern
-                if (!namn && /^[A-ZÅÄÖ][a-zåäö]+ [A-ZÅÄÖ][a-zåäö]+$/.test(text.trim())) {
-                    namn = text.trim();
+                // Look for anställningsnummer
+                if (!anstNr && text.toLowerCase().indexOf('anställningsnummer') > -1) {
+                    var nextEl2 = el.nextElementSibling;
+                    if (nextEl2) {
+                        var match = (nextEl2.value || nextEl2.textContent || '').match(/(\d{6})/);
+                        if (match) {
+                            anstNr = match[1];
+                        }
+                    }
                 }
             }
 
-            // If no anstNr found, try finding it in any 6-digit readonly/disabled input
+            // Fallback: Look for 6-digit anstNr pattern
             if (!anstNr) {
                 var inputs = document.querySelectorAll('input[readonly], input[disabled]');
                 for (var j = 0; j < inputs.length; j++) {
@@ -627,18 +653,39 @@
                 }
             }
 
-            // Try getCurrentUserName as fallback for namn
-            if (!namn && VR.getCurrentUserName) {
-                var foundName = VR.getCurrentUserName();
-                if (foundName && foundName !== 'Okänd') {
-                    namn = foundName;
+            // Fallback for namn: look in readonly inputs but exclude bad matches
+            if (!namn) {
+                var inputs2 = document.querySelectorAll('input[readonly], input[disabled]');
+                for (var k = 0; k < inputs2.length; k++) {
+                    var inputVal2 = (inputs2[k].value || '').trim();
+                    // Check if it looks like a name (two words, capitalized) and not excluded
+                    if (/^[A-ZÅÄÖ][a-zåäö]+ [A-ZÅÄÖ][a-zåäö]+$/.test(inputVal2)) {
+                        if (!VR.isExcludedName(inputVal2, excludeWords)) {
+                            namn = inputVal2;
+                            break;
+                        }
+                    }
                 }
             }
+
+            console.log('VR: Found user info - anstNr:', anstNr, 'namn:', namn);
         } catch (e) {
             console.log('VR: Error getting user info from CrewWeb', e);
         }
 
         return { anstNr: anstNr, namn: namn };
+    };
+
+    // Helper to check if a name should be excluded
+    VR.isExcludedName = function(name, excludeWords) {
+        if (!name) return true;
+        var lower = name.toLowerCase();
+        for (var i = 0; i < excludeWords.length; i++) {
+            if (lower.indexOf(excludeWords[i]) > -1) {
+                return true;
+            }
+        }
+        return false;
     };
 
     // ===== UPLOAD MY SCHEDULE =====
