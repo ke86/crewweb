@@ -1002,11 +1002,12 @@
             html += '</div>';
         } else {
             // Build calendar grid - calculate cell width to show 7 days
+            // Need wider cells for full time format (05:00-12:00)
             var daysInMonth = new Date(year, month + 1, 0).getDate();
-            var nameColWidth = 100; // Name column width
-            var availableWidth = Math.max(window.innerWidth - 40, 320); // Screen width minus padding
+            var nameColWidth = 90; // Name column width
+            var availableWidth = Math.max(window.innerWidth - 32, 320); // Screen width minus padding
             var cellWidth = Math.floor((availableWidth - nameColWidth) / 7);
-            cellWidth = Math.max(cellWidth, 70); // Minimum 70px per cell
+            cellWidth = Math.max(cellWidth, 85); // Minimum 85px per cell for full time
             var tableMinWidth = nameColWidth + (daysInMonth * cellWidth);
 
             html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08);overflow-x:auto;-webkit-overflow-scrolling:touch">';
@@ -1050,21 +1051,25 @@
                             cellContent = '<div style="font-size:13px;font-weight:700;background:#16A34A;color:#fff;padding:6px 8px;border-radius:6px;display:inline-block">' + fpText + '</div>';
                             cellBg = 'rgba(22,163,74,0.08)';
                         } else {
-                            // Working day - show ONLY time (larger, clearer)
+                            // Working day - show FULL time (e.g. 05:00-12:00)
                             var tidVal = schedule.tid || '';
-                            var shortTime = VR.formatShortTime(tidVal);
 
-                            if (shortTime) {
-                                // Show time only - big and clear
-                                cellContent = '<div style="font-size:15px;font-weight:700;color:#1a1a2e">' + shortTime + '</div>';
+                            // Debug: log first few schedules to see what data we have
+                            if (u === 0 && day <= 3) {
+                                console.log('VR Month: day ' + day + ', tid="' + tidVal + '", tur="' + schedule.tur + '", ps="' + schedule.ps + '"');
+                            }
+
+                            if (tidVal) {
+                                // Show full time - big and clear
+                                cellContent = '<div style="font-size:12px;font-weight:700;color:#1a1a2e;white-space:nowrap">' + tidVal + '</div>';
                                 cellBg = 'rgba(59,130,246,0.08)';
                             } else if (schedule.tur) {
                                 // No time - show tur as fallback
-                                cellContent = '<div style="font-size:13px;font-weight:600;color:#666">' + schedule.tur + '</div>';
+                                cellContent = '<div style="font-size:11px;font-weight:600;color:#666">' + schedule.tur + '</div>';
                                 cellBg = 'rgba(59,130,246,0.05)';
                             } else if (schedule.ps) {
                                 // Show PS code as last fallback
-                                cellContent = '<div style="font-size:12px;color:#888">' + schedule.ps + '</div>';
+                                cellContent = '<div style="font-size:10px;color:#888">' + schedule.ps + '</div>';
                             }
                         }
                         cellStyle = 'cursor:pointer';
