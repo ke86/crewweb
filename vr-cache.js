@@ -532,54 +532,11 @@
         }, 400);
     };
 
+    // OB skipped in preload - loads on-demand when user visits OB view
     VR.preloadOB = function() {
-        VR.updateLoader(55, 'Laddar OB...');
-
-        VR.clickFolder();
-
-        setTimeout(function() {
-            var n = 0;
-            VR.timer = setInterval(function() {
-                n++;
-                var el = VR.findMenuItem('Ersättningsspecifikation');
-                if (el) {
-                    VR.stopTimer();
-                    el.click();
-                    VR.waitForPreloadOB();
-                } else if (n > 15) {
-                    VR.stopTimer();
-                    VR.preloadKomp();
-                }
-            }, 400);
-        }, 500);
-    };
-
-    VR.waitForPreloadOB = function() {
-        var n = 0;
-        VR.timer = setInterval(function() {
-            n++;
-
-            var tables = document.querySelectorAll('table');
-            var hasData = false;
-            for (var i = 0; i < tables.length; i++) {
-                if (tables[i].querySelectorAll('tr').length > 3) {
-                    hasData = true;
-                    break;
-                }
-            }
-
-            if (hasData || n > 20) {
-                VR.stopTimer();
-                VR.updateLoader(70, 'OB laddat...');
-
-                // Parse OB data
-                if (VR.parseOBData) {
-                    VR.parseOBData();
-                }
-
-                setTimeout(VR.preloadKomp, 500);
-            }
-        }, 400);
+        VR.updateLoader(55, 'Hoppar över OB (laddas vid behov)...');
+        // Go directly to Komp
+        setTimeout(VR.preloadKomp, 300);
     };
 
     VR.preloadKomp = function() {

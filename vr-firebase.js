@@ -98,13 +98,16 @@
 
     // ===== UPLOAD SCHEMA TO FIREBASE =====
     VR.uploadSchemaToFirebase = function(callback) {
+        console.log('VR: uploadSchemaToFirebase started');
+
         if (!VR.firebaseReady || !VR.firebaseDb) {
-            console.log('VR: Firebase not ready');
+            console.log('VR: Firebase not ready - firebaseReady:', VR.firebaseReady, 'firebaseDb:', !!VR.firebaseDb);
             if (callback) callback(false, 'Firebase ej redo');
             return;
         }
 
         var user = VR.getFirebaseUser();
+        console.log('VR: User for upload:', user);
         if (!user || !user.anstNr) {
             if (callback) callback(false, 'Ingen användare');
             return;
@@ -112,58 +115,68 @@
 
         // Get schema data
         var schemaData = VR.allSchemaData || {};
-        if (Object.keys(schemaData).length === 0) {
+        var schemaKeys = Object.keys(schemaData);
+        console.log('VR: Schema data keys:', schemaKeys.length);
+
+        if (schemaKeys.length === 0) {
             if (callback) callback(false, 'Inget schema laddat');
             return;
         }
 
-        var batch = VR.firebaseDb.batch();
-        var userRef = VR.firebaseDb.collection('users').doc(user.anstNr);
+        try {
+            var batch = VR.firebaseDb.batch();
+            var userRef = VR.firebaseDb.collection('users').doc(user.anstNr);
 
-        // Update user info
-        batch.set(userRef, {
-            namn: user.namn,
-            anstNr: user.anstNr,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+            // Update user info
+            batch.set(userRef, {
+                namn: user.namn || 'Okänd',
+                anstNr: user.anstNr,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
 
-        // Upload each day's schedule
-        var count = 0;
-        for (var dateKey in schemaData) {
-            if (schemaData.hasOwnProperty(dateKey)) {
-                var entries = schemaData[dateKey];
-                if (entries && entries.length > 0) {
-                    var entry = entries[0]; // Take first entry for the day
+            // Upload each day's schedule
+            var count = 0;
+            for (var dateKey in schemaData) {
+                if (schemaData.hasOwnProperty(dateKey)) {
+                    var entries = schemaData[dateKey];
+                    if (entries && entries.length > 0) {
+                        var entry = entries[0]; // Take first entry for the day
 
-                    var dayRef = VR.firebaseDb.collection('schedules')
-                        .doc(user.anstNr)
-                        .collection('days')
-                        .doc(dateKey);
+                        var dayRef = VR.firebaseDb.collection('schedules')
+                            .doc(user.anstNr)
+                            .collection('days')
+                            .doc(dateKey);
 
-                    batch.set(dayRef, {
-                        date: dateKey,
-                        tur: entry.tn || '',
-                        tid: entry.pr || '',
-                        ps: entry.ps || '',
-                        cd: entry.cd || '',
-                        isFriday: VR.isFriday ? VR.isFriday(entry.ps, entry.cd) : false,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    count++;
+                        batch.set(dayRef, {
+                            date: dateKey,
+                            tur: entry.tn || '',
+                            tid: entry.pr || '',
+                            ps: entry.ps || '',
+                            cd: entry.cd || '',
+                            isFriday: VR.isFriday ? VR.isFriday(entry.ps, entry.cd) : false,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        count++;
+                    }
                 }
             }
-        }
 
-        // Commit batch
-        batch.commit()
-            .then(function() {
-                console.log('VR: Uploaded', count, 'schedule days');
-                if (callback) callback(true, count + ' dagar uppladdade');
-            })
-            .catch(function(error) {
-                console.log('VR: Upload error:', error);
-                if (callback) callback(false, 'Uppladdningsfel');
-            });
+            console.log('VR: Committing batch with', count, 'days');
+
+            // Commit batch
+            batch.commit()
+                .then(function() {
+                    console.log('VR: Uploaded', count, 'schedule days successfully');
+                    if (callback) callback(true, count + ' dagar uppladdade');
+                })
+                .catch(function(error) {
+                    console.log('VR: Upload batch commit error:', error);
+                    if (callback) callback(false, 'Uppladdningsfel: ' + (error.message || error));
+                });
+        } catch (e) {
+            console.log('VR: Upload exception:', e);
+            if (callback) callback(false, 'Fel: ' + (e.message || e));
+        }
     };
 
     // ===== GET ALL USERS =====

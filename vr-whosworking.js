@@ -690,28 +690,52 @@
 
     // ===== UPLOAD MY SCHEDULE =====
     VR.uploadMySchedule = function() {
+        console.log('VR: uploadMySchedule called');
+
         // Check if we have user data, try to get from CrewWeb if missing
         var user = VR.getFirebaseUser();
+        console.log('VR: Current user from storage:', user);
 
         if (!user || !user.anstNr) {
             // Try to get from CrewWeb page
             var crewWebInfo = VR.getUserInfoFromCrewWeb();
+            console.log('VR: CrewWeb info:', crewWebInfo);
 
             if (crewWebInfo.anstNr && crewWebInfo.namn) {
                 // Register user with found info
                 VR.setFirebaseUser(crewWebInfo.anstNr, crewWebInfo.namn);
                 user = { anstNr: crewWebInfo.anstNr, namn: crewWebInfo.namn };
                 console.log('VR: Auto-registered user from CrewWeb:', user.namn, '(' + user.anstNr + ')');
+            } else if (crewWebInfo.anstNr) {
+                // We have anstNr but no namn - use anstNr as fallback name
+                VR.setFirebaseUser(crewWebInfo.anstNr, 'Anställd ' + crewWebInfo.anstNr);
+                user = { anstNr: crewWebInfo.anstNr, namn: 'Anställd ' + crewWebInfo.anstNr };
+                console.log('VR: Registered with fallback name:', user.namn);
             } else {
                 VR.showUploadError('Kunde inte hitta dina anställningsuppgifter. Gå till Anställddata först och kom tillbaka.');
                 return;
             }
         }
 
+        // Ensure user has both anstNr and namn
+        if (!user.namn) {
+            user.namn = 'Anställd ' + user.anstNr;
+            VR.setFirebaseUser(user.anstNr, user.namn);
+        }
+
         VR.showLoader('Laddar upp');
-        VR.updateLoader(30, 'Ansluter...');
+        VR.updateLoader(30, 'Ansluter till Firebase...');
+
+        // Check if Firebase SDK is loaded
+        if (typeof firebase === 'undefined') {
+            console.log('VR: Firebase SDK not loaded');
+            VR.hideLoader();
+            VR.showUploadError('Firebase SDK kunde inte laddas. Kontrollera din internetanslutning.');
+            return;
+        }
 
         VR.initFirebase(function(success) {
+            console.log('VR: initFirebase callback, success:', success);
             if (!success) {
                 VR.hideLoader();
                 VR.showUploadError('Kunde inte ansluta till Firebase');
@@ -720,17 +744,18 @@
 
             VR.updateLoader(60, 'Laddar upp schema...');
 
-            VR.uploadSchemaToFirebase(function(success, message) {
+            VR.uploadSchemaToFirebase(function(uploadSuccess, message) {
+                console.log('VR: uploadSchemaToFirebase callback, success:', uploadSuccess, 'message:', message);
                 VR.hideLoader();
 
-                if (success) {
+                if (uploadSuccess) {
                     VR.showUploadSuccess(message);
                     // Reload view after short delay
                     setTimeout(function() {
                         VR.doWhosWorking();
                     }, 2000);
                 } else {
-                    VR.showUploadError(message);
+                    VR.showUploadError(message || 'Okänt fel vid uppladdning');
                 }
             });
         });
