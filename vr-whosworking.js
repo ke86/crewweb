@@ -7,6 +7,7 @@
     // ===== STATE =====
     VR.whosWorkingMonth = null;
     VR.whosWorkingYear = null;
+    VR.whosWorkingViewMode = 'day'; // 'day' or 'month'
 
     // ===== MAIN ENTRY POINT =====
     VR.doWhosWorking = function() {
@@ -25,15 +26,34 @@
             return;
         }
 
-        // Check if user info exists
-        var user = VR.getFirebaseUser();
-        if (!user || !user.anstNr) {
-            VR.showWhosWorkingSetup();
-            return;
-        }
+        // Auto-register user if we have data from CrewWeb
+        VR.autoRegisterUser();
 
         // Show the main view
         VR.showWhosWorkingView();
+    };
+
+    // ===== AUTO REGISTER USER =====
+    VR.autoRegisterUser = function() {
+        var user = VR.getFirebaseUser();
+
+        // If already registered, check if we need to update
+        if (user && user.anstNr) {
+            // Update name if we have a better one from CrewWeb
+            if (VR.anstNamn && VR.anstNamn !== user.namn) {
+                VR.setFirebaseUser(user.anstNr, VR.anstNamn);
+            }
+            return;
+        }
+
+        // Auto-register from CrewWeb data
+        var anstNr = VR.anstNr || '';
+        var namn = VR.anstNamn || '';
+
+        if (anstNr && namn) {
+            VR.setFirebaseUser(anstNr, namn);
+            console.log('VR: Auto-registered user:', namn, '(' + anstNr + ')');
+        }
     };
 
     // ===== LOGIN SCREEN =====
@@ -85,52 +105,6 @@
         }, 100);
     };
 
-    // ===== SETUP SCREEN (first time) =====
-    VR.showWhosWorkingSetup = function() {
-        var html = '<div style="background:#fff;border-radius:27px;padding:40px;box-shadow:0 5px 20px rgba(0,0,0,0.08);max-width:400px;margin:0 auto">';
-        html += '<div style="text-align:center;margin-bottom:30px">';
-        html += '<div style="font-size:60px;margin-bottom:16px">👤</div>';
-        html += '<div style="font-size:28px;font-weight:700;color:#333">Vem är du?</div>';
-        html += '<div style="font-size:18px;color:#888;margin-top:8px">Fyll i dina uppgifter (en gång)</div>';
-        html += '</div>';
-
-        html += '<div style="margin-bottom:16px">';
-        html += '<label style="font-size:16px;color:#666;margin-bottom:6px;display:block">Anställningsnummer</label>';
-        html += '<input type="text" id="vrFbAnstNr" placeholder="t.ex. 302113" style="width:100%;padding:16px;font-size:20px;border:2px solid #E5E5E5;border-radius:14px;box-sizing:border-box">';
-        html += '</div>';
-
-        html += '<div style="margin-bottom:24px">';
-        html += '<label style="font-size:16px;color:#666;margin-bottom:6px;display:block">Ditt namn</label>';
-        html += '<input type="text" id="vrFbNamn" placeholder="t.ex. Kenny Eriksson" style="width:100%;padding:16px;font-size:20px;border:2px solid #E5E5E5;border-radius:14px;box-sizing:border-box">';
-        html += '</div>';
-
-        html += '<button id="vrFbSetupBtn" style="width:100%;padding:18px;font-size:22px;font-weight:600;color:#fff;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border:none;border-radius:14px;cursor:pointer">Spara</button>';
-        html += '</div>';
-
-        VR.showView('', '', html);
-
-        // Bind events
-        setTimeout(function() {
-            var anstNrInput = document.getElementById('vrFbAnstNr');
-            var namnInput = document.getElementById('vrFbNamn');
-            var setupBtn = document.getElementById('vrFbSetupBtn');
-
-            if (setupBtn) {
-                setupBtn.onclick = function() {
-                    var anstNr = anstNrInput ? anstNrInput.value.trim() : '';
-                    var namn = namnInput ? namnInput.value.trim() : '';
-
-                    if (anstNr && namn) {
-                        VR.setFirebaseUser(anstNr, namn);
-                        VR.doWhosWorking(); // Reload
-                    }
-                };
-            }
-
-            if (anstNrInput) anstNrInput.focus();
-        }, 100);
-    };
-
     // ===== MAIN VIEW =====
     VR.showWhosWorkingView = function() {
         VR.showLoader('Laddar kollegor');
@@ -158,10 +132,50 @@
 
                 setTimeout(function() {
                     VR.hideLoader();
+                    VR.whosWorkingViewMode = 'day';
                     VR.renderWhosWorkingView(schedules, todayStr);
                 }, 200);
             });
         });
+    };
+
+    // ===== RENDER HEADER BAR (iOS style) =====
+    VR.renderWhosWorkingHeader = function(isMonthView) {
+        var user = VR.getFirebaseUser();
+        var userName = user ? user.namn : (VR.anstNamn || 'Okänd');
+
+        // Shorten name to first name + initial
+        var shortName = userName;
+        var nameParts = userName.split(' ');
+        if (nameParts.length > 1) {
+            shortName = nameParts[0] + ' ' + nameParts[1].charAt(0) + '.';
+        }
+
+        var html = '';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:16px;padding:12px 16px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);flex-wrap:wrap;gap:10px">';
+
+        // Left: User info
+        html += '<div style="display:flex;align-items:center;gap:8px">';
+        html += '<span style="font-size:20px">👤</span>';
+        html += '<span style="font-size:16px;font-weight:600;color:#333">' + shortName + '</span>';
+        html += '</div>';
+
+        // Center: iOS segmented control
+        html += '<div style="display:flex;background:#E5E5EA;border-radius:10px;padding:3px">';
+        html += '<button id="vrWwDayTab" style="padding:8px 20px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;' +
+                (!isMonthView ? 'background:#fff;color:#333;box-shadow:0 1px 3px rgba(0,0,0,0.1)' : 'background:transparent;color:#666') + '">Idag</button>';
+        html += '<button id="vrWwMonthTab" style="padding:8px 20px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;' +
+                (isMonthView ? 'background:#fff;color:#333;box-shadow:0 1px 3px rgba(0,0,0,0.1)' : 'background:transparent;color:#666') + '">Månad</button>';
+        html += '</div>';
+
+        // Right: Upload button
+        html += '<button id="vrWwUploadBtn" style="display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:10px;border:none;background:linear-gradient(180deg,#34C759 0%,#28a745 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(52,199,89,0.3)">';
+        html += '<span>📤</span><span>Ladda upp</span>';
+        html += '</button>';
+
+        html += '</div>';
+
+        return html;
     };
 
     // ===== RENDER MAIN VIEW =====
@@ -182,20 +196,17 @@
 
         var html = '';
 
-        // Header with navigation
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:20px 28px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">';
-        html += '<span id="vrWwPrev" style="font-size:32px;color:#fff;cursor:pointer;padding:8px 12px">◀</span>';
-        html += '<div style="text-align:center">';
-        html += '<div style="font-size:24px;font-weight:700;color:#fff">' + (isToday ? 'Idag' : weekday) + '</div>';
-        html += '<div style="font-size:18px;color:rgba(255,255,255,0.7)">' + dayNum + ' ' + monthName + ' ' + year + '</div>';
-        html += '</div>';
-        html += '<span id="vrWwNext" style="font-size:32px;color:#fff;cursor:pointer;padding:8px 12px">▶</span>';
-        html += '</div>';
+        // iOS-style header bar
+        html += VR.renderWhosWorkingHeader(false);
 
-        // Month selector
-        html += '<div style="display:flex;gap:10px;margin-bottom:16px;overflow-x:auto;padding:4px 0">';
-        html += '<button id="vrWwToday" style="padding:10px 18px;border-radius:12px;border:none;background:' + (isToday ? 'linear-gradient(180deg,#1a1a2e 0%,#16213e 100%)' : 'rgba(0,0,0,0.08)') + ';color:' + (isToday ? '#fff' : '#333') + ';font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap">Idag</button>';
-        html += '<button id="vrWwMonth" style="padding:10px 18px;border-radius:12px;border:none;background:rgba(0,0,0,0.08);color:#333;font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap">📅 Hela månaden</button>';
+        // Date navigation header
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:16px 24px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">';
+        html += '<span id="vrWwPrev" style="font-size:28px;color:#fff;cursor:pointer;padding:8px 12px">◀</span>';
+        html += '<div style="text-align:center">';
+        html += '<div style="font-size:22px;font-weight:700;color:#fff">' + (isToday ? 'Idag' : weekday) + '</div>';
+        html += '<div style="font-size:16px;color:rgba(255,255,255,0.7)">' + dayNum + ' ' + monthName + ' ' + year + '</div>';
+        html += '</div>';
+        html += '<span id="vrWwNext" style="font-size:28px;color:#fff;cursor:pointer;padding:8px 12px">▶</span>';
         html += '</div>';
 
         // Schedules list
@@ -264,20 +275,6 @@
 
         html += '</div>';
 
-        // Upload button
-        html += '<div style="margin-top:20px;text-align:center">';
-        html += '<button id="vrWwUpload" style="padding:18px 36px;font-size:20px;font-weight:600;color:#fff;background:linear-gradient(180deg,#34C759 0%,#28a745 100%);border:none;border-radius:16px;cursor:pointer;box-shadow:0 4px 12px rgba(52,199,89,0.3)">';
-        html += '<span style="margin-right:8px">📤</span> Ladda upp mitt schema</button>';
-        html += '</div>';
-
-        // Info text
-        var user = VR.getFirebaseUser();
-        if (user) {
-            html += '<div style="margin-top:16px;text-align:center;color:#8E8E93;font-size:16px">';
-            html += 'Inloggad som ' + user.namn + ' (' + user.anstNr + ')';
-            html += '</div>';
-        }
-
         VR.showView('', '', html);
         VR.bindWhosWorkingEvents(dateStr);
     };
@@ -287,9 +284,9 @@
         setTimeout(function() {
             var prevBtn = document.getElementById('vrWwPrev');
             var nextBtn = document.getElementById('vrWwNext');
-            var todayBtn = document.getElementById('vrWwToday');
-            var monthBtn = document.getElementById('vrWwMonth');
-            var uploadBtn = document.getElementById('vrWwUpload');
+            var dayTab = document.getElementById('vrWwDayTab');
+            var monthTab = document.getElementById('vrWwMonthTab');
+            var uploadBtn = document.getElementById('vrWwUploadBtn');
 
             if (prevBtn) {
                 prevBtn.onclick = function() {
@@ -303,18 +300,20 @@
                 };
             }
 
-            if (todayBtn) {
-                todayBtn.onclick = function() {
-                    var today = new Date();
-                    var todayStr = ('0' + today.getDate()).slice(-2) + '-' +
-                                   ('0' + (today.getMonth() + 1)).slice(-2) + '-' +
-                                   today.getFullYear();
-                    VR.loadWhosWorkingDate(todayStr);
+            if (dayTab) {
+                dayTab.onclick = function() {
+                    if (VR.whosWorkingViewMode !== 'day') {
+                        var today = new Date();
+                        var todayStr = ('0' + today.getDate()).slice(-2) + '-' +
+                                       ('0' + (today.getMonth() + 1)).slice(-2) + '-' +
+                                       today.getFullYear();
+                        VR.loadWhosWorkingDate(todayStr);
+                    }
                 };
             }
 
-            if (monthBtn) {
-                monthBtn.onclick = function() {
+            if (monthTab) {
+                monthTab.onclick = function() {
                     VR.showWhosWorkingMonth();
                 };
             }
@@ -347,6 +346,7 @@
 
         VR.getSchedulesForDate(dateStr, function(schedules) {
             VR.hideLoader();
+            VR.whosWorkingViewMode = 'day';
             VR.renderWhosWorkingView(schedules, dateStr);
         });
     };
@@ -357,6 +357,18 @@
         if (!VR.allSchemaData || Object.keys(VR.allSchemaData).length === 0) {
             VR.showUploadError('Du har inget schema laddat. Gå till Schema först för att ladda ditt schema.');
             return;
+        }
+
+        // Check if we have user data
+        var user = VR.getFirebaseUser();
+        if (!user || !user.anstNr) {
+            // Try to auto-register
+            if (VR.anstNr && VR.anstNamn) {
+                VR.setFirebaseUser(VR.anstNr, VR.anstNamn);
+            } else {
+                VR.showUploadError('Kunde inte hitta dina anställningsuppgifter. Gå till Anställddata först.');
+                return;
+            }
         }
 
         VR.showLoader('Laddar upp');
@@ -398,6 +410,7 @@
 
         VR.getSchedulesForMonth(year, month, function(allSchedules) {
             VR.hideLoader();
+            VR.whosWorkingViewMode = 'month';
             VR.renderMonthView(allSchedules, year, month);
         });
     };
@@ -408,15 +421,15 @@
 
         var html = '';
 
-        // Header with navigation
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:20px 28px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">';
-        html += '<span id="vrWwMonthPrev" style="font-size:32px;color:#fff;cursor:pointer;padding:8px 12px">◀</span>';
-        html += '<div style="font-size:28px;font-weight:700;color:#fff">' + monthName + ' ' + year + '</div>';
-        html += '<span id="vrWwMonthNext" style="font-size:32px;color:#fff;cursor:pointer;padding:8px 12px">▶</span>';
-        html += '</div>';
+        // iOS-style header bar
+        html += VR.renderWhosWorkingHeader(true);
 
-        // Back button
-        html += '<button id="vrWwBackToDay" style="margin-bottom:16px;padding:12px 20px;border-radius:12px;border:none;background:rgba(0,0,0,0.08);color:#333;font-size:16px;font-weight:600;cursor:pointer">← Tillbaka till dagvy</button>';
+        // Month navigation header
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:16px 24px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">';
+        html += '<span id="vrWwMonthPrev" style="font-size:28px;color:#fff;cursor:pointer;padding:8px 12px">◀</span>';
+        html += '<div style="font-size:24px;font-weight:700;color:#fff">' + monthName + ' ' + year + '</div>';
+        html += '<span id="vrWwMonthNext" style="font-size:28px;color:#fff;cursor:pointer;padding:8px 12px">▶</span>';
+        html += '</div>';
 
         // Get all users who have schedules
         var usersByDate = {};
@@ -506,12 +519,17 @@
         }
 
         VR.showView('', '', html);
+        VR.bindMonthViewEvents();
+    };
 
-        // Bind events
+    // ===== BIND MONTH VIEW EVENTS =====
+    VR.bindMonthViewEvents = function() {
         setTimeout(function() {
             var prevBtn = document.getElementById('vrWwMonthPrev');
             var nextBtn = document.getElementById('vrWwMonthNext');
-            var backBtn = document.getElementById('vrWwBackToDay');
+            var dayTab = document.getElementById('vrWwDayTab');
+            var monthTab = document.getElementById('vrWwMonthTab');
+            var uploadBtn = document.getElementById('vrWwUploadBtn');
 
             if (prevBtn) {
                 prevBtn.onclick = function() {
@@ -535,9 +553,23 @@
                 };
             }
 
-            if (backBtn) {
-                backBtn.onclick = function() {
-                    VR.doWhosWorking();
+            if (dayTab) {
+                dayTab.onclick = function() {
+                    var today = new Date();
+                    var todayStr = ('0' + today.getDate()).slice(-2) + '-' +
+                                   ('0' + (today.getMonth() + 1)).slice(-2) + '-' +
+                                   today.getFullYear();
+                    VR.loadWhosWorkingDate(todayStr);
+                };
+            }
+
+            if (monthTab) {
+                // Already on month view
+            }
+
+            if (uploadBtn) {
+                uploadBtn.onclick = function() {
+                    VR.uploadMySchedule();
                 };
             }
         }, 100);
