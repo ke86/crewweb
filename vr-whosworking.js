@@ -858,10 +858,10 @@
 
         var overlay = document.createElement('div');
         overlay.id = 'vrDetailOverlay';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99998;display:flex;align-items:center;justify-content:center';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:99998;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
 
         var modal = document.createElement('div');
-        modal.style.cssText = 'background:#fff;border-radius:20px;padding:32px;max-width:320px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3)';
+        modal.style.cssText = 'background:linear-gradient(180deg,#fff 0%,#f8f9fa 100%);border-radius:24px;padding:28px 32px;max-width:340px;width:90%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.3)';
 
         var html = '';
 
@@ -869,9 +869,18 @@
             // FP/FP-V popup
             html += '<div style="margin-bottom:16px">' + VR.getFPBadgeHtml(schedule.ps, 'large') + '</div>';
             html += '<div style="font-size:20px;font-weight:600;color:#16A34A;margin-bottom:20px">' + VR.getFPTypeText(schedule.ps) + '</div>';
-        } else if (schedule.tur) {
-            // Working popup
-            var c3 = schedule.tur.length >= 3 ? schedule.tur.charAt(2) : '';
+
+            html += '<div style="text-align:left;font-size:17px;color:#333;line-height:2.2;background:#fff;padding:16px 20px;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">';
+            html += '<div>👤 ' + (schedule.namn || 'Okänd') + '</div>';
+            html += '<div>📅 ' + weekday + ' ' + dayNum + ' ' + monthName + ' ' + year + '</div>';
+            if (schedule.ps) {
+                html += '<div>📋 ' + schedule.ps + '</div>';
+            }
+            html += '</div>';
+        } else {
+            // Working popup - handle with or without tur
+            var turVal = schedule.tur || '';
+            var c3 = turVal.length >= 3 ? turVal.charAt(2) : '';
             var icon = '👤';
             var role = '';
             var flag = '';
@@ -892,15 +901,21 @@
                 country = 'Danmark';
             }
 
-            html += '<div style="font-size:50px;margin-bottom:12px">' + icon + '</div>';
-            html += '<div style="font-size:24px;font-weight:700;color:#333;margin-bottom:16px">Tur ' + schedule.tur + '</div>';
+            // Header with icon and tur
+            html += '<div style="font-size:48px;margin-bottom:8px">' + icon + '</div>';
+            if (turVal) {
+                html += '<div style="font-size:26px;font-weight:700;color:#1a1a2e;margin-bottom:16px">Tur ' + turVal + '</div>';
+            } else {
+                html += '<div style="font-size:22px;font-weight:600;color:#666;margin-bottom:16px">Arbetsdag</div>';
+            }
 
-            html += '<div style="text-align:left;font-size:18px;color:#333;line-height:2">';
+            // Details card
+            html += '<div style="text-align:left;font-size:17px;color:#333;line-height:2.2;background:#fff;padding:16px 20px;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">';
             html += '<div>👤 ' + (schedule.namn || 'Okänd') + '</div>';
             html += '<div>📅 ' + weekday + ' ' + dayNum + ' ' + monthName + ' ' + year + '</div>';
 
             if (schedule.tid) {
-                html += '<div>⏰ ' + schedule.tid + '</div>';
+                html += '<div style="font-weight:600;color:#1a1a2e">⏰ ' + schedule.tid + '</div>';
             }
 
             if (role) {
@@ -911,18 +926,14 @@
                 html += '<div>' + flag + ' ' + country + '</div>';
             }
 
+            if (schedule.ps) {
+                html += '<div>📋 ' + schedule.ps + '</div>';
+            }
+
             html += '</div>';
         }
 
-        // Common info for FP
-        if (schedule.isFriday) {
-            html += '<div style="text-align:left;font-size:18px;color:#333;line-height:2">';
-            html += '<div>👤 ' + (schedule.namn || 'Okänd') + '</div>';
-            html += '<div>📅 ' + weekday + ' ' + dayNum + ' ' + monthName + ' ' + year + '</div>';
-            html += '</div>';
-        }
-
-        html += '<button id="vrDetailClose" style="margin-top:24px;padding:14px 32px;border-radius:12px;border:none;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;font-size:16px;font-weight:600;cursor:pointer">Stäng</button>';
+        html += '<button id="vrDetailClose" style="margin-top:24px;padding:14px 40px;border-radius:14px;border:none;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;font-size:17px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2)">Stäng</button>';
 
         modal.innerHTML = html;
         overlay.appendChild(modal);
@@ -990,30 +1001,39 @@
             html += '<div style="font-size:22px;color:#888">Inga scheman för denna månad</div>';
             html += '</div>';
         } else {
-            // Build calendar grid
+            // Build calendar grid - calculate cell width to show 7 days
             var daysInMonth = new Date(year, month + 1, 0).getDate();
+            var nameColWidth = 100; // Name column width
+            var availableWidth = Math.max(window.innerWidth - 40, 320); // Screen width minus padding
+            var cellWidth = Math.floor((availableWidth - nameColWidth) / 7);
+            cellWidth = Math.max(cellWidth, 70); // Minimum 70px per cell
+            var tableMinWidth = nameColWidth + (daysInMonth * cellWidth);
 
-            html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08);overflow-x:auto">';
-            html += '<table style="width:100%;border-collapse:collapse;min-width:800px">';
+            html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08);overflow-x:auto;-webkit-overflow-scrolling:touch">';
+            html += '<table style="width:100%;border-collapse:collapse;min-width:' + tableMinWidth + 'px">';
 
             // Header row with dates
             html += '<tr style="background:#1C1C1E">';
-            html += '<th style="padding:12px 16px;color:#fff;font-size:16px;text-align:left;position:sticky;left:0;background:#1C1C1E;min-width:120px">Namn</th>';
+            html += '<th style="padding:14px 12px;color:#fff;font-size:15px;text-align:left;position:sticky;left:0;background:#1C1C1E;min-width:' + nameColWidth + 'px;z-index:2">Namn</th>';
 
             for (var d = 1; d <= daysInMonth; d++) {
                 var dateObj = new Date(year, month, d);
                 var isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
-                html += '<th style="padding:12px 6px;color:' + (isWeekend ? '#FF9500' : '#fff') + ';font-size:14px;text-align:center;min-width:55px">' + d + '</th>';
+                var dayName = VR.DAYS_SHORT ? VR.DAYS_SHORT[dateObj.getDay()] : '';
+                html += '<th style="padding:10px 4px;color:' + (isWeekend ? '#FF9500' : '#fff') + ';font-size:13px;text-align:center;width:' + cellWidth + 'px;min-width:' + cellWidth + 'px">';
+                html += '<div style="font-size:11px;opacity:0.7">' + dayName + '</div>';
+                html += '<div style="font-size:16px;font-weight:700">' + d + '</div>';
+                html += '</th>';
             }
             html += '</tr>';
 
             // Row per user
             for (var u = 0; u < userList.length; u++) {
                 var user = userList[u];
-                var rowBg = u % 2 === 0 ? '#fff' : '#F8F8F8';
+                var rowBg = u % 2 === 0 ? '#fff' : '#F5F5F7';
 
                 html += '<tr style="background:' + rowBg + '">';
-                html += '<td style="padding:12px 16px;font-size:16px;font-weight:600;position:sticky;left:0;background:' + rowBg + ';white-space:nowrap">' + user.namn + '</td>';
+                html += '<td style="padding:14px 12px;font-size:15px;font-weight:600;position:sticky;left:0;background:' + rowBg + ';white-space:nowrap;z-index:1;border-right:1px solid #eee">' + user.namn + '</td>';
 
                 for (var day = 1; day <= daysInMonth; day++) {
                     var dayStr = ('0' + day).slice(-2) + '-' + ('0' + (month + 1)).slice(-2) + '-' + year;
@@ -1027,46 +1047,30 @@
                         if (schedule.isFriday) {
                             // FP/FP-V badge
                             var fpText = VR.isFPV(schedule.ps) ? 'FP-V' : 'FP';
-                            cellContent = '<div style="font-size:10px;font-weight:700;background:#16A34A;color:#fff;padding:2px 4px;border-radius:4px;display:inline-block">' + fpText + '</div>';
-                            cellBg = 'rgba(22,163,74,0.1)';
+                            cellContent = '<div style="font-size:13px;font-weight:700;background:#16A34A;color:#fff;padding:6px 8px;border-radius:6px;display:inline-block">' + fpText + '</div>';
+                            cellBg = 'rgba(22,163,74,0.08)';
                         } else {
-                            // Working day - show time and optional flag
-                            var turVal = schedule.tur || '';
+                            // Working day - show ONLY time (larger, clearer)
                             var tidVal = schedule.tid || '';
                             var shortTime = VR.formatShortTime(tidVal);
 
-                            // Determine flag based on tur 3rd character
-                            var c3 = turVal.length >= 3 ? turVal.charAt(2) : '';
-                            var flag = '';
-                            if (c3 === '2' || c3 === '4') {
-                                flag = '🇩🇰';
-                            } else if (turVal) {
-                                flag = '🇸🇪';
-                            }
-
                             if (shortTime) {
-                                // Show time with optional flag
-                                cellContent = '<div style="font-size:12px;font-weight:600;color:#333">' + shortTime + '</div>';
-                                if (flag) {
-                                    cellContent += '<div style="font-size:12px">' + flag + '</div>';
-                                }
-                                cellBg = 'rgba(59,130,246,0.1)';
-                            } else if (turVal) {
-                                // Show tur number if no time
-                                cellContent = '<div style="font-size:11px;font-weight:600;color:#333">' + turVal + '</div>';
-                                if (flag) {
-                                    cellContent += '<div style="font-size:12px">' + flag + '</div>';
-                                }
-                                cellBg = 'rgba(59,130,246,0.1)';
+                                // Show time only - big and clear
+                                cellContent = '<div style="font-size:15px;font-weight:700;color:#1a1a2e">' + shortTime + '</div>';
+                                cellBg = 'rgba(59,130,246,0.08)';
+                            } else if (schedule.tur) {
+                                // No time - show tur as fallback
+                                cellContent = '<div style="font-size:13px;font-weight:600;color:#666">' + schedule.tur + '</div>';
+                                cellBg = 'rgba(59,130,246,0.05)';
                             } else if (schedule.ps) {
-                                // Show PS code as fallback
-                                cellContent = '<div style="font-size:10px;color:#666">' + schedule.ps + '</div>';
+                                // Show PS code as last fallback
+                                cellContent = '<div style="font-size:12px;color:#888">' + schedule.ps + '</div>';
                             }
                         }
                         cellStyle = 'cursor:pointer';
                     }
 
-                    html += '<td class="vrMonthCell" data-date="' + dayStr + '" data-user="' + user.anstNr + '" style="padding:6px 4px;text-align:center;background:' + cellBg + ';font-size:14px;vertical-align:middle;' + cellStyle + '">' + cellContent + '</td>';
+                    html += '<td class="vrMonthCell" data-date="' + dayStr + '" data-user="' + user.anstNr + '" style="padding:12px 6px;text-align:center;background:' + cellBg + ';vertical-align:middle;border-bottom:1px solid #f0f0f0;' + cellStyle + '">' + cellContent + '</td>';
                 }
 
                 html += '</tr>';
