@@ -1025,23 +1025,42 @@
 
                     if (schedule) {
                         if (schedule.isFriday) {
-                            // FP/FP-V badge instead of 🏖️
+                            // FP/FP-V badge
                             var fpText = VR.isFPV(schedule.ps) ? 'FP-V' : 'FP';
                             cellContent = '<div style="font-size:10px;font-weight:700;background:#16A34A;color:#fff;padding:2px 4px;border-radius:4px;display:inline-block">' + fpText + '</div>';
                             cellBg = 'rgba(22,163,74,0.1)';
-                        } else if (schedule.tur) {
-                            var c3 = schedule.tur.length >= 3 ? schedule.tur.charAt(2) : '';
+                        } else {
+                            // Working day - show time and optional flag
+                            var turVal = schedule.tur || '';
+                            var tidVal = schedule.tid || '';
+                            var shortTime = VR.formatShortTime(tidVal);
+
+                            // Determine flag based on tur 3rd character
+                            var c3 = turVal.length >= 3 ? turVal.charAt(2) : '';
                             var flag = '';
                             if (c3 === '2' || c3 === '4') {
                                 flag = '🇩🇰';
-                            } else {
+                            } else if (turVal) {
                                 flag = '🇸🇪';
                             }
 
-                            var shortTime = VR.formatShortTime(schedule.tid);
-                            cellContent = '<div style="font-size:14px">' + flag + '</div>';
                             if (shortTime) {
-                                cellContent += '<div style="font-size:11px;color:#666">' + shortTime + '</div>';
+                                // Show time with optional flag
+                                cellContent = '<div style="font-size:12px;font-weight:600;color:#333">' + shortTime + '</div>';
+                                if (flag) {
+                                    cellContent += '<div style="font-size:12px">' + flag + '</div>';
+                                }
+                                cellBg = 'rgba(59,130,246,0.1)';
+                            } else if (turVal) {
+                                // Show tur number if no time
+                                cellContent = '<div style="font-size:11px;font-weight:600;color:#333">' + turVal + '</div>';
+                                if (flag) {
+                                    cellContent += '<div style="font-size:12px">' + flag + '</div>';
+                                }
+                                cellBg = 'rgba(59,130,246,0.1)';
+                            } else if (schedule.ps) {
+                                // Show PS code as fallback
+                                cellContent = '<div style="font-size:10px;color:#666">' + schedule.ps + '</div>';
                             }
                         }
                         cellStyle = 'cursor:pointer';
