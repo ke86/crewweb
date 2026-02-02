@@ -357,7 +357,13 @@
             var exportBtn = document.getElementById('vrExportMonth');
 
             if (prevBtn) prevBtn.onclick = function() { VR.changeMonth(-1); };
-            if (nextBtn) nextBtn.onclick = function() { VR.changeMonth(1); };
+            if (nextBtn) nextBtn.onclick = function() {
+                if (nextBtn.getAttribute('data-enabled') === 'true') {
+                    VR.changeMonth(1);
+                } else {
+                    VR.showSchemaReleaseTooltip();
+                }
+            };
             if (exportBtn) exportBtn.onclick = function() { VR.exportMonthToCalendar(); };
 
             // Load Komp saldo in background (only on first load)
@@ -375,6 +381,11 @@
 
     // ===== BUILD SCHEMA NAV =====
     VR.buildSchemaNav = function() {
+        // Check if can navigate to next month
+        var canGoNext = VR.canNavigateToNextMonth(VR.schemaMonth, VR.schemaYear);
+        var nextArrowColor = canGoNext ? '#fff' : 'rgba(255,255,255,0.3)';
+        var nextArrowCursor = canGoNext ? 'pointer' : 'not-allowed';
+
         return '\
 <div style="display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:20px 28px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">\
 <span id="vrPrevMonth" style="font-size:32px;color:#fff;cursor:pointer;padding:8px 12px">◀</span>\
@@ -383,8 +394,39 @@
 <button id="vrExportMonth" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">\
 <span>📅</span> Exportera</button>\
 </div>\
-<span id="vrNextMonth" style="font-size:32px;color:#fff;cursor:pointer;padding:8px 12px">▶</span>\
+<span id="vrNextMonth" data-enabled="' + (canGoNext ? 'true' : 'false') + '" style="font-size:32px;color:' + nextArrowColor + ';cursor:' + nextArrowCursor + ';padding:8px 12px">▶</span>\
 </div>';
+    };
+
+    // ===== SHOW SCHEMA RELEASE TOOLTIP =====
+    VR.showSchemaReleaseTooltip = function() {
+        // Remove any existing tooltip
+        var existing = document.getElementById('vrSchemaTooltip');
+        if (existing) existing.remove();
+
+        var releaseInfo = VR.getNextSchemaReleaseInfo();
+        var nextMonthName = VR.MONTHS[VR.schemaMonth + 1] || VR.MONTHS[0];
+        if (VR.schemaMonth === 11) nextMonthName = VR.MONTHS[0]; // January
+
+        // Create tooltip
+        var tooltip = document.createElement('div');
+        tooltip.id = 'vrSchemaTooltip';
+        tooltip.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:24px 32px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:99999;text-align:center;animation:vrTooltipFadeIn 0.2s ease-out';
+        tooltip.innerHTML = '\
+<div style="font-size:20px;font-weight:600;margin-bottom:8px">📅 Schema ej tillgängligt</div>\
+<div style="font-size:26px;font-weight:700;color:#F59E0B">' + nextMonthName + ' publiceras ' + releaseInfo.text + '</div>\
+<div style="margin-top:16px;font-size:14px;color:rgba(255,255,255,0.6)">Tryck för att stänga</div>';
+
+        tooltip.onclick = function() {
+            tooltip.remove();
+        };
+
+        document.body.appendChild(tooltip);
+
+        // Auto-remove after 3 seconds
+        setTimeout(function() {
+            if (tooltip.parentNode) tooltip.remove();
+        }, 3000);
     };
 
     // ===== BUILD SCHEMA ROWS =====

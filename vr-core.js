@@ -69,6 +69,118 @@
         return muniTax + churchTax + VR.BURIAL_FEE;
     };
 
+    // ===== SCHEMA RELEASE DATE LOGIC =====
+    // Schema for next month is released on the 15th (or last weekday before if weekend/holiday)
+    VR.getSchemaReleaseDate = function(year, month) {
+        var date = new Date(year, month, 15);
+
+        // Go backwards until we find a weekday that's not a holiday
+        while (VR.isWeekend(date) || VR.isSwedishHoliday(date)) {
+            date.setDate(date.getDate() - 1);
+        }
+
+        return date;
+    };
+
+    VR.isWeekend = function(date) {
+        var day = date.getDay();
+        return day === 0 || day === 6; // Sunday or Saturday
+    };
+
+    VR.isSwedishHoliday = function(date) {
+        var d = date.getDate();
+        var m = date.getMonth(); // 0-11
+        var y = date.getFullYear();
+
+        // Fixed holidays
+        if (m === 0 && d === 1) return true;   // Nyårsdagen
+        if (m === 0 && d === 6) return true;   // Trettondag
+        if (m === 4 && d === 1) return true;   // 1 maj
+        if (m === 5 && d === 6) return true;   // Nationaldagen
+        if (m === 11 && d === 24) return true; // Julafton
+        if (m === 11 && d === 25) return true; // Juldagen
+        if (m === 11 && d === 26) return true; // Annandag jul
+        if (m === 11 && d === 31) return true; // Nyårsafton
+
+        // Easter-based holidays (simplified calculation)
+        var easter = VR.getEasterDate(y);
+        var easterMs = easter.getTime();
+        var dateMs = date.getTime();
+        var dayMs = 86400000;
+
+        // Långfredagen (Easter - 2 days)
+        if (dateMs === easterMs - 2 * dayMs) return true;
+        // Påskdagen
+        if (dateMs === easterMs) return true;
+        // Annandag påsk (Easter + 1 day)
+        if (dateMs === easterMs + dayMs) return true;
+        // Kristi himmelsfärd (Easter + 39 days)
+        if (dateMs === easterMs + 39 * dayMs) return true;
+
+        // Midsommar (Saturday between June 20-26)
+        if (m === 5 && d >= 20 && d <= 26 && date.getDay() === 6) return true;
+        // Midsommarafton (Friday before midsommar)
+        if (m === 5 && d >= 19 && d <= 25 && date.getDay() === 5) return true;
+
+        // Alla helgons dag (Saturday between Oct 31 - Nov 6)
+        if ((m === 9 && d === 31 && date.getDay() === 6) ||
+            (m === 10 && d <= 6 && date.getDay() === 6)) return true;
+
+        return false;
+    };
+
+    // Easter calculation (Anonymous Gregorian algorithm)
+    VR.getEasterDate = function(year) {
+        var a = year % 19;
+        var b = Math.floor(year / 100);
+        var c = year % 100;
+        var d = Math.floor(b / 4);
+        var e = b % 4;
+        var f = Math.floor((b + 8) / 25);
+        var g = Math.floor((b - f + 1) / 3);
+        var h = (19 * a + b - d - g + 15) % 30;
+        var i = Math.floor(c / 4);
+        var k = c % 4;
+        var l = (32 + 2 * e + 2 * i - h - k) % 7;
+        var m = Math.floor((a + 11 * h + 22 * l) / 451);
+        var month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+        var day = ((h + l - 7 * m + 114) % 31) + 1;
+        return new Date(year, month, day);
+    };
+
+    VR.canNavigateToNextMonth = function(currentViewMonth, currentViewYear) {
+        var today = new Date();
+        var todayYear = today.getFullYear();
+        var todayMonth = today.getMonth();
+
+        // If viewing a past month, can always go forward
+        if (currentViewYear < todayYear) return true;
+        if (currentViewYear === todayYear && currentViewMonth < todayMonth) return true;
+
+        // If viewing current month, check if release date has passed
+        if (currentViewYear === todayYear && currentViewMonth === todayMonth) {
+            var releaseDate = VR.getSchemaReleaseDate(todayYear, todayMonth);
+            return today >= releaseDate;
+        }
+
+        // Viewing future month - not allowed
+        return false;
+    };
+
+    VR.getNextSchemaReleaseInfo = function() {
+        var today = new Date();
+        var releaseDate = VR.getSchemaReleaseDate(today.getFullYear(), today.getMonth());
+
+        // Format the date nicely
+        var day = releaseDate.getDate();
+        var monthName = VR.MONTHS_SHORT[releaseDate.getMonth()];
+
+        return {
+            date: releaseDate,
+            text: day + ' ' + monthName
+        };
+    };
+
     // ===== DATE HELPERS =====
     VR.formatDate = function(dateStr) {
         var p = dateStr.split('-');
