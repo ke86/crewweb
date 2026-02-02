@@ -600,7 +600,12 @@
         var namn = null;
 
         // Words to exclude from name matching (these are not person names)
-        var excludeWords = ['lokförare', 'tågvärd', 'malmö', 'stockholm', 'göteborg', 'distrikt', 'avdelning', 'enhet'];
+        var excludeWords = [
+            'lokförare', 'tågvärd', 'malmö', 'stockholm', 'göteborg', 'distrikt', 'avdelning', 'enhet',
+            'crew', 'web', 'meny', 'arbetsdag', 'anställd', 'meddelanden', 'ankomst', 'redovisning',
+            'löne', 'tidsregistrering', 'lösenord', 'e-post', 'arbetsschema', 'lista', 'frånvaro',
+            'rapport', 'link', 'schema'
+        ];
 
         try {
             // SPECIFIC: Look for "Anställds namn" label and get next sibling or nearby input
@@ -609,13 +614,13 @@
                 var el = allLabels[i];
                 var text = (el.textContent || '').trim();
 
-                // Look for "Anställds namn" label
-                if (!namn && text.toLowerCase().indexOf('anställds namn') > -1) {
+                // Look for "Anställds namn" label - must be relatively short (not the whole page text)
+                if (!namn && text.length < 50 && text.toLowerCase().indexOf('anställds namn') > -1) {
                     // Try to find the value - check next sibling, parent's next child, or nearby input
                     var nextEl = el.nextElementSibling;
                     if (nextEl) {
                         var nextVal = (nextEl.value || nextEl.textContent || '').trim();
-                        if (nextVal && nextVal.length > 3 && !VR.isExcludedName(nextVal, excludeWords)) {
+                        if (nextVal && nextVal.length > 3 && nextVal.length < 50 && !VR.isExcludedName(nextVal, excludeWords)) {
                             namn = nextVal;
                         }
                     }
@@ -623,14 +628,14 @@
                     var nearbyInput = el.parentElement ? el.parentElement.querySelector('input') : null;
                     if (!namn && nearbyInput && nearbyInput.value) {
                         var inputVal = nearbyInput.value.trim();
-                        if (inputVal && !VR.isExcludedName(inputVal, excludeWords)) {
+                        if (inputVal && inputVal.length < 50 && !VR.isExcludedName(inputVal, excludeWords)) {
                             namn = inputVal;
                         }
                     }
                 }
 
                 // Look for anställningsnummer
-                if (!anstNr && text.toLowerCase().indexOf('anställningsnummer') > -1) {
+                if (!anstNr && text.length < 50 && text.toLowerCase().indexOf('anställningsnummer') > -1) {
                     var nextEl2 = el.nextElementSibling;
                     if (nextEl2) {
                         var match = (nextEl2.value || nextEl2.textContent || '').match(/(\d{6})/);
@@ -641,7 +646,7 @@
                 }
             }
 
-            // Fallback: Look for 6-digit anstNr pattern
+            // Fallback: Look for 6-digit anstNr pattern in inputs
             if (!anstNr) {
                 var inputs = document.querySelectorAll('input[readonly], input[disabled]');
                 for (var j = 0; j < inputs.length; j++) {
@@ -653,13 +658,14 @@
                 }
             }
 
-            // Fallback for namn: look in readonly inputs but exclude bad matches
+            // Fallback for namn: look in readonly inputs but ONLY accept proper name format
             if (!namn) {
                 var inputs2 = document.querySelectorAll('input[readonly], input[disabled]');
                 for (var k = 0; k < inputs2.length; k++) {
                     var inputVal2 = (inputs2[k].value || '').trim();
-                    // Check if it looks like a name (two words, capitalized) and not excluded
-                    if (/^[A-ZÅÄÖ][a-zåäö]+ [A-ZÅÄÖ][a-zåäö]+$/.test(inputVal2)) {
+                    // STRICT: Must be exactly "Förnamn Efternamn" format, 3-40 chars total
+                    if (inputVal2.length >= 5 && inputVal2.length <= 40 &&
+                        /^[A-ZÅÄÖ][a-zåäö]+(-[A-ZÅÄÖ][a-zåäö]+)? [A-ZÅÄÖ][a-zåäö]+(-[A-ZÅÄÖ][a-zåäö]+)?$/.test(inputVal2)) {
                         if (!VR.isExcludedName(inputVal2, excludeWords)) {
                             namn = inputVal2;
                             break;
@@ -679,6 +685,8 @@
     // Helper to check if a name should be excluded
     VR.isExcludedName = function(name, excludeWords) {
         if (!name) return true;
+        // Reject if too long (probably menu/page text)
+        if (name.length > 50) return true;
         var lower = name.toLowerCase();
         for (var i = 0; i < excludeWords.length; i++) {
             if (lower.indexOf(excludeWords[i]) > -1) {
@@ -712,7 +720,7 @@
                 user = { anstNr: crewWebInfo.anstNr, namn: 'Anställd ' + crewWebInfo.anstNr };
                 console.log('VR: Registered with fallback name:', user.namn);
             } else {
-                VR.showUploadError('Kunde inte hitta dina anställningsuppgifter. Gå till Anställddata först och kom tillbaka.');
+                VR.showUploadError('Kunde inte hitta dina anställningsuppgifter.\n\n1. Gå till Anställddata i menyn\n2. Vänta tills sidan laddat\n3. Klicka på Ladda upp igen');
                 return;
             }
         }
