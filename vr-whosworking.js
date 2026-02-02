@@ -177,10 +177,50 @@
         });
     };
 
+    // ===== GET CURRENT USER NAME =====
+    VR.getCurrentUserName = function() {
+        // Priority: 1. Firebase user, 2. Try to find from CrewWeb page, 3. Cache
+        var user = VR.getFirebaseUser();
+        if (user && user.namn) {
+            return user.namn;
+        }
+
+        // Try to find user name from CrewWeb page (look in topbar or employee data)
+        try {
+            // Look for employee name in page - often in a specific element
+            var allLabels = document.querySelectorAll('label, span, div');
+            for (var i = 0; i < allLabels.length; i++) {
+                var el = allLabels[i];
+                var text = el.textContent || '';
+                // CrewWeb often shows "Namn: Förnamn Efternamn" or similar
+                if (text.indexOf('Namn:') > -1 || text.indexOf('Name:') > -1) {
+                    var match = text.match(/(?:Namn|Name):\s*([A-ZÅÄÖa-zåäö]+ [A-ZÅÄÖa-zåäö]+)/);
+                    if (match && match[1]) {
+                        return match[1];
+                    }
+                }
+            }
+
+            // Look in input fields that might have the user's name
+            var inputs = document.querySelectorAll('input[readonly], input[disabled]');
+            for (var j = 0; j < inputs.length; j++) {
+                var input = inputs[j];
+                var val = input.value || '';
+                // Check if it looks like a name (two words, capitalized)
+                if (/^[A-ZÅÄÖ][a-zåäö]+ [A-ZÅÄÖ][a-zåäö]+$/.test(val)) {
+                    return val;
+                }
+            }
+        } catch (e) {
+            console.log('VR: Error finding user name from page', e);
+        }
+
+        return 'Okänd';
+    };
+
     // ===== RENDER HEADER BAR (iOS style) =====
     VR.renderWhosWorkingHeader = function(isMonthView) {
-        var user = VR.getFirebaseUser();
-        var userName = user ? user.namn : (VR.anstNamn || 'Okänd');
+        var userName = VR.getCurrentUserName();
 
         // Shorten name to first name + initial
         var shortName = userName;

@@ -229,17 +229,8 @@
                                 isFriday: data.isFriday || false,
                                 lastUpdated: user.lastUpdated
                             });
-                        } else {
-                            // User exists but no schedule for this date
-                            schedules.push({
-                                anstNr: user.anstNr,
-                                namn: user.namn,
-                                tur: null,
-                                tid: null,
-                                noData: true,
-                                lastUpdated: user.lastUpdated
-                            });
                         }
+                        // Don't add users without schedule data for this date
 
                         completed++;
                         if (completed === users.length) {
@@ -359,6 +350,13 @@
             })
             .then(function(count) {
                 console.log('VR: Deleted user data,', count, 'schedule days');
+
+                // Clear local Firebase user data
+                try {
+                    localStorage.removeItem(VR.FB_USER_KEY);
+                    console.log('VR: Cleared local Firebase user data');
+                } catch (e) {}
+
                 if (callback) callback(true, count + ' dagar borttagna');
             })
             .catch(function(error) {
