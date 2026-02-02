@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.0.99';
+    VR.VERSION = 'V.1.00';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -346,7 +346,7 @@
         if (isFri) {
             var fB = VR.getHeaderFridagBadge(ps, cd);
             el.innerHTML = 'Ledig' + fB;
-            el.style.color = '#F59E0B';
+            el.style.color = '#34C759';
         } else if (tn) {
             // Check if day data contains DK.K in sP or eP for Danish flag on Ändrad Reserv
             var hasDKKK = false;

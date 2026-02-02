@@ -378,9 +378,9 @@
         return '\
 <div style="display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:20px 28px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">\
 <span id="vrPrevMonth" style="font-size:32px;color:#fff;cursor:pointer;padding:8px 12px">◀</span>\
-<div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px">\
+<div style="display:flex;align-items:center;gap:16px">\
 <div style="font-size:28px;font-weight:700;color:#fff">' + VR.MONTHS[VR.schemaMonth] + ' ' + VR.schemaYear + '</div>\
-<button id="vrExportMonth" style="padding:10px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,#34C759,#30D158);color:#fff;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">\
+<button id="vrExportMonth" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">\
 <span>📅</span> Exportera</button>\
 </div>\
 <span id="vrNextMonth" style="font-size:32px;color:#fff;cursor:pointer;padding:8px 12px">▶</span>\
