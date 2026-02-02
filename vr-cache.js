@@ -446,21 +446,90 @@
 
             if (hasData || n > 15) {
                 VR.stopTimer();
-                VR.updateLoader(40, 'Schema laddat...');
+                VR.updateLoader(35, 'Schema (aktuell månad)...');
 
                 // Schema data is already cached by prefetch module
-                // Just ensure it's loaded
                 if (VR.prefetchAllData) {
                     VR.prefetchAllData();
                 }
 
-                setTimeout(VR.preloadOB, 1000);
+                // Now navigate to previous month
+                setTimeout(VR.preloadSchemaPrevMonth, 800);
+            }
+        }, 400);
+    };
+
+    VR.preloadSchemaPrevMonth = function() {
+        VR.updateLoader(42, 'Laddar föregående månad...');
+
+        // Find and click the left arrow (previous month button)
+        var prevBtn = null;
+
+        // Try to find the prev month button in CrewWeb's schema page
+        var allElements = document.querySelectorAll('*');
+        for (var i = 0; i < allElements.length; i++) {
+            var el = allElements[i];
+            var text = el.textContent.trim();
+            // Look for left arrow or "previous" type buttons
+            if (text === '◀' || text === '◄' || text === '<' || text === '‹') {
+                var rect = el.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                    prevBtn = el;
+                    break;
+                }
+            }
+        }
+
+        // Also try common selectors
+        if (!prevBtn) {
+            prevBtn = document.querySelector('[class*="prev"]') ||
+                      document.querySelector('[class*="Prev"]') ||
+                      document.querySelector('[aria-label*="previous"]') ||
+                      document.querySelector('[title*="Föregående"]');
+        }
+
+        if (prevBtn) {
+            console.log('VR: Clicking prev month button');
+            prevBtn.click();
+            VR.waitForPreloadSchemaPrev();
+        } else {
+            console.log('VR: Prev month button not found, skipping');
+            // Continue to OB anyway
+            setTimeout(VR.preloadOB, 500);
+        }
+    };
+
+    VR.waitForPreloadSchemaPrev = function() {
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+
+            // Wait for the page to update with previous month data
+            var tables = document.querySelectorAll('table');
+            var hasData = false;
+            for (var i = 0; i < tables.length; i++) {
+                if (tables[i].querySelectorAll('tr').length > 5) {
+                    hasData = true;
+                    break;
+                }
+            }
+
+            if (hasData || n > 12) {
+                VR.stopTimer();
+                VR.updateLoader(50, 'Föregående månad laddat...');
+
+                // Prefetch this month's data too
+                if (VR.prefetchAllData) {
+                    VR.prefetchAllData();
+                }
+
+                setTimeout(VR.preloadOB, 800);
             }
         }, 400);
     };
 
     VR.preloadOB = function() {
-        VR.updateLoader(50, 'Laddar OB...');
+        VR.updateLoader(55, 'Laddar OB...');
 
         VR.clickFolder();
 
@@ -497,7 +566,7 @@
 
             if (hasData || n > 20) {
                 VR.stopTimer();
-                VR.updateLoader(60, 'OB laddat...');
+                VR.updateLoader(70, 'OB laddat...');
 
                 // Parse OB data
                 if (VR.parseOBData) {
@@ -510,7 +579,7 @@
     };
 
     VR.preloadKomp = function() {
-        VR.updateLoader(70, 'Laddar Komp...');
+        VR.updateLoader(80, 'Laddar Komp...');
 
         VR.clickFolder();
 
@@ -542,16 +611,39 @@
 
             if (hasKomp || n > 15) {
                 VR.stopTimer();
-                VR.updateLoader(85, 'Komp laddat...');
+                VR.updateLoader(82, 'Komp laddat...');
 
                 // Parse komp saldo
                 if (VR.parseKompSaldo) {
                     VR.parseKompSaldo();
                 }
 
-                setTimeout(VR.preloadFinish, 500);
+                setTimeout(VR.preloadLon, 500);
             }
         }, 400);
+    };
+
+    // ===== PRELOAD LÖN (föregående månad) =====
+    VR.preloadLon = function() {
+        VR.updateLoader(88, 'Beräknar föregående lön...');
+
+        // Check if already cached
+        if (VR.getPayoutMonthInfo && VR.getLonFromCache) {
+            var payoutInfo = VR.getPayoutMonthInfo(-1);
+            var cached = VR.getLonFromCache(payoutInfo.workYear, payoutInfo.workMonth);
+            if (cached) {
+                console.log('VR: Lön already cached for prev month');
+                setTimeout(VR.preloadFinish, 300);
+                return;
+            }
+        }
+
+        // Calculate previous month's lön silently (without rendering)
+        if (VR.calculateLonForPreload) {
+            VR.calculateLonForPreload(-1);
+        }
+
+        setTimeout(VR.preloadFinish, 500);
     };
 
     VR.preloadFinish = function() {

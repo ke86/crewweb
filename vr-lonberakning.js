@@ -13,12 +13,133 @@
     // Average work hours per week (holiday-free)
     VR.AVG_WORK_HOURS_WEEK = 38;
 
+    // ===== LÖN CACHE =====
+    VR.LON_CACHE_KEY = 'vr_lon_cache';
+
+    VR.getLonCacheKey = function(year, month) {
+        return year + '-' + ('0' + (month + 1)).slice(-2);
+    };
+
+    VR.getLonFromCache = function(year, month) {
+        try {
+            var cached = localStorage.getItem(VR.LON_CACHE_KEY);
+            if (!cached) return null;
+            var data = JSON.parse(cached);
+            var key = VR.getLonCacheKey(year, month);
+            return data[key] || null;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    VR.saveLonToCache = function(year, month, lonData) {
+        try {
+            var cached = localStorage.getItem(VR.LON_CACHE_KEY);
+            var data = cached ? JSON.parse(cached) : {};
+            var key = VR.getLonCacheKey(year, month);
+            data[key] = {
+                lonData: lonData,
+                savedAt: Date.now()
+            };
+            localStorage.setItem(VR.LON_CACHE_KEY, JSON.stringify(data));
+            console.log('VR: Lön cached for', key);
+        } catch (e) {
+            console.log('VR: Lön cache save error', e);
+        }
+    };
+
+    VR.isLonMonthInPast = function(offset) {
+        // offset 0 = current month (don't cache)
+        // offset -1 = previous month (cache it)
+        return offset < 0;
+    };
+
+    // ===== SILENT CALCULATION FOR PRELOAD =====
+    // Calculates lön for a given month offset without rendering UI
+    VR.calculateLonForPreload = function(offset) {
+        console.log('VR: Calculating lön for preload, offset:', offset);
+
+        var payoutInfo = VR.getPayoutMonthInfo(offset);
+
+        // Initialize lon data object
+        var lonData = {
+            role: VR.userRole || 'Lokförare',
+            baseSalary: VR.SALARIES[VR.userRole] || 46188,
+            payoutInfo: payoutInfo,
+            targetMonth: payoutInfo.workMonth,
+            targetYear: payoutInfo.workYear,
+            ob: { total: 0, details: [] },
+            sr: { total: 0, details: [] },
+            overtime: { kvalificerad: 0, enkel: 0, totalKr: 0 },
+            deductions: { total: 0, details: [] }
+        };
+
+        // Calculate OB for month
+        if (VR.obData && VR.obData.length > 0) {
+            var obTotal = 0;
+            for (var i = 0; i < VR.obData.length; i++) {
+                var entry = VR.obData[i];
+                var parts = (entry.date || '').split('-');
+                if (parts.length === 3) {
+                    var entryMonth = parseInt(parts[1], 10) - 1;
+                    var entryYear = parseInt(parts[2], 10);
+                    if (entryMonth === lonData.targetMonth && entryYear === lonData.targetYear) {
+                        obTotal += entry.amount || 0;
+                    }
+                }
+            }
+            lonData.ob.total = obTotal;
+        }
+
+        // Calculate SR for month
+        if (VR.srData) {
+            var srTotal = 0;
+            for (var dateKey in VR.srData) {
+                if (VR.srData.hasOwnProperty(dateKey)) {
+                    var srEntry = VR.srData[dateKey];
+                    var srParts = dateKey.split('-');
+                    if (srParts.length === 3) {
+                        var srMonth = parseInt(srParts[1], 10) - 1;
+                        var srYear = parseInt(srParts[2], 10);
+                        if (srMonth === lonData.targetMonth && srYear === lonData.targetYear) {
+                            srTotal += srEntry.amount || 0;
+                        }
+                    }
+                }
+            }
+            lonData.sr.total = srTotal;
+        }
+
+        // Calculate totals
+        var grossTotal = lonData.baseSalary + lonData.ob.total + lonData.sr.total + lonData.overtime.totalKr;
+        var netTotal = grossTotal - lonData.deductions.total;
+        lonData.netTotal = netTotal;
+
+        // Save to cache
+        VR.saveLonToCache(payoutInfo.workYear, payoutInfo.workMonth, lonData);
+
+        console.log('VR: Preload lön cached for', payoutInfo.workYear, payoutInfo.workMonth);
+    };
+
     // ===== MAIN ENTRY POINT =====
     VR.doLon = function() {
         VR.stopTimer();
         VR.closeOverlay();
         VR.showLoader('Laddar Lönberäkning');
         VR.updateLoader(5, 'Kontrollerar data...');
+
+        // Check if we're viewing a past month and have it cached
+        if (VR.isLonMonthInPast(VR.lonMonthOffset)) {
+            var payoutInfo = VR.getPayoutMonthInfo(VR.lonMonthOffset);
+            var cachedLon = VR.getLonFromCache(payoutInfo.workYear, payoutInfo.workMonth);
+            if (cachedLon && cachedLon.lonData) {
+                console.log('VR: Lön from cache for', payoutInfo.workYear, payoutInfo.workMonth);
+                VR.lonData = cachedLon.lonData;
+                VR.updateLoader(90, 'Från cache...');
+                setTimeout(VR.renderLon, 200);
+                return;
+            }
+        }
 
         // Check if we have role
         if (!VR.userRole) {
@@ -597,6 +718,11 @@
 
         // Store netTotal for recalculation
         VR.lonData.netTotal = netTotal;
+
+        // Cache this month's data if it's a past month
+        if (VR.isLonMonthInPast(VR.lonMonthOffset)) {
+            VR.saveLonToCache(data.payoutInfo.workYear, data.payoutInfo.workMonth, VR.lonData);
+        }
 
         setTimeout(function() {
             VR.hideLoader();
