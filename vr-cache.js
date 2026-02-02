@@ -312,7 +312,7 @@
         VR.updateLoader(5, 'Startar...');
 
         VR.preloadStep = 0;
-        VR.preloadTotal = 5; // Anställd, Schema, OB, Komp, Lön
+        VR.preloadTotal = 5; // Anställd, OB, Komp, Lön, Schema (Schema SIST så vyn blir kvar)
 
         // Step 1: Anställddata
         VR.preloadAnstalld();
@@ -357,7 +357,8 @@
                     VR.parseAndCacheAnstalld();
                 }
 
-                setTimeout(VR.preloadSchema, 500);
+                // Next: OB (skip Schema for now, do it last)
+                setTimeout(VR.preloadOB, 500);
             }
         }, 400);
     };
@@ -628,7 +629,7 @@
 
     // ===== PRELOAD LÖN (föregående månad) =====
     VR.preloadLon = function() {
-        VR.updateLoader(88, 'Beräknar föregående lön...');
+        VR.updateLoader(75, 'Beräknar föregående lön...');
 
         // Check if already cached
         if (VR.getPayoutMonthInfo && VR.getLonFromCache) {
@@ -636,7 +637,8 @@
             var cached = VR.getLonFromCache(payoutInfo.workYear, payoutInfo.workMonth);
             if (cached) {
                 console.log('VR: Lön already cached for prev month');
-                setTimeout(VR.preloadFinish, 300);
+                // Next: Schema (last step before finish)
+                setTimeout(VR.preloadSchemaLast, 300);
                 return;
             }
         }
@@ -646,7 +648,54 @@
             VR.calculateLonForPreload(-1);
         }
 
-        setTimeout(VR.preloadFinish, 500);
+        // Next: Schema (last step before finish)
+        setTimeout(VR.preloadSchemaLast, 500);
+    };
+
+    // ===== PRELOAD SCHEMA LAST (so it stays visible) =====
+    VR.preloadSchemaLast = function() {
+        VR.updateLoader(85, 'Laddar Schema...');
+
+        VR.clickFolder();
+
+        setTimeout(function() {
+            var n = 0;
+            VR.timer = setInterval(function() {
+                n++;
+                var el = VR.findMenuItem('Schema/arbetsdag');
+                if (el) {
+                    VR.stopTimer();
+                    el.click();
+                    VR.waitForPreloadSchemaLast();
+                } else if (n > 15) {
+                    VR.stopTimer();
+                    VR.preloadFinish();
+                }
+            }, 400);
+        }, 500);
+    };
+
+    VR.waitForPreloadSchemaLast = function() {
+        var n = 0;
+        VR.timer = setInterval(function() {
+            n++;
+            var workdays = document.getElementById('workdays');
+
+            if (workdays || n > 20) {
+                VR.stopTimer();
+                VR.updateLoader(92, 'Schema laddat...');
+
+                // Parse schema
+                if (VR.parseSchemaTable) {
+                    var tbl = workdays ? workdays.querySelector('table') : null;
+                    if (tbl) {
+                        VR.parseSchemaTable(tbl);
+                    }
+                }
+
+                setTimeout(VR.preloadFinish, 500);
+            }
+        }, 400);
     };
 
     VR.preloadFinish = function() {
@@ -667,13 +716,14 @@
         setTimeout(function() {
             VR.hideLoader();
 
-            // FIRST: Open Schema view
-            console.log('VR: Opening Schema view after preload');
-            if (typeof VR.doSchema === 'function') {
-                VR.doSchema();
+            // Schema is already loaded and visible (we loaded it last)
+            // Just render our Schema view on top of CrewWeb's schema page
+            console.log('VR: Rendering Schema view after preload');
+            if (typeof VR.renderSchemaFromCache === 'function') {
+                VR.renderSchemaFromCache();
             }
 
-            // THEN: Show success popup on top (after small delay to let view render)
+            // Show success popup on top
             setTimeout(function() {
                 VR.showPreloadSuccess();
             }, 300);

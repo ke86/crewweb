@@ -588,13 +588,77 @@
         }, 50);
     };
 
+    // ===== GET USER INFO FROM CREWWEB =====
+    VR.getUserInfoFromCrewWeb = function() {
+        // Try to find anställningsnummer and namn from CrewWeb page
+        var anstNr = null;
+        var namn = null;
+
+        try {
+            // Look for anställningsnummer in inputs/labels
+            var allElements = document.querySelectorAll('input, span, div, label, td');
+            for (var i = 0; i < allElements.length; i++) {
+                var el = allElements[i];
+                var text = el.textContent || el.value || '';
+
+                // Look for anställningsnummer pattern (6 digits)
+                if (!anstNr) {
+                    var anstMatch = text.match(/(?:Anst|Anställ)[^\d]*(\d{6})/i);
+                    if (anstMatch) {
+                        anstNr = anstMatch[1];
+                    }
+                }
+
+                // Look for name pattern
+                if (!namn && /^[A-ZÅÄÖ][a-zåäö]+ [A-ZÅÄÖ][a-zåäö]+$/.test(text.trim())) {
+                    namn = text.trim();
+                }
+            }
+
+            // If no anstNr found, try finding it in any 6-digit readonly/disabled input
+            if (!anstNr) {
+                var inputs = document.querySelectorAll('input[readonly], input[disabled]');
+                for (var j = 0; j < inputs.length; j++) {
+                    var val = inputs[j].value || '';
+                    if (/^\d{6}$/.test(val.trim())) {
+                        anstNr = val.trim();
+                        break;
+                    }
+                }
+            }
+
+            // Try getCurrentUserName as fallback for namn
+            if (!namn && VR.getCurrentUserName) {
+                var foundName = VR.getCurrentUserName();
+                if (foundName && foundName !== 'Okänd') {
+                    namn = foundName;
+                }
+            }
+        } catch (e) {
+            console.log('VR: Error getting user info from CrewWeb', e);
+        }
+
+        return { anstNr: anstNr, namn: namn };
+    };
+
     // ===== UPLOAD MY SCHEDULE =====
     VR.uploadMySchedule = function() {
-        // Check if we have user data
+        // Check if we have user data, try to get from CrewWeb if missing
         var user = VR.getFirebaseUser();
+
         if (!user || !user.anstNr) {
-            VR.showUploadError('Kunde inte hitta dina anställningsuppgifter. Ladda upp ditt schema från Schema-vyn först.');
-            return;
+            // Try to get from CrewWeb page
+            var crewWebInfo = VR.getUserInfoFromCrewWeb();
+
+            if (crewWebInfo.anstNr && crewWebInfo.namn) {
+                // Register user with found info
+                VR.setFirebaseUser(crewWebInfo.anstNr, crewWebInfo.namn);
+                user = { anstNr: crewWebInfo.anstNr, namn: crewWebInfo.namn };
+                console.log('VR: Auto-registered user from CrewWeb:', user.namn, '(' + user.anstNr + ')');
+            } else {
+                VR.showUploadError('Kunde inte hitta dina anställningsuppgifter. Gå till Anställddata först och kom tillbaka.');
+                return;
+            }
         }
 
         VR.showLoader('Laddar upp');
