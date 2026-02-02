@@ -604,43 +604,88 @@
             'lokförare', 'tågvärd', 'malmö', 'stockholm', 'göteborg', 'distrikt', 'avdelning', 'enhet',
             'crew', 'web', 'meny', 'arbetsdag', 'anställd', 'meddelanden', 'ankomst', 'redovisning',
             'löne', 'tidsregistrering', 'lösenord', 'e-post', 'arbetsschema', 'lista', 'frånvaro',
-            'rapport', 'link', 'schema'
+            'rapport', 'link', 'schema', 'företag', 'öresundståg', 'skånetrafiken', 'sj', 'mtr'
         ];
 
         try {
-            // SPECIFIC: Look for "Anställds namn" label and get next sibling or nearby input
+            // Look through all DIV, SPAN, LABEL, TD elements
             var allLabels = document.querySelectorAll('label, span, div, td');
+
             for (var i = 0; i < allLabels.length; i++) {
                 var el = allLabels[i];
                 var text = (el.textContent || '').trim();
+                var textLower = text.toLowerCase();
 
-                // Look for "Anställds namn" label - must be relatively short (not the whole page text)
-                if (!namn && text.length < 50 && text.toLowerCase().indexOf('anställds namn') > -1) {
-                    // Try to find the value - check next sibling, parent's next child, or nearby input
+                // Skip if element text is too long (probably container with lots of text)
+                if (text.length > 30) continue;
+
+                // Look for "Anställd nr" or "Anställd nr.:" label
+                if (!anstNr && (textLower === 'anställd nr.:' || textLower === 'anställd nr:' ||
+                    textLower === 'anställd nr.' || textLower === 'anställd nr' ||
+                    textLower.indexOf('anställd nr') === 0)) {
+
+                    console.log('VR: Found anstNr label:', text);
+
+                    // Check next sibling
                     var nextEl = el.nextElementSibling;
                     if (nextEl) {
-                        var nextVal = (nextEl.value || nextEl.textContent || '').trim();
-                        if (nextVal && nextVal.length > 3 && nextVal.length < 50 && !VR.isExcludedName(nextVal, excludeWords)) {
-                            namn = nextVal;
+                        var nextText = (nextEl.value || nextEl.textContent || '').trim();
+                        var match = nextText.match(/(\d{6})/);
+                        if (match) {
+                            anstNr = match[1];
+                            console.log('VR: Found anstNr from nextSibling:', anstNr);
                         }
                     }
-                    // Also check for input inside or after
-                    var nearbyInput = el.parentElement ? el.parentElement.querySelector('input') : null;
-                    if (!namn && nearbyInput && nearbyInput.value) {
-                        var inputVal = nearbyInput.value.trim();
-                        if (inputVal && inputVal.length < 50 && !VR.isExcludedName(inputVal, excludeWords)) {
-                            namn = inputVal;
+
+                    // Check parent's children
+                    if (!anstNr && el.parentElement) {
+                        var siblings = el.parentElement.children;
+                        for (var s = 0; s < siblings.length; s++) {
+                            var sib = siblings[s];
+                            if (sib !== el) {
+                                var sibText = (sib.value || sib.textContent || '').trim();
+                                var sibMatch = sibText.match(/^(\d{6})$/);
+                                if (sibMatch) {
+                                    anstNr = sibMatch[1];
+                                    console.log('VR: Found anstNr from sibling:', anstNr);
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
 
-                // Look for anställningsnummer
-                if (!anstNr && text.length < 50 && text.toLowerCase().indexOf('anställningsnummer') > -1) {
+                // Look for "Anställds namn" label
+                if (!namn && (textLower === 'anställds namn:' || textLower === 'anställds namn' ||
+                    textLower.indexOf('anställds namn') === 0)) {
+
+                    console.log('VR: Found namn label:', text);
+
+                    // Check next sibling
                     var nextEl2 = el.nextElementSibling;
                     if (nextEl2) {
-                        var match = (nextEl2.value || nextEl2.textContent || '').match(/(\d{6})/);
-                        if (match) {
-                            anstNr = match[1];
+                        var nextVal = (nextEl2.value || nextEl2.textContent || '').trim();
+                        if (nextVal && nextVal.length >= 3 && nextVal.length <= 50 && !VR.isExcludedName(nextVal, excludeWords)) {
+                            namn = nextVal;
+                            console.log('VR: Found namn from nextSibling:', namn);
+                        }
+                    }
+
+                    // Check parent's children
+                    if (!namn && el.parentElement) {
+                        var siblings2 = el.parentElement.children;
+                        for (var s2 = 0; s2 < siblings2.length; s2++) {
+                            var sib2 = siblings2[s2];
+                            if (sib2 !== el) {
+                                var sibVal = (sib2.value || sib2.textContent || '').trim();
+                                // Must look like a name (has space, reasonable length)
+                                if (sibVal && sibVal.length >= 3 && sibVal.length <= 50 &&
+                                    sibVal.indexOf(' ') > 0 && !VR.isExcludedName(sibVal, excludeWords)) {
+                                    namn = sibVal;
+                                    console.log('VR: Found namn from sibling:', namn);
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
@@ -653,6 +698,7 @@
                     var val = inputs[j].value || '';
                     if (/^\d{6}$/.test(val.trim())) {
                         anstNr = val.trim();
+                        console.log('VR: Found anstNr from input fallback:', anstNr);
                         break;
                     }
                 }
@@ -663,18 +709,19 @@
                 var inputs2 = document.querySelectorAll('input[readonly], input[disabled]');
                 for (var k = 0; k < inputs2.length; k++) {
                     var inputVal2 = (inputs2[k].value || '').trim();
-                    // STRICT: Must be exactly "Förnamn Efternamn" format, 3-40 chars total
+                    // STRICT: Must be exactly "Förnamn Efternamn" format, 5-40 chars total
                     if (inputVal2.length >= 5 && inputVal2.length <= 40 &&
                         /^[A-ZÅÄÖ][a-zåäö]+(-[A-ZÅÄÖ][a-zåäö]+)? [A-ZÅÄÖ][a-zåäö]+(-[A-ZÅÄÖ][a-zåäö]+)?$/.test(inputVal2)) {
                         if (!VR.isExcludedName(inputVal2, excludeWords)) {
                             namn = inputVal2;
+                            console.log('VR: Found namn from input fallback:', namn);
                             break;
                         }
                     }
                 }
             }
 
-            console.log('VR: Found user info - anstNr:', anstNr, 'namn:', namn);
+            console.log('VR: Final user info - anstNr:', anstNr, 'namn:', namn);
         } catch (e) {
             console.log('VR: Error getting user info from CrewWeb', e);
         }
@@ -687,6 +734,8 @@
         if (!name) return true;
         // Reject if too long (probably menu/page text)
         if (name.length > 50) return true;
+        // Reject if contains colon (probably a label like "Företag:Öresundståg")
+        if (name.indexOf(':') > -1) return true;
         var lower = name.toLowerCase();
         for (var i = 0; i < excludeWords.length; i++) {
             if (lower.indexOf(excludeWords[i]) > -1) {
