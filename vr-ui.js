@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.1.09';
+    VR.VERSION = 'V.1.11';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -196,6 +196,10 @@
                 VR.closeMenu();
                 if (VR[action]) {
                     VR.closeDayDetail();
+                    // Track current view for restore after preload (but not for preload/cleanup itself)
+                    if (action !== 'doPreloadAll' && action !== 'cleanup') {
+                        VR.currentViewAction = action;
+                    }
                     // Small delay to let menu close completely before running action
                     setTimeout(function() {
                         VR[action]();

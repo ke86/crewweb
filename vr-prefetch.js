@@ -479,6 +479,19 @@
         console.log('VR: OB entries:', VR.obData ? VR.obData.length : 0);
         console.log('VR: SR entries:', VR.srData ? Object.keys(VR.srData).length : 0);
         console.log('VR: FP/FPV entries:', VR.statistikFPData ? VR.statistikFPData.length : 0);
+
+        // Restore previous view or show Schema
+        if (VR.prefetchReturnView && typeof VR[VR.prefetchReturnView] === 'function') {
+            console.log('VR: Restoring view:', VR.prefetchReturnView);
+            VR[VR.prefetchReturnView]();
+        } else {
+            // Default: show Schema
+            console.log('VR: Showing Schema after prefetch');
+            if (typeof VR.doSchema === 'function') {
+                VR.doSchema();
+            }
+        }
+        VR.prefetchReturnView = null;
     };
 
     // ===== PARSE FP/FPV DATA =====

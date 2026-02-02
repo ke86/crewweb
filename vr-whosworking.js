@@ -56,6 +56,44 @@
         }
     };
 
+    // ===== FP/FP-V BADGE HELPERS =====
+    VR.isFPV = function(ps) {
+        if (!ps) return false;
+        var p = ps.toUpperCase();
+        return p === 'FV' || p === 'FP2' || p === 'FP-V' ||
+               p.indexOf('FP-V') > -1 || p.indexOf('FP2') > -1;
+    };
+
+    VR.getFPBadgeHtml = function(ps, size) {
+        var isFPV = VR.isFPV(ps);
+        var text = isFPV ? 'FP-V' : 'FP';
+
+        if (size === 'mini') {
+            return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:12px;font-weight:700;padding:2px 6px;border-radius:5px">' + text + '</span>';
+        } else if (size === 'small') {
+            return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:14px;font-weight:700;padding:3px 8px;border-radius:6px">' + text + '</span>';
+        }
+        // Default/large
+        return '<span style="display:inline-block;background:#16A34A;color:#fff;font-size:18px;font-weight:700;padding:4px 10px;border-radius:8px">' + text + '</span>';
+    };
+
+    VR.getFPTypeText = function(ps) {
+        if (VR.isFPV(ps)) {
+            return 'Semester (FP-V)';
+        }
+        return 'Fridag (FP)';
+    };
+
+    // ===== PARSE START TIME FOR SORTING =====
+    VR.parseStartTime = function(tid) {
+        if (!tid) return 9999; // No time = sort last among workers
+        var match = tid.match(/(\d{2}):(\d{2})/);
+        if (match) {
+            return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+        }
+        return 9999;
+    };
+
     // ===== LOGIN SCREEN =====
     VR.showWhosWorkingLogin = function() {
         var html = '<div style="background:#fff;border-radius:27px;padding:40px;box-shadow:0 5px 20px rgba(0,0,0,0.08);max-width:400px;margin:0 auto">';
@@ -169,12 +207,12 @@
         html += '</div>';
 
         // Right: Upload and Delete buttons
-        html += '<div style="display:flex;gap:8px">';
-        html += '<button id="vrWwUploadBtn" style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(180deg,#34C759 0%,#28a745 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(52,199,89,0.3)">';
-        html += '<span>📤</span><span>Ladda upp</span>';
+        html += '<div style="display:flex;gap:10px">';
+        html += '<button id="vrWwUploadBtn" style="display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:12px;border:none;background:linear-gradient(180deg,#34C759 0%,#28a745 100%);color:#fff;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 3px 10px rgba(52,199,89,0.35)">';
+        html += '<span style="font-size:18px">📤</span><span>Ladda upp</span>';
         html += '</button>';
-        html += '<button id="vrWwDeleteBtn" style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(180deg,#FF3B30 0%,#D32F2F 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(255,59,48,0.3)">';
-        html += '<span>🗑️</span>';
+        html += '<button id="vrWwDeleteBtn" style="display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:12px;border:none;background:linear-gradient(180deg,#2C2C3E 0%,#1a1a2e 100%);color:#FF3B30;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,0.25);border:2px solid rgba(255,59,48,0.3)">';
+        html += '<span style="font-size:18px">🗑️</span><span>Radera</span>';
         html += '</button>';
         html += '</div>';
 
@@ -223,12 +261,28 @@
             html += '<div style="font-size:22px;color:#888">Inga kollegor har laddat upp schema ännu</div>';
             html += '</div>';
         } else {
-            // Sort: working first, then fridag, then no data
+            // NEW SORTING: Working (by start time) -> Fridag (alphabetically) -> No data
             schedules.sort(function(a, b) {
+                // No data always last
                 if (a.noData && !b.noData) return 1;
                 if (!a.noData && b.noData) return -1;
+                if (a.noData && b.noData) return (a.namn || '').localeCompare(b.namn || '');
+
+                // Fridag after working
                 if (a.isFriday && !b.isFriday) return 1;
                 if (!a.isFriday && b.isFriday) return -1;
+
+                // Both fridag: alphabetically
+                if (a.isFriday && b.isFriday) {
+                    return (a.namn || '').localeCompare(b.namn || '');
+                }
+
+                // Both working: sort by start time
+                var timeA = VR.parseStartTime(a.tid);
+                var timeB = VR.parseStartTime(b.tid);
+                if (timeA !== timeB) return timeA - timeB;
+
+                // Same start time: alphabetically
                 return (a.namn || '').localeCompare(b.namn || '');
             });
 
@@ -236,44 +290,38 @@
                 var s = schedules[i];
                 var bgCol = i % 2 === 0 ? '#fff' : '#F8F8F8';
 
-                // Determine icon and color
-                var icon = '👤';
-                var statusColor = '#333';
-                var statusText = '';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
 
                 if (s.noData) {
-                    icon = '⏳';
-                    statusColor = '#999';
-                    statusText = 'Ej laddat';
+                    // No data row
+                    html += '<div style="flex:1;font-size:20px;font-weight:600;color:#999">' + (s.namn || 'Okänd') + '</div>';
+                    html += '<div style="font-size:16px;color:#999">Ej laddat</div>';
                 } else if (s.isFriday) {
-                    icon = '🏖️';
-                    statusColor = '#34C759';
-                    statusText = 'Ledig';
+                    // Fridag row - NEW LAYOUT with FP/FP-V badge
+                    html += '<div style="flex:1;font-size:20px;font-weight:600;color:#333">' + (s.namn || 'Okänd') + '</div>';
+                    html += '<div style="font-size:16px;color:#16A34A;margin-right:12px">Ledig</div>';
+                    html += VR.getFPBadgeHtml(s.ps, 'small');
                 } else if (s.tur) {
-                    // Check role from tour number
+                    // Working row - NEW LAYOUT: Name | Time | Icons | Tour
                     var c3 = s.tur.length >= 3 ? s.tur.charAt(2) : '';
-                    if (c3 === '1' || c3 === '2') icon = '🚂';
-                    else if (c3 === '3' || c3 === '4') icon = '🎫';
+                    var roleIcon = '';
+                    var flagIcon = '';
 
-                    // Check country flag
-                    var flag = '';
-                    if (c3 === '1' || c3 === '3') flag = '🇸🇪';
-                    else if (c3 === '2' || c3 === '4') flag = '🇩🇰';
+                    if (c3 === '1' || c3 === '2') roleIcon = '🚂';
+                    else if (c3 === '3' || c3 === '4') roleIcon = '🎫';
 
-                    statusText = s.tur + (flag ? ' ' + flag : '');
+                    if (c3 === '1' || c3 === '3') flagIcon = '🇸🇪';
+                    else if (c3 === '2' || c3 === '4') flagIcon = '🇩🇰';
+
+                    html += '<div style="flex:1;font-size:20px;font-weight:600;color:#333">' + (s.namn || 'Okänd') + '</div>';
+                    html += '<div style="font-size:16px;color:#666;min-width:90px;text-align:center">' + (s.tid || '') + '</div>';
+                    html += '<div style="font-size:20px;min-width:50px;text-align:center">' + roleIcon + ' ' + flagIcon + '</div>';
+                    html += '<div style="font-size:16px;font-weight:600;color:#333;min-width:60px;text-align:right">' + s.tur + '</div>';
+                } else {
+                    // Unknown type
+                    html += '<div style="flex:1;font-size:20px;font-weight:600;color:#333">' + (s.namn || 'Okänd') + '</div>';
                 }
 
-                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 24px;background:' + bgCol + ';border-bottom:1px solid #E5E5EA">';
-                html += '<div style="display:flex;align-items:center;gap:14px">';
-                html += '<span style="font-size:32px">' + icon + '</span>';
-                html += '<div>';
-                html += '<div style="font-size:22px;font-weight:600;color:' + (s.noData ? '#999' : '#333') + '">' + (s.namn || 'Okänd') + '</div>';
-                if (s.tid && !s.isFriday && !s.noData) {
-                    html += '<div style="font-size:16px;color:#666">' + s.tid + '</div>';
-                }
-                html += '</div>';
-                html += '</div>';
-                html += '<div style="font-size:18px;color:' + statusColor + ';font-weight:500">' + statusText + '</div>';
                 html += '</div>';
             }
         }
@@ -342,17 +390,17 @@
     VR.showDeleteConfirmation = function() {
         var overlay = document.createElement('div');
         overlay.id = 'vrDeleteOverlay';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99998;display:flex;align-items:center;justify-content:center';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:999999999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
 
         var modal = document.createElement('div');
-        modal.style.cssText = 'background:#fff;border-radius:20px;padding:32px;max-width:320px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3)';
+        modal.style.cssText = 'background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:24px;padding:36px;max-width:340px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.5);margin:20px';
 
-        modal.innerHTML = '<div style="font-size:50px;margin-bottom:16px">🗑️</div>' +
-            '<div style="font-size:22px;font-weight:700;color:#333;margin-bottom:12px">Ta bort data?</div>' +
-            '<div style="font-size:16px;color:#666;margin-bottom:24px">All din uppladdade schemainfo kommer att tas bort från Firebase.</div>' +
-            '<div style="display:flex;gap:12px;justify-content:center">' +
-            '<button id="vrDeleteCancel" style="padding:14px 24px;border-radius:12px;border:none;background:#E5E5EA;color:#333;font-size:16px;font-weight:600;cursor:pointer">Avbryt</button>' +
-            '<button id="vrDeleteConfirm" style="padding:14px 24px;border-radius:12px;border:none;background:linear-gradient(180deg,#FF3B30 0%,#D32F2F 100%);color:#fff;font-size:16px;font-weight:600;cursor:pointer">Ta bort</button>' +
+        modal.innerHTML = '<div style="font-size:56px;margin-bottom:20px">🗑️</div>' +
+            '<div style="font-size:24px;font-weight:700;color:#fff;margin-bottom:14px">Ta bort data?</div>' +
+            '<div style="font-size:17px;color:rgba(255,255,255,0.7);margin-bottom:28px;line-height:1.5">All din uppladdade schemainfo kommer att tas bort från Firebase.</div>' +
+            '<div style="display:flex;gap:14px;justify-content:center">' +
+            '<button id="vrDeleteCancel" style="flex:1;padding:16px 24px;border-radius:14px;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:18px;font-weight:600;cursor:pointer">Avbryt</button>' +
+            '<button id="vrDeleteConfirm" style="flex:1;padding:16px 24px;border-radius:14px;border:none;background:linear-gradient(180deg,#FF3B30 0%,#D32F2F 100%);color:#fff;font-size:18px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(255,59,48,0.4)">Ta bort</button>' +
             '</div>';
 
         overlay.appendChild(modal);
@@ -533,17 +581,27 @@
         var weekday = VR.WEEKDAYS[dateObj.getDay()];
         var monthName = VR.MONTHS[monthIdx];
 
-        // Determine icon
-        var icon = '👤';
-        var role = '';
-        var flag = '';
-        var country = '';
+        var overlay = document.createElement('div');
+        overlay.id = 'vrDetailOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99998;display:flex;align-items:center;justify-content:center';
+
+        var modal = document.createElement('div');
+        modal.style.cssText = 'background:#fff;border-radius:20px;padding:32px;max-width:320px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3)';
+
+        var html = '';
 
         if (schedule.isFriday) {
-            icon = '🏖️';
-            role = 'Ledig';
+            // FP/FP-V popup
+            html += '<div style="margin-bottom:16px">' + VR.getFPBadgeHtml(schedule.ps, 'large') + '</div>';
+            html += '<div style="font-size:20px;font-weight:600;color:#16A34A;margin-bottom:20px">' + VR.getFPTypeText(schedule.ps) + '</div>';
         } else if (schedule.tur) {
+            // Working popup
             var c3 = schedule.tur.length >= 3 ? schedule.tur.charAt(2) : '';
+            var icon = '👤';
+            var role = '';
+            var flag = '';
+            var country = '';
+
             if (c3 === '1' || c3 === '2') {
                 icon = '🚂';
                 role = 'Lokförare';
@@ -558,40 +616,36 @@
                 flag = '🇩🇰';
                 country = 'Danmark';
             }
-        }
 
-        var overlay = document.createElement('div');
-        overlay.id = 'vrDetailOverlay';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99998;display:flex;align-items:center;justify-content:center';
-
-        var modal = document.createElement('div');
-        modal.style.cssText = 'background:#fff;border-radius:20px;padding:32px;max-width:320px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3)';
-
-        var html = '<div style="font-size:50px;margin-bottom:12px">' + icon + '</div>';
-
-        if (schedule.tur && !schedule.isFriday) {
+            html += '<div style="font-size:50px;margin-bottom:12px">' + icon + '</div>';
             html += '<div style="font-size:24px;font-weight:700;color:#333;margin-bottom:16px">Tur ' + schedule.tur + '</div>';
-        } else if (schedule.isFriday) {
-            html += '<div style="font-size:24px;font-weight:700;color:#34C759;margin-bottom:16px">Ledig</div>';
+
+            html += '<div style="text-align:left;font-size:18px;color:#333;line-height:2">';
+            html += '<div>👤 ' + (schedule.namn || 'Okänd') + '</div>';
+            html += '<div>📅 ' + weekday + ' ' + dayNum + ' ' + monthName + ' ' + year + '</div>';
+
+            if (schedule.tid) {
+                html += '<div>⏰ ' + schedule.tid + '</div>';
+            }
+
+            if (role) {
+                html += '<div>' + icon + ' ' + role + '</div>';
+            }
+
+            if (flag && country) {
+                html += '<div>' + flag + ' ' + country + '</div>';
+            }
+
+            html += '</div>';
         }
 
-        html += '<div style="text-align:left;font-size:18px;color:#333;line-height:2">';
-        html += '<div>👤 ' + (schedule.namn || 'Okänd') + '</div>';
-        html += '<div>📅 ' + weekday + ' ' + dayNum + ' ' + monthName + ' ' + year + '</div>';
-
-        if (schedule.tid && !schedule.isFriday) {
-            html += '<div>⏰ ' + schedule.tid + '</div>';
+        // Common info for FP
+        if (schedule.isFriday) {
+            html += '<div style="text-align:left;font-size:18px;color:#333;line-height:2">';
+            html += '<div>👤 ' + (schedule.namn || 'Okänd') + '</div>';
+            html += '<div>📅 ' + weekday + ' ' + dayNum + ' ' + monthName + ' ' + year + '</div>';
+            html += '</div>';
         }
-
-        if (role && !schedule.isFriday) {
-            html += '<div>' + icon + ' ' + role + '</div>';
-        }
-
-        if (flag && country) {
-            html += '<div>' + flag + ' ' + country + '</div>';
-        }
-
-        html += '</div>';
 
         html += '<button id="vrDetailClose" style="margin-top:24px;padding:14px 32px;border-radius:12px;border:none;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;font-size:16px;font-weight:600;cursor:pointer">Stäng</button>';
 
@@ -696,8 +750,10 @@
 
                     if (schedule) {
                         if (schedule.isFriday) {
-                            cellContent = '🏖️';
-                            cellBg = 'rgba(52,199,89,0.2)';
+                            // FP/FP-V badge instead of 🏖️
+                            var fpText = VR.isFPV(schedule.ps) ? 'FP-V' : 'FP';
+                            cellContent = '<div style="font-size:10px;font-weight:700;background:#16A34A;color:#fff;padding:2px 4px;border-radius:4px;display:inline-block">' + fpText + '</div>';
+                            cellBg = 'rgba(22,163,74,0.1)';
                         } else if (schedule.tur) {
                             var c3 = schedule.tur.length >= 3 ? schedule.tur.charAt(2) : '';
                             var flag = '';

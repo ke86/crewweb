@@ -305,6 +305,9 @@
         VR.closeOverlay();
         VR.closeMenu();
 
+        // Save current view to restore after preload
+        VR.preloadReturnView = VR.currentViewAction || 'doSchema';
+
         VR.showLoader('Förladdar data');
         VR.updateLoader(5, 'Startar...');
 
@@ -688,6 +691,20 @@
         setTimeout(function() {
             if (popup.parentNode) popup.remove();
         }, 3000);
+
+        // Restore previous view after popup closes
+        setTimeout(function() {
+            if (VR.preloadReturnView && typeof VR[VR.preloadReturnView] === 'function') {
+                console.log('VR: Restoring view after preload:', VR.preloadReturnView);
+                VR[VR.preloadReturnView]();
+            } else {
+                // Default: show Schema
+                if (typeof VR.doSchema === 'function') {
+                    VR.doSchema();
+                }
+            }
+            VR.preloadReturnView = null;
+        }, 500);
     };
 
     console.log('VR: Cache loaded');
