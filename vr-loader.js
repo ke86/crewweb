@@ -46,13 +46,43 @@
         'vr-forvantad.js',
         'vr-statistik.js',
         'vr-lonberakning.js',
-        'vr-prefetch.js'
+        'vr-prefetch.js',
+        'vr-firebase.js',   // Firebase integration
+        'vr-whosworking.js' // Who's working today
     ];
 
-    var loaded = 0;
+    // External libraries to load (before modules)
+    var externalLibs = [
+        'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js',
+        'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js'
+    ];
 
-    function loadNext() {
-        if (loaded >= modules.length) {
+    var extLoaded = 0;
+    var modLoaded = 0;
+
+    function loadExternalLibs() {
+        if (extLoaded >= externalLibs.length) {
+            // All external libs loaded, start loading modules
+            loadNextModule();
+            return;
+        }
+
+        var script = document.createElement('script');
+        script.src = externalLibs[extLoaded];
+        script.onload = function() {
+            extLoaded++;
+            loadExternalLibs();
+        };
+        script.onerror = function() {
+            console.warn('VR: Failed to load external lib (continuing anyway)');
+            extLoaded++;
+            loadExternalLibs();
+        };
+        document.body.appendChild(script);
+    }
+
+    function loadNextModule() {
+        if (modLoaded >= modules.length) {
             // All modules loaded - initialize
             if (typeof VR.init === 'function') {
                 VR.init();
@@ -61,17 +91,19 @@
         }
 
         var script = document.createElement('script');
-        script.src = BASE + modules[loaded] + '?' + VERSION;
+        script.src = BASE + modules[modLoaded] + '?' + VERSION;
         script.onload = function() {
-            loaded++;
-            loadNext();
+            modLoaded++;
+            loadNextModule();
         };
         script.onerror = function() {
-            console.error('VR: Failed to load ' + modules[loaded]);
+            console.error('VR: Failed to load ' + modules[modLoaded]);
+            modLoaded++;
+            loadNextModule();
         };
         document.body.appendChild(script);
     }
 
-    // Start loading
-    loadNext();
+    // Start loading external libs first, then modules
+    loadExternalLibs();
 })();

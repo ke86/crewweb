@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.1.06';
+    VR.VERSION = 'V.1.07';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -129,7 +129,8 @@
             { icon: '🔮', label: 'Förväntat', action: 'doForvantad', color: '#9B59B6' },
             { icon: '📊', label: 'Statistik', action: 'doStatistik', color: '#FF9500' },
             { icon: '💰', label: 'Lön', action: 'doLon', color: '#4CAF50' },
-            { icon: '👤', label: 'Anställddata', action: 'doAnstallddata', color: '#5AC8FA' }
+            { icon: '👤', label: 'Anställddata', action: 'doAnstallddata', color: '#5AC8FA' },
+            { icon: '👥', label: 'Vem jobbar?', action: 'doWhosWorking', color: '#FF6F00' }
         ];
 
         // Role display - use detected role from SR_RATE if available
