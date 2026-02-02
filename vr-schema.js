@@ -376,14 +376,14 @@
     // ===== BUILD SCHEMA NAV =====
     VR.buildSchemaNav = function() {
         return '\
-<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:20px;padding:16px 20px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08)">\
-<button id="vrPrevMonth" style="width:60px;height:60px;border-radius:50%;border:none;background:linear-gradient(135deg,#007AFF,#5856D6);color:#fff;font-size:28px;font-weight:700;cursor:pointer">←</button>\
-<div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px">\
-<div style="font-size:28px;font-weight:700;color:#000">' + VR.MONTHS[VR.schemaMonth] + ' ' + VR.schemaYear + '</div>\
+<div style="display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:20px 28px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">\
+<span id="vrPrevMonth" style="font-size:32px;color:#fff;cursor:pointer;padding:8px 12px">◀</span>\
+<div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px">\
+<div style="font-size:28px;font-weight:700;color:#fff">' + VR.MONTHS[VR.schemaMonth] + ' ' + VR.schemaYear + '</div>\
 <button id="vrExportMonth" style="padding:10px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,#34C759,#30D158);color:#fff;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">\
 <span>📅</span> Exportera</button>\
 </div>\
-<button id="vrNextMonth" style="width:60px;height:60px;border-radius:50%;border:none;background:linear-gradient(135deg,#007AFF,#5856D6);color:#fff;font-size:28px;font-weight:700;cursor:pointer">→</button>\
+<span id="vrNextMonth" style="font-size:32px;color:#fff;cursor:pointer;padding:8px 12px">▶</span>\
 </div>';
     };
 
@@ -428,7 +428,7 @@
             var rowBg = isT ? 'linear-gradient(135deg,#34C759,#30D158)' : (d % 2 === 0 ? '#fff' : '#F8F8F8');
             var dateBg = isT ? 'rgba(255,255,255,0.25)' : isF ? '#FFF3E0' : isWeekend ? '#FEF3C7' : '#E8F0FE';
             var dateCol = isT ? '#fff' : isF ? '#F59E0B' : isWeekend ? '#D97706' : '#007AFF';
-            var textCol = isT ? '#fff' : '#333';
+            var textCol = isT ? '#fff' : isF ? '#34C759' : '#333';
             var subCol = isT ? 'rgba(255,255,255,0.8)' : '#666';
 
             html += '<div data-date="' + dKey + '" style="display:grid;grid-template-columns:113px 1fr auto;gap:23px;align-items:center;padding:23px 27px;background:' + rowBg + ';border-bottom:1px solid ' + (isT ? 'rgba(255,255,255,0.2)' : '#E5E5E5') + ';cursor:pointer" onclick="VR.showDayDetail(this.getAttribute(\'data-date\'))">';
