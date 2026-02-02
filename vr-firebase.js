@@ -320,5 +320,52 @@
         });
     };
 
+    // ===== DELETE USER DATA =====
+    VR.deleteMyFirebaseData = function(callback) {
+        if (!VR.firebaseReady || !VR.firebaseDb) {
+            if (callback) callback(false, 'Firebase ej redo');
+            return;
+        }
+
+        var user = VR.getFirebaseUser();
+        if (!user || !user.anstNr) {
+            if (callback) callback(false, 'Ingen användare');
+            return;
+        }
+
+        var anstNr = user.anstNr;
+
+        // First delete all schedule days
+        VR.firebaseDb.collection('schedules')
+            .doc(anstNr)
+            .collection('days')
+            .get()
+            .then(function(snapshot) {
+                var batch = VR.firebaseDb.batch();
+                var count = 0;
+
+                snapshot.forEach(function(doc) {
+                    batch.delete(doc.ref);
+                    count++;
+                });
+
+                // Also delete user document
+                var userRef = VR.firebaseDb.collection('users').doc(anstNr);
+                batch.delete(userRef);
+
+                return batch.commit().then(function() {
+                    return count;
+                });
+            })
+            .then(function(count) {
+                console.log('VR: Deleted user data,', count, 'schedule days');
+                if (callback) callback(true, count + ' dagar borttagna');
+            })
+            .catch(function(error) {
+                console.log('VR: Delete error:', error);
+                if (callback) callback(false, 'Kunde inte ta bort data');
+            });
+    };
+
     console.log('VR: Firebase module loaded');
 })();

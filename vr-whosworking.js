@@ -168,10 +168,15 @@
                 (isMonthView ? 'background:#fff;color:#333;box-shadow:0 1px 3px rgba(0,0,0,0.1)' : 'background:transparent;color:#666') + '">Månad</button>';
         html += '</div>';
 
-        // Right: Upload button
-        html += '<button id="vrWwUploadBtn" style="display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:10px;border:none;background:linear-gradient(180deg,#34C759 0%,#28a745 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(52,199,89,0.3)">';
+        // Right: Upload and Delete buttons
+        html += '<div style="display:flex;gap:8px">';
+        html += '<button id="vrWwUploadBtn" style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(180deg,#34C759 0%,#28a745 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(52,199,89,0.3)">';
         html += '<span>📤</span><span>Ladda upp</span>';
         html += '</button>';
+        html += '<button id="vrWwDeleteBtn" style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(180deg,#FF3B30 0%,#D32F2F 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(255,59,48,0.3)">';
+        html += '<span>🗑️</span>';
+        html += '</button>';
+        html += '</div>';
 
         html += '</div>';
 
@@ -287,6 +292,7 @@
             var dayTab = document.getElementById('vrWwDayTab');
             var monthTab = document.getElementById('vrWwMonthTab');
             var uploadBtn = document.getElementById('vrWwUploadBtn');
+            var deleteBtn = document.getElementById('vrWwDeleteBtn');
 
             if (prevBtn) {
                 prevBtn.onclick = function() {
@@ -323,7 +329,97 @@
                     VR.uploadMySchedule();
                 };
             }
+
+            if (deleteBtn) {
+                deleteBtn.onclick = function() {
+                    VR.showDeleteConfirmation();
+                };
+            }
         }, 100);
+    };
+
+    // ===== DELETE CONFIRMATION =====
+    VR.showDeleteConfirmation = function() {
+        var overlay = document.createElement('div');
+        overlay.id = 'vrDeleteOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99998;display:flex;align-items:center;justify-content:center';
+
+        var modal = document.createElement('div');
+        modal.style.cssText = 'background:#fff;border-radius:20px;padding:32px;max-width:320px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3)';
+
+        modal.innerHTML = '<div style="font-size:50px;margin-bottom:16px">🗑️</div>' +
+            '<div style="font-size:22px;font-weight:700;color:#333;margin-bottom:12px">Ta bort data?</div>' +
+            '<div style="font-size:16px;color:#666;margin-bottom:24px">All din uppladdade schemainfo kommer att tas bort från Firebase.</div>' +
+            '<div style="display:flex;gap:12px;justify-content:center">' +
+            '<button id="vrDeleteCancel" style="padding:14px 24px;border-radius:12px;border:none;background:#E5E5EA;color:#333;font-size:16px;font-weight:600;cursor:pointer">Avbryt</button>' +
+            '<button id="vrDeleteConfirm" style="padding:14px 24px;border-radius:12px;border:none;background:linear-gradient(180deg,#FF3B30 0%,#D32F2F 100%);color:#fff;font-size:16px;font-weight:600;cursor:pointer">Ta bort</button>' +
+            '</div>';
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        setTimeout(function() {
+            var cancelBtn = document.getElementById('vrDeleteCancel');
+            var confirmBtn = document.getElementById('vrDeleteConfirm');
+
+            if (cancelBtn) {
+                cancelBtn.onclick = function() {
+                    overlay.remove();
+                };
+            }
+
+            if (confirmBtn) {
+                confirmBtn.onclick = function() {
+                    overlay.remove();
+                    VR.deleteMyData();
+                };
+            }
+
+            overlay.onclick = function(e) {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            };
+        }, 50);
+    };
+
+    // ===== DELETE MY DATA =====
+    VR.deleteMyData = function() {
+        VR.showLoader('Tar bort');
+        VR.updateLoader(30, 'Ansluter...');
+
+        VR.initFirebase(function(success) {
+            if (!success) {
+                VR.hideLoader();
+                VR.showUploadError('Kunde inte ansluta till Firebase');
+                return;
+            }
+
+            VR.updateLoader(60, 'Tar bort data...');
+
+            VR.deleteMyFirebaseData(function(success, message) {
+                VR.hideLoader();
+
+                if (success) {
+                    VR.showDeleteSuccess(message);
+                    // Reload view after short delay
+                    setTimeout(function() {
+                        VR.doWhosWorking();
+                    }, 2000);
+                } else {
+                    VR.showUploadError(message);
+                }
+            });
+        });
+    };
+
+    VR.showDeleteSuccess = function(message) {
+        var popup = document.createElement('div');
+        popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(180deg,#FF3B30 0%,#D32F2F 100%);color:#fff;padding:32px;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:99999;text-align:center';
+        popup.innerHTML = '<div style="font-size:50px;margin-bottom:12px">✅</div><div style="font-size:22px;font-weight:600">Data borttagen!</div><div style="font-size:16px;margin-top:8px;opacity:0.9">' + message + '</div>';
+        popup.onclick = function() { popup.remove(); };
+        document.body.appendChild(popup);
+        setTimeout(function() { if (popup.parentNode) popup.remove(); }, 3000);
     };
 
     // ===== NAVIGATE DAY =====
@@ -415,6 +511,109 @@
         });
     };
 
+    // ===== FORMAT SHORT TIME =====
+    VR.formatShortTime = function(tid) {
+        if (!tid) return '';
+        // tid is like "05:42-14:18", we want "05-14"
+        var match = tid.match(/(\d{2}):\d{2}-(\d{2}):\d{2}/);
+        if (match) {
+            return match[1] + '-' + match[2];
+        }
+        return '';
+    };
+
+    // ===== SHOW SCHEDULE DETAIL POPUP =====
+    VR.showScheduleDetailPopup = function(schedule, dateStr) {
+        // Parse date
+        var parts = dateStr.split('-');
+        var dayNum = parseInt(parts[0], 10);
+        var monthIdx = parseInt(parts[1], 10) - 1;
+        var year = parseInt(parts[2], 10);
+        var dateObj = new Date(year, monthIdx, dayNum);
+        var weekday = VR.WEEKDAYS[dateObj.getDay()];
+        var monthName = VR.MONTHS[monthIdx];
+
+        // Determine icon
+        var icon = '👤';
+        var role = '';
+        var flag = '';
+        var country = '';
+
+        if (schedule.isFriday) {
+            icon = '🏖️';
+            role = 'Ledig';
+        } else if (schedule.tur) {
+            var c3 = schedule.tur.length >= 3 ? schedule.tur.charAt(2) : '';
+            if (c3 === '1' || c3 === '2') {
+                icon = '🚂';
+                role = 'Lokförare';
+            } else if (c3 === '3' || c3 === '4') {
+                icon = '🎫';
+                role = 'Tågvärd';
+            }
+            if (c3 === '1' || c3 === '3') {
+                flag = '🇸🇪';
+                country = 'Sverige';
+            } else if (c3 === '2' || c3 === '4') {
+                flag = '🇩🇰';
+                country = 'Danmark';
+            }
+        }
+
+        var overlay = document.createElement('div');
+        overlay.id = 'vrDetailOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99998;display:flex;align-items:center;justify-content:center';
+
+        var modal = document.createElement('div');
+        modal.style.cssText = 'background:#fff;border-radius:20px;padding:32px;max-width:320px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3)';
+
+        var html = '<div style="font-size:50px;margin-bottom:12px">' + icon + '</div>';
+
+        if (schedule.tur && !schedule.isFriday) {
+            html += '<div style="font-size:24px;font-weight:700;color:#333;margin-bottom:16px">Tur ' + schedule.tur + '</div>';
+        } else if (schedule.isFriday) {
+            html += '<div style="font-size:24px;font-weight:700;color:#34C759;margin-bottom:16px">Ledig</div>';
+        }
+
+        html += '<div style="text-align:left;font-size:18px;color:#333;line-height:2">';
+        html += '<div>👤 ' + (schedule.namn || 'Okänd') + '</div>';
+        html += '<div>📅 ' + weekday + ' ' + dayNum + ' ' + monthName + ' ' + year + '</div>';
+
+        if (schedule.tid && !schedule.isFriday) {
+            html += '<div>⏰ ' + schedule.tid + '</div>';
+        }
+
+        if (role && !schedule.isFriday) {
+            html += '<div>' + icon + ' ' + role + '</div>';
+        }
+
+        if (flag && country) {
+            html += '<div>' + flag + ' ' + country + '</div>';
+        }
+
+        html += '</div>';
+
+        html += '<button id="vrDetailClose" style="margin-top:24px;padding:14px 32px;border-radius:12px;border:none;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;font-size:16px;font-weight:600;cursor:pointer">Stäng</button>';
+
+        modal.innerHTML = html;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        setTimeout(function() {
+            var closeBtn = document.getElementById('vrDetailClose');
+            if (closeBtn) {
+                closeBtn.onclick = function() {
+                    overlay.remove();
+                };
+            }
+            overlay.onclick = function(e) {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            };
+        }, 50);
+    };
+
     // ===== RENDER MONTH VIEW =====
     VR.renderMonthView = function(allSchedules, year, month) {
         var monthName = VR.MONTHS[month];
@@ -466,16 +665,16 @@
             var daysInMonth = new Date(year, month + 1, 0).getDate();
 
             html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08);overflow-x:auto">';
-            html += '<table style="width:100%;border-collapse:collapse;min-width:600px">';
+            html += '<table style="width:100%;border-collapse:collapse;min-width:800px">';
 
             // Header row with dates
             html += '<tr style="background:#1C1C1E">';
-            html += '<th style="padding:12px 16px;color:#fff;font-size:16px;text-align:left;position:sticky;left:0;background:#1C1C1E">Namn</th>';
+            html += '<th style="padding:12px 16px;color:#fff;font-size:16px;text-align:left;position:sticky;left:0;background:#1C1C1E;min-width:120px">Namn</th>';
 
             for (var d = 1; d <= daysInMonth; d++) {
                 var dateObj = new Date(year, month, d);
                 var isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
-                html += '<th style="padding:12px 8px;color:' + (isWeekend ? '#FF9500' : '#fff') + ';font-size:14px;text-align:center;min-width:40px">' + d + '</th>';
+                html += '<th style="padding:12px 6px;color:' + (isWeekend ? '#FF9500' : '#fff') + ';font-size:14px;text-align:center;min-width:55px">' + d + '</th>';
             }
             html += '</tr>';
 
@@ -485,7 +684,7 @@
                 var rowBg = u % 2 === 0 ? '#fff' : '#F8F8F8';
 
                 html += '<tr style="background:' + rowBg + '">';
-                html += '<td style="padding:12px 16px;font-size:16px;font-weight:600;position:sticky;left:0;background:' + rowBg + '">' + user.namn + '</td>';
+                html += '<td style="padding:12px 16px;font-size:16px;font-weight:600;position:sticky;left:0;background:' + rowBg + ';white-space:nowrap">' + user.namn + '</td>';
 
                 for (var day = 1; day <= daysInMonth; day++) {
                     var dayStr = ('0' + day).slice(-2) + '-' + ('0' + (month + 1)).slice(-2) + '-' + year;
@@ -493,6 +692,7 @@
 
                     var cellContent = '';
                     var cellBg = 'transparent';
+                    var cellStyle = '';
 
                     if (schedule) {
                         if (schedule.isFriday) {
@@ -500,15 +700,23 @@
                             cellBg = 'rgba(52,199,89,0.2)';
                         } else if (schedule.tur) {
                             var c3 = schedule.tur.length >= 3 ? schedule.tur.charAt(2) : '';
+                            var flag = '';
                             if (c3 === '2' || c3 === '4') {
-                                cellContent = '🇩🇰';
+                                flag = '🇩🇰';
                             } else {
-                                cellContent = '🇸🇪';
+                                flag = '🇸🇪';
+                            }
+
+                            var shortTime = VR.formatShortTime(schedule.tid);
+                            cellContent = '<div style="font-size:14px">' + flag + '</div>';
+                            if (shortTime) {
+                                cellContent += '<div style="font-size:11px;color:#666">' + shortTime + '</div>';
                             }
                         }
+                        cellStyle = 'cursor:pointer';
                     }
 
-                    html += '<td style="padding:8px;text-align:center;background:' + cellBg + ';font-size:16px">' + cellContent + '</td>';
+                    html += '<td class="vrMonthCell" data-date="' + dayStr + '" data-user="' + user.anstNr + '" style="padding:6px 4px;text-align:center;background:' + cellBg + ';font-size:14px;vertical-align:middle;' + cellStyle + '">' + cellContent + '</td>';
                 }
 
                 html += '</tr>';
@@ -517,6 +725,9 @@
             html += '</table>';
             html += '</div>';
         }
+
+        // Store data for click handler
+        VR.monthViewData = { usersByDate: usersByDate, allUsers: allUsers };
 
         VR.showView('', '', html);
         VR.bindMonthViewEvents();
@@ -530,6 +741,7 @@
             var dayTab = document.getElementById('vrWwDayTab');
             var monthTab = document.getElementById('vrWwMonthTab');
             var uploadBtn = document.getElementById('vrWwUploadBtn');
+            var deleteBtn = document.getElementById('vrWwDeleteBtn');
 
             if (prevBtn) {
                 prevBtn.onclick = function() {
@@ -563,15 +775,31 @@
                 };
             }
 
-            if (monthTab) {
-                // Already on month view
-            }
-
             if (uploadBtn) {
                 uploadBtn.onclick = function() {
                     VR.uploadMySchedule();
                 };
             }
+
+            if (deleteBtn) {
+                deleteBtn.onclick = function() {
+                    VR.showDeleteConfirmation();
+                };
+            }
+
+            // Bind cell clicks
+            var cells = document.querySelectorAll('.vrMonthCell');
+            cells.forEach(function(cell) {
+                cell.onclick = function() {
+                    var dateStr = cell.getAttribute('data-date');
+                    var userAnstNr = cell.getAttribute('data-user');
+
+                    if (VR.monthViewData && VR.monthViewData.usersByDate[dateStr] && VR.monthViewData.usersByDate[dateStr][userAnstNr]) {
+                        var schedule = VR.monthViewData.usersByDate[dateStr][userAnstNr];
+                        VR.showScheduleDetailPopup(schedule, dateStr);
+                    }
+                };
+            });
         }, 100);
     };
 
