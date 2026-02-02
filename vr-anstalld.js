@@ -4,10 +4,63 @@
 
     var VR = window.VR;
 
+    // ===== CACHE SETTINGS =====
+    VR.ANSTALLD_CACHE_KEY = 'vr_anstalld_cache';
+    VR.ANSTALLD_CACHE_DAYS = 7; // Auto-update after 7 days
+
+    // ===== CACHE FUNCTIONS =====
+    VR.getAnstalldCache = function() {
+        try {
+            var cached = localStorage.getItem(VR.ANSTALLD_CACHE_KEY);
+            if (!cached) return null;
+            return JSON.parse(cached);
+        } catch (e) {
+            console.log('VR: Cache read error', e);
+            return null;
+        }
+    };
+
+    VR.saveAnstalldCache = function(kvalifikationer) {
+        try {
+            var cacheData = {
+                kvalifikationer: kvalifikationer,
+                savedAt: Date.now()
+            };
+            localStorage.setItem(VR.ANSTALLD_CACHE_KEY, JSON.stringify(cacheData));
+            console.log('VR: Anställddata cached');
+        } catch (e) {
+            console.log('VR: Cache save error', e);
+        }
+    };
+
+    VR.isCacheValid = function(cache) {
+        if (!cache || !cache.savedAt) return false;
+        var ageMs = Date.now() - cache.savedAt;
+        var ageDays = ageMs / (1000 * 60 * 60 * 24);
+        return ageDays < VR.ANSTALLD_CACHE_DAYS;
+    };
+
+    VR.formatCacheDate = function(timestamp) {
+        var d = new Date(timestamp);
+        return d.getDate() + ' ' + VR.MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear();
+    };
+
     // ===== ANSTÄLLDDATA FUNCTIONALITY =====
-    VR.doAnstallddata = function() {
+    VR.doAnstallddata = function(forceRefresh) {
         VR.stopTimer();
         VR.closeOverlay();
+
+        // Check cache first (unless force refresh)
+        if (!forceRefresh) {
+            var cache = VR.getAnstalldCache();
+            if (cache && VR.isCacheValid(cache) && cache.kvalifikationer && cache.kvalifikationer.length > 0) {
+                console.log('VR: Using cached anställddata');
+                var html = VR.buildAnstalldataView({}, cache.kvalifikationer, cache.savedAt);
+                VR.showView('', '', html);
+                return;
+            }
+        }
+
         VR.showLoader('Laddar Anställddata');
         VR.updateLoader(5, 'Letar efter sidan...');
 
@@ -148,7 +201,12 @@
 
         VR.updateLoader(95, 'Bygger vy...');
 
-        var html = VR.buildAnstalldataView(data, kvalifikationer);
+        // Save to cache
+        if (kvalifikationer.length > 0) {
+            VR.saveAnstalldCache(kvalifikationer);
+        }
+
+        var html = VR.buildAnstalldataView(data, kvalifikationer, Date.now());
 
         setTimeout(function() {
             VR.hideLoader();
@@ -156,7 +214,7 @@
         }, 300);
     };
 
-    VR.buildAnstalldataView = function(data, kvalifikationer) {
+    VR.buildAnstalldataView = function(data, kvalifikationer, savedAt) {
         kvalifikationer = kvalifikationer || [];
 
         if (kvalifikationer.length === 0) {
@@ -168,8 +226,16 @@
                 </div>';
         }
 
+        // Update bar with refresh button and "Senast uppdaterad" text
+        var savedDateStr = savedAt ? VR.formatCacheDate(savedAt) : 'Okänt';
+        var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding:0 8px">';
+        html += '<div style="font-size:22px;color:#8E8E93">Senast uppdaterad: ' + savedDateStr + '</div>';
+        html += '<button id="vrRefreshAnstalld" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:12px;border:none;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;font-size:18px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.15)">';
+        html += '<span style="font-size:20px">🔄</span> Uppdatera</button>';
+        html += '</div>';
+
         // Kvalifikationer table with 3 columns
-        var html = '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
+        html += '<div style="background:#fff;border-radius:27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
 
         // Header
         html += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;padding:20px 24px;background:#1C1C1E">';
@@ -219,6 +285,16 @@
         html += '<div style="margin-top:16px;padding:12px 20px;text-align:center;color:#8E8E93;font-size:28px">';
         html += kvalifikationer.length + ' kvalifikationer';
         html += '</div>';
+
+        // Add script to bind refresh button after DOM is ready
+        setTimeout(function() {
+            var refreshBtn = document.getElementById('vrRefreshAnstalld');
+            if (refreshBtn) {
+                refreshBtn.onclick = function() {
+                    VR.doAnstallddata(true); // Force refresh
+                };
+            }
+        }, 100);
 
         return html;
     };
