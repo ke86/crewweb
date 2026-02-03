@@ -1,4 +1,4 @@
-// VR CrewWeb - Export to Firebase - V.1.37
+// VR CrewWeb - Export to Firebase - V.1.38
 (function() {
     'use strict';
 
@@ -169,10 +169,22 @@
                     if (VR.allSchemaData.hasOwnProperty(dateKey)) {
                         var entries = VR.allSchemaData[dateKey];
                         if (entries && entries.length > 0) {
-                            var entry = entries[0];
+                            // Find the header entry (has isHeader flag) or first entry with data
+                            var entry = null;
+                            for (var i = 0; i < entries.length; i++) {
+                                if (entries[i].isHeader) {
+                                    entry = entries[i];
+                                    break;
+                                }
+                            }
+                            if (!entry) entry = entries[0];
+
+                            // Get tur from tn, fallback to ps
+                            var tur = entry.tn || entry.ps || '';
+
                             scheduleData.push({
                                 datum: dateKey,
-                                tjanst: entry.tn || '',
+                                tjanst: tur,
                                 tid: entry.pr || '',
                                 ps: entry.ps || '',
                                 cd: entry.cd || '',
@@ -289,18 +301,44 @@
 
         // Add schema data
         if (VR.allSchemaData) {
+            var allKeys = Object.keys(VR.allSchemaData);
+            console.log('VR Export: Found', allKeys.length, 'dates in schema');
+
+            // Debug: log first 3 entries with all their data
+            for (var dbg = 0; dbg < Math.min(3, allKeys.length); dbg++) {
+                var dbgKey = allKeys[dbg];
+                var dbgEntries = VR.allSchemaData[dbgKey];
+                console.log('VR Export: Date', dbgKey, '- entries count:', dbgEntries.length);
+                for (var de = 0; de < dbgEntries.length; de++) {
+                    console.log('  Entry', de, ':', JSON.stringify(dbgEntries[de]));
+                }
+            }
+
             for (var dateKey in VR.allSchemaData) {
                 if (VR.allSchemaData.hasOwnProperty(dateKey)) {
                     var entries = VR.allSchemaData[dateKey];
                     if (entries && entries.length > 0) {
-                        var entry = entries[0];
+                        // Find the header entry (has isHeader flag) or first entry with data
+                        var entry = null;
+                        for (var i = 0; i < entries.length; i++) {
+                            if (entries[i].isHeader) {
+                                entry = entries[i];
+                                break;
+                            }
+                        }
+                        if (!entry) entry = entries[0];
+
                         // Convert DD-MM-YYYY to YYYY-MM-DD
                         var parts = dateKey.split('-');
                         var isoDate = parts[2] + '-' + parts[1] + '-' + parts[0];
 
+                        // tn = turnummer (kolumn 9), ps = sträcka, pr = tid
+                        // Fallback: if tn empty, try ps
+                        var tur = entry.tn || entry.ps || '';
+
                         rows.push({
                             date: isoDate,
-                            tjanst: entry.tn || '',
+                            tjanst: tur,
                             tid: entry.pr || ''
                         });
                     }
@@ -408,5 +446,5 @@
         });
     };
 
-    console.log('VR: Export module loaded (V.1.37)');
+    console.log('VR: Export module loaded (V.1.38)');
 })();
