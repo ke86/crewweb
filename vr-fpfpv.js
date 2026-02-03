@@ -1,4 +1,4 @@
-// VR CrewWeb - FP/FPV (Fridagar) - V.1.30
+// VR CrewWeb - FP/FPV (Fridagar) - V.1.31
 (function() {
     'use strict';
 
@@ -213,6 +213,8 @@
         var monthTops = Object.keys(months).map(Number).sort(function(a, b) { return a - b; });
         var dayLefts = Object.keys(days).map(Number).sort(function(a, b) { return a - b; });
 
+        console.log('VR: FP/FPV parsing - months:', Object.keys(months).length, 'days:', Object.keys(days).length, 'values:', values.length);
+
         if (monthTops.length === 0 || dayLefts.length === 0 || values.length === 0) {
             console.log('VR: Incomplete data, using test data');
             ledigheter = VR.generateTestData();
@@ -225,12 +227,13 @@
                     return Math.abs(curr - v.left) < Math.abs(prev - v.left) ? curr : prev;
                 });
 
-                ledigheter.push({
+                var entry = {
                     manad: months[monthTop],
                     dag: days[dayLeft],
                     typ: v.type,
                     visas: v.type === 'FRI' ? 'FP' : 'FPV'
-                });
+                };
+                ledigheter.push(entry);
             });
 
             ledigheter.sort(function(a, b) {
@@ -239,7 +242,11 @@
             });
         }
 
+        // DEBUG: Log first few entries to verify format
         console.log('VR: Hittade', ledigheter.length, 'lediga dagar');
+        if (ledigheter.length > 0) {
+            console.log('VR: Första 3 entries:', JSON.stringify(ledigheter.slice(0, 3)));
+        }
 
         VR.fpfpvData = ledigheter;
 
@@ -465,23 +472,33 @@
             });
 
             var currentDay = 1;
+            var firstWeek = true;
 
             while (currentDay <= totalDays) {
                 var weekNum = VR.getWeekNumber(new Date(YEAR, monthIndex, currentDay));
                 html += '<div class="vr-fp-week-num">v' + weekNum + '</div>';
 
                 for (var i = 0; i < 7; i++) {
-                    if ((currentDay === 1 && i < startDay) || currentDay > totalDays) {
+                    // Tomma celler före första dagen eller efter sista dagen
+                    if ((firstWeek && i < startDay) || currentDay > totalDays) {
                         html += '<div class="vr-fp-cal-day empty"></div>';
                     } else {
                         var key = month + '-' + currentDay;
                         var type = dayTypeMap[key] || '';
                         var typeClass = type ? ' ' + type : '';
                         var label = type ? type : '';
-                        html += '<div class="vr-fp-cal-day' + typeClass + '"><span class="day-num">' + currentDay + '</span>' + (label ? '<span class="day-label">' + label + '</span>' : '') + '</div>';
+
+                        html += '<div class="vr-fp-cal-day' + typeClass + '">';
+                        html += '<span class="day-num">' + currentDay + '</span>';
+                        if (label) {
+                            html += '<span class="day-label">' + label + '</span>';
+                        }
+                        html += '</div>';
+
                         currentDay++;
                     }
                 }
+                firstWeek = false;
             }
 
             html += '</div></div></div>';
@@ -601,5 +618,5 @@
         console.log('VR: Exporterade', VR.fpfpvData.length, 'dagar till kalender');
     };
 
-    console.log('VR: FP/FPV loaded (V.1.30)');
+    console.log('VR: FP/FPV loaded (V.1.31)');
 })();
