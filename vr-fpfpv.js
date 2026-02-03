@@ -191,41 +191,23 @@
         var months = {};
         var days = {};
         var values = [];
-        var potentialDays = [];  // Samla alla celler med siffror 1-31
 
         allCells.forEach(function(cell) {
             var text = cell.textContent.trim();
             var style = cell.getAttribute('style') || '';
-            var topMatch = style.match(/top:\s*(\d+)px/);
-            var leftMatch = style.match(/left:\s*(\d+)px/);
-            var top = topMatch ? parseInt(topMatch[1]) : 0;
-            var left = leftMatch ? parseInt(leftMatch[1]) : 0;
+            var topMatch = style.match(/top:\s*([\d.]+)px/);
+            var leftMatch = style.match(/left:\s*([\d.]+)px/);
+            var top = topMatch ? parseFloat(topMatch[1]) : 0;
+            var left = leftMatch ? parseFloat(leftMatch[1]) : 0;
 
             if (MONTH_NAMES.indexOf(text) > -1) {
                 months[top] = text;
-            } else if (/^\d{1,2}$/.test(text)) {
-                var num = parseInt(text);
-                if (num >= 1 && num <= 31) {
-                    potentialDays.push({ left: left, top: top, day: num });
-                }
+            } else if (/^\d{1,2}$/.test(text) && top === 0) {
+                days[left] = parseInt(text);
             } else if (text === 'FRI' || text === 'afd') {
                 values.push({ top: top, left: left, type: text });
             }
         });
-
-        // Hitta header-raden (lägsta top-värdet bland dagceller)
-        if (potentialDays.length > 0) {
-            var minTop = potentialDays.reduce(function(min, d) {
-                return d.top < min ? d.top : min;
-            }, potentialDays[0].top);
-
-            // Använd endast celler på header-raden
-            potentialDays.forEach(function(d) {
-                if (d.top === minTop) {
-                    days[d.left] = d.day;
-                }
-            });
-        }
 
         var ledigheter = [];
         var monthTops = Object.keys(months).map(Number).sort(function(a, b) { return a - b; });
