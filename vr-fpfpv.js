@@ -1,4 +1,4 @@
-// VR CrewWeb - FP/FPV (Fridagar) - V.1.36
+// VR CrewWeb - FP/FPV (Fridagar) - V.1.37
 (function() {
     'use strict';
 
@@ -646,5 +646,5 @@
         console.log('VR: Exporterade', VR.fpfpvData.length, 'dagar till kalender');
     };
 
-    console.log('VR: FP/FPV loaded (V.1.36)');
+    console.log('VR: FP/FPV loaded (V.1.37)');
 })();

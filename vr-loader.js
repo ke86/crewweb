@@ -47,6 +47,7 @@
         'vr-statistik.js',
         'vr-lonberakning.js',
         'vr-firebase.js',   // Firebase integration
+        'vr-export.js',     // Export to Firebase/CSV
         'vr-whosworking.js' // Who's working today
     ];
 
