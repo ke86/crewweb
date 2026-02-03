@@ -1,4 +1,4 @@
-// VR CrewWeb - FP/FPV (Fridagar) - V.1.33
+// VR CrewWeb - FP/FPV (Fridagar) - V.1.34
 (function() {
     'use strict';
 
@@ -191,6 +191,7 @@
         var months = {};
         var days = {};
         var values = [];
+        var potentialDays = [];  // Samla alla celler med siffror 1-31
 
         allCells.forEach(function(cell) {
             var text = cell.textContent.trim();
@@ -202,12 +203,29 @@
 
             if (MONTH_NAMES.indexOf(text) > -1) {
                 months[top] = text;
-            } else if (/^\d{1,2}$/.test(text) && top === 0) {
-                days[left] = parseInt(text);
+            } else if (/^\d{1,2}$/.test(text)) {
+                var num = parseInt(text);
+                if (num >= 1 && num <= 31) {
+                    potentialDays.push({ left: left, top: top, day: num });
+                }
             } else if (text === 'FRI' || text === 'afd') {
                 values.push({ top: top, left: left, type: text });
             }
         });
+
+        // Hitta header-raden (lägsta top-värdet bland dagceller)
+        if (potentialDays.length > 0) {
+            var minTop = potentialDays.reduce(function(min, d) {
+                return d.top < min ? d.top : min;
+            }, potentialDays[0].top);
+
+            // Använd endast celler på header-raden
+            potentialDays.forEach(function(d) {
+                if (d.top === minTop) {
+                    days[d.left] = d.day;
+                }
+            });
+        }
 
         var ledigheter = [];
         var monthTops = Object.keys(months).map(Number).sort(function(a, b) { return a - b; });
@@ -618,5 +636,5 @@
         console.log('VR: Exporterade', VR.fpfpvData.length, 'dagar till kalender');
     };
 
-    console.log('VR: FP/FPV loaded (V.1.33)');
+    console.log('VR: FP/FPV loaded (V.1.34)');
 })();
