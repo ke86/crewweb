@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.1.35';
+    VR.VERSION = 'V.1.36';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -113,10 +113,10 @@
         overlay.onclick = function() { VR.closeMenu(); };
         document.body.appendChild(overlay);
 
-        // Menu panel
+        // Menu panel - 50% större (450px istället för 300px)
         var menu = document.createElement('div');
         menu.id = VR.ID.menu;
-        menu.style.cssText = 'position:fixed;top:0;left:-320px;width:300px;height:100%;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);z-index:99999991;transition:left 0.3s ease;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;flex-direction:column;box-shadow:5px 0 30px rgba(0,0,0,0.5)';
+        menu.style.cssText = 'position:fixed;top:0;left:-480px;width:450px;height:100%;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);z-index:99999991;transition:left 0.3s ease;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;flex-direction:column;box-shadow:5px 0 30px rgba(0,0,0,0.5)';
 
         // Kategoriserad menystruktur
         var menuCategories = [
@@ -164,26 +164,26 @@
 
         var menuHTML = '<style>\
 .vrMenuCategory{border-bottom:1px solid rgba(255,255,255,0.05)}\
-.vrMenuCategoryHeader{display:flex;align-items:center;gap:14px;padding:16px 24px;cursor:pointer;transition:background 0.2s}\
+.vrMenuCategoryHeader{display:flex;align-items:center;gap:21px;padding:24px 36px;cursor:pointer;transition:background 0.2s}\
 .vrMenuCategoryHeader:hover{background:rgba(255,255,255,0.05)}\
-.vrMenuCategoryIcon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}\
-.vrMenuCategoryLabel{flex:1;font-size:18px;font-weight:700;color:#fff}\
-.vrMenuCategoryArrow{font-size:14px;color:rgba(255,255,255,0.4);transition:transform 0.2s}\
+.vrMenuCategoryIcon{width:66px;height:66px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:33px}\
+.vrMenuCategoryLabel{flex:1;font-size:27px;font-weight:700;color:#fff}\
+.vrMenuCategoryArrow{font-size:21px;color:rgba(255,255,255,0.4);transition:transform 0.2s}\
 .vrMenuCategory.open .vrMenuCategoryArrow{transform:rotate(90deg)}\
-.vrMenuCategoryItems{display:none;padding-bottom:8px}\
+.vrMenuCategoryItems{display:none;padding-bottom:12px}\
 .vrMenuCategory.open .vrMenuCategoryItems{display:block}\
-.vrMenuSubItem{display:flex;align-items:center;gap:14px;padding:14px 24px 14px 40px;cursor:pointer;transition:background 0.2s}\
+.vrMenuSubItem{display:flex;align-items:center;gap:21px;padding:21px 36px 21px 60px;cursor:pointer;transition:background 0.2s}\
 .vrMenuSubItem:hover{background:rgba(255,255,255,0.08)}\
-.vrMenuSubIcon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}\
-.vrMenuSubLabel{font-size:18px;font-weight:500;color:rgba(255,255,255,0.9)}\
+.vrMenuSubIcon{width:60px;height:60px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:30px}\
+.vrMenuSubLabel{font-size:27px;font-weight:500;color:rgba(255,255,255,0.9)}\
 </style>';
 
-        menuHTML += '<div style="padding:24px 24px 20px;border-bottom:1px solid rgba(255,255,255,0.1)">\
+        menuHTML += '<div style="padding:36px 36px 30px;border-bottom:1px solid rgba(255,255,255,0.1)">\
             <div style="display:flex;justify-content:space-between;align-items:center">\
-                <div style="font-size:26px;font-weight:700;color:#fff">CrewWeb</div>\
-                <div style="font-size:13px;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:8px">' + VR.VERSION + '</div>\
+                <div style="font-size:39px;font-weight:700;color:#fff">CrewWeb</div>\
+                <div style="font-size:20px;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);padding:6px 15px;border-radius:12px">' + VR.VERSION + '</div>\
             </div>' +
-            (roleText ? '<div style="font-size:15px;color:rgba(255,255,255,0.5);margin-top:4px">' + roleText + '</div>' : '') +
+            (roleText ? '<div style="font-size:23px;color:rgba(255,255,255,0.5);margin-top:6px">' + roleText + '</div>' : '') +
         '</div>';
 
         menuHTML += '<div style="flex:1;padding:12px 0;overflow-y:auto">';
@@ -215,21 +215,11 @@
 
         menuHTML += '</div>';
 
-        // Preload button and close button at bottom
-        var preloadDate = VR.formatPreloadDate ? VR.formatPreloadDate() : null;
-        var preloadText = preloadDate ? 'Senast: ' + preloadDate : 'Ej körd';
-
-        menuHTML += '<div style="padding:20px 24px;border-top:1px solid rgba(255,255,255,0.1)">\
-            <div class="vrMenuItem" data-action="doPreloadAll" style="display:flex;align-items:center;gap:18px;padding:16px 20px;cursor:pointer;background:rgba(255,255,255,0.08);border-radius:16px;margin-bottom:12px">\
-                <div style="width:50px;height:50px;border-radius:14px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:26px">⚡</div>\
-                <div>\
-                    <div style="font-size:20px;font-weight:600;color:#fff">Förladda data</div>\
-                    <div style="font-size:14px;color:rgba(255,255,255,0.5);margin-top:2px">' + preloadText + '</div>\
-                </div>\
-            </div>\
-            <div class="vrMenuItem" data-action="cleanup" style="display:flex;align-items:center;gap:18px;padding:16px 20px;cursor:pointer;background:rgba(255,59,48,0.2);border-radius:16px">\
-                <div style="width:50px;height:50px;border-radius:14px;background:#FF3B30;display:flex;align-items:center;justify-content:center;font-size:26px">✕</div>\
-                <div style="font-size:22px;font-weight:600;color:#FF3B30">Stäng app</div>\
+        // Close button at bottom (förladda data borttagen)
+        menuHTML += '<div style="padding:30px 36px;border-top:1px solid rgba(255,255,255,0.1)">\
+            <div class="vrMenuItem" data-action="cleanup" style="display:flex;align-items:center;gap:27px;padding:24px 30px;cursor:pointer;background:rgba(255,59,48,0.2);border-radius:24px">\
+                <div style="width:75px;height:75px;border-radius:21px;background:#FF3B30;display:flex;align-items:center;justify-content:center;font-size:39px">✕</div>\
+                <div style="font-size:33px;font-weight:600;color:#FF3B30">Stäng app</div>\
             </div>\
         </div>';
 
@@ -290,7 +280,7 @@
     VR.closeMenu = function() {
         var menu = document.getElementById(VR.ID.menu);
         var overlay = document.getElementById(VR.ID.menuOverlay);
-        if (menu) menu.style.left = '-320px';
+        if (menu) menu.style.left = '-480px';
         if (overlay) {
             overlay.style.opacity = '0';
             overlay.style.visibility = 'hidden';
