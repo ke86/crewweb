@@ -1,4 +1,4 @@
-// VR CrewWeb - FP/FPV (Fridagar) - V.1.31
+// VR CrewWeb - FP/FPV (Fridagar) - V.1.32
 (function() {
     'use strict';
 
@@ -448,14 +448,8 @@
     VR.buildFPCalendarView = function(ledigheter) {
         var html = '';
 
-        // Skapa lookup map för snabb sökning
-        var dayTypeMap = {};
-        ledigheter.forEach(function(d) {
-            var key = d.manad + '-' + d.dag;
-            dayTypeMap[key] = d.visas;
-        });
-
         MONTH_NAMES.forEach(function(month, monthIndex) {
+            // Samma approach som listvyn - filtrera dagar för denna månad
             var daysInMonth = ledigheter.filter(function(d) { return d.manad === month; });
             var firstDay = new Date(YEAR, monthIndex, 1).getDay();
             var startDay = firstDay === 0 ? 6 : firstDay - 1;
@@ -483,15 +477,14 @@
                     if ((firstWeek && i < startDay) || currentDay > totalDays) {
                         html += '<div class="vr-fp-cal-day empty"></div>';
                     } else {
-                        var key = month + '-' + currentDay;
-                        var type = dayTypeMap[key] || '';
+                        // Använd samma funktion som fungerar i andra vyer
+                        var type = VR.getDayTypeFromData(currentDay, month, ledigheter);
                         var typeClass = type ? ' ' + type : '';
-                        var label = type ? type : '';
 
                         html += '<div class="vr-fp-cal-day' + typeClass + '">';
                         html += '<span class="day-num">' + currentDay + '</span>';
-                        if (label) {
-                            html += '<span class="day-label">' + label + '</span>';
+                        if (type) {
+                            html += '<span class="day-label">' + type + '</span>';
                         }
                         html += '</div>';
 
@@ -510,13 +503,6 @@
     // ===== BUILD HELGDAGAR VIEW =====
     VR.buildFPHelgdagarView = function(ledigheter) {
         var html = '';
-
-        // Skapa lookup map
-        var dayTypeMap = {};
-        ledigheter.forEach(function(d) {
-            var key = d.manad + '-' + d.dag;
-            dayTypeMap[key] = d.visas;
-        });
 
         // Group helgdagar by month
         var helgdagarByMonth = {};
@@ -540,9 +526,8 @@
                 var weekNum = VR.getWeekNumber(date);
                 var monthAbbr = MONTH_SHORT[monthIdx];
 
-                // Använd lookup map
-                var key = h.manad + '-' + h.dag;
-                var dayType = dayTypeMap[key] || null;
+                // Använd samma funktion som fungerar i andra vyer
+                var dayType = VR.getDayTypeFromData(h.dag, h.manad, ledigheter);
 
                 html += '<div class="vr-fp-helg-item">';
                 html += '<div class="vr-fp-helg-date-box"><span class="vr-fp-helg-day">' + h.dag + '</span><span class="vr-fp-helg-month-abbr">' + monthAbbr + '</span></div>';
@@ -618,5 +603,5 @@
         console.log('VR: Exporterade', VR.fpfpvData.length, 'dagar till kalender');
     };
 
-    console.log('VR: FP/FPV loaded (V.1.31)');
+    console.log('VR: FP/FPV loaded (V.1.32)');
 })();
