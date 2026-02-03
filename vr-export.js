@@ -4,6 +4,9 @@
 
     var VR = window.VR;
 
+    // ===== MONTH NAMES FOR PARSING =====
+    var MONTH_NAMES = ['Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December'];
+
     // ===== BADGE TYPE HELPER =====
     VR.getBadgeType = function(service, cd) {
         var s = (service || '').toUpperCase();
@@ -50,13 +53,13 @@
     // ===== AUTO LOAD DATA FOR EXPORT =====
     VR.autoLoadForExport = function() {
         var schemaCount = VR.allSchemaData ? Object.keys(VR.allSchemaData).length : 0;
+        var fpfpvCount = VR.fpfpvData ? VR.fpfpvData.length : 0;
 
         // Step 1: Load Schema if missing
         if (schemaCount === 0) {
             VR.updateLoader(10, 'Laddar Schema...');
             VR.loadSchemaForExport(function() {
-                // Step 2: Load FP/FPV (check AFTER schema loaded)
-                var fpfpvCount = VR.fpfpvData ? VR.fpfpvData.length : 0;
+                // Step 2: Load FP/FPV if missing
                 if (fpfpvCount === 0) {
                     VR.updateLoader(50, 'Laddar FP/FPV...');
                     VR.loadFPFPVForExport(function() {
@@ -74,52 +77,17 @@
                     }, 300);
                 }
             });
-        } else {
-            // Schema exists, check FP/FPV
-            var fpfpvCount = VR.fpfpvData ? VR.fpfpvData.length : 0;
-            if (fpfpvCount === 0) {
-                VR.updateLoader(50, 'Laddar FP/FPV...');
-                VR.loadFPFPVForExport(function() {
-                    VR.updateLoader(100, 'Klar!');
-                    setTimeout(function() {
-                        VR.hideLoader();
-                        VR.showExportView();
-                    }, 300);
-                });
-            } else {
-                // Both loaded
-                VR.hideLoader();
-                VR.showExportView();
-            }
+        } else if (fpfpvCount === 0) {
+            // Only need FP/FPV
+            VR.updateLoader(50, 'Laddar FP/FPV...');
+            VR.loadFPFPVForExport(function() {
+                VR.updateLoader(100, 'Klar!');
+                setTimeout(function() {
+                    VR.hideLoader();
+                    VR.showExportView();
+                }, 300);
+            });
         }
-    };
-
-    // ===== RELOAD SCHEMA (manual refresh) =====
-    VR.reloadSchemaForExport = function() {
-        VR.allSchemaData = null;
-        VR.showLoader('Uppdaterar Schema');
-        VR.updateLoader(10, 'Laddar...');
-        VR.loadSchemaForExport(function() {
-            VR.updateLoader(100, 'Klar!');
-            setTimeout(function() {
-                VR.hideLoader();
-                VR.showExportView();
-            }, 300);
-        });
-    };
-
-    // ===== RELOAD FP/FPV (manual refresh) =====
-    VR.reloadFPFPVForExport = function() {
-        VR.fpfpvData = null;
-        VR.showLoader('Uppdaterar FP/FPV');
-        VR.updateLoader(50, 'Laddar...');
-        VR.loadFPFPVForExport(function() {
-            VR.updateLoader(100, 'Klar!');
-            setTimeout(function() {
-                VR.hideLoader();
-                VR.showExportView();
-            }, 300);
-        });
     };
 
     // ===== LOAD SCHEMA FOR EXPORT (silent) =====
@@ -256,125 +224,159 @@
 
     // ===== LOAD FP/FPV FOR EXPORT =====
     VR.loadFPFPVForExport = function(callback) {
-        // Navigate to FP/FPV page
-        VR.clickFolder();
-        setTimeout(function() {
-            var n = 0;
-            var findTimer = setInterval(function() {
-                n++;
-                var el = VR.findMenuItem('FP-förläggning');
-                if (el) {
-                    clearInterval(findTimer);
-                    VR.updateLoader(60, 'Öppnar FP-förläggning...');
-                    el.click();
-                    VR.waitForFPFPVForExport(callback);
-                } else if (n > 20) {
-                    clearInterval(findTimer);
-                    console.log('VR: Could not find FP-förläggning menu');
-                    if (callback) callback();
-                }
-            }, 400);
-        }, 600);
+        // Store the callback for when parsing is done
+        VR.exportFPCallback = callback;
+
+        // Navigate to FP/FPV page using same method as VR.doFPFPV
+        VR.navigateToFranvaro(function() {
+            VR.updateLoader(60, 'Väntar på FP-data...');
+            VR.waitForFPFPVForExport();
+        });
     };
 
     // ===== WAIT FOR FP/FPV FOR EXPORT =====
-    VR.waitForFPFPVForExport = function(callback) {
+    VR.waitForFPFPVForExport = function() {
         var n = 0;
         var waitTimer = setInterval(function() {
             n++;
-            VR.updateLoader(65 + Math.min(n, 20), 'Väntar på FP-data...');
+            VR.updateLoader(60 + Math.min(n, 25), 'Letar efter data...');
 
-            // Look for GridCell elements
+            // Look for GridCell elements (same as VR.waitForFranvaroGrid)
             var cells = document.querySelectorAll('.GridCell');
+            console.log('VR Export: Found', cells.length, 'GridCells');
+
             if (cells.length > 10) {
                 clearInterval(waitTimer);
                 VR.updateLoader(90, 'Parsar FP-data...');
                 setTimeout(function() {
                     VR.parseFPFPVForExport();
-                    if (callback) callback();
+                    if (VR.exportFPCallback) VR.exportFPCallback();
                 }, 500);
-            } else if (n > 40) {
+            } else if (n > 30) {
                 clearInterval(waitTimer);
-                console.log('VR: Timeout waiting for FP/FPV data');
-                if (callback) callback();
+                console.log('VR Export: Timeout waiting for FP/FPV data');
+                if (VR.exportFPCallback) VR.exportFPCallback();
             }
         }, 400);
     };
 
-    // ===== PARSE FP/FPV FOR EXPORT =====
+    // ===== PARSE FP/FPV FOR EXPORT (same logic as VR.parseAndShowFPFPV) =====
     VR.parseFPFPVForExport = function() {
-        var cells = document.querySelectorAll('.GridCell');
-        var fpData = [];
+        var allCells = document.querySelectorAll('.GridCell');
+        var months = {};
+        var days = {};
+        var values = [];
 
-        cells.forEach(function(cell) {
-            var txt = cell.textContent.trim().toUpperCase();
-            if (txt === 'FP' || txt === 'FPV' || txt === 'FV' || txt === 'FP2') {
-                var style = cell.getAttribute('style') || '';
-                var topMatch = style.match(/top:\s*([\d.]+)px/);
-                var leftMatch = style.match(/left:\s*([\d.]+)px/);
+        allCells.forEach(function(cell) {
+            var text = cell.textContent.trim();
+            var style = cell.getAttribute('style') || '';
+            var topMatch = style.match(/top:\s*([\d.]+)px/);
+            var leftMatch = style.match(/left:\s*([\d.]+)px/);
+            var top = topMatch ? parseFloat(topMatch[1]) : 0;
+            var left = leftMatch ? parseFloat(leftMatch[1]) : 0;
 
-                if (topMatch && leftMatch) {
-                    var top = parseFloat(topMatch[1]);
-                    var left = parseFloat(leftMatch[1]);
-                    var row = Math.round((top - 20) / 21);
-                    var col = Math.round((left - 3) / 26);
-
-                    if (row >= 0 && row < 12 && col >= 1 && col <= 31) {
-                        fpData.push({
-                            manad: VR.MONTHS[row],
-                            dag: col,
-                            ar: 2026,
-                            visas: txt === 'FV' ? 'FPV' : txt
-                        });
-                    }
-                }
+            if (MONTH_NAMES.indexOf(text) > -1) {
+                months[top] = text;
+            } else if (/^\d{1,2}$/.test(text) && top === 0) {
+                days[left] = parseInt(text);
+            } else if (text === 'FRI' || text === 'afd') {
+                values.push({ top: top, left: left, type: text });
             }
         });
 
-        VR.fpfpvData = fpData;
-        console.log('VR: Parsed', fpData.length, 'FP/FPV days for export');
+        var ledigheter = [];
+        var monthTops = Object.keys(months).map(Number).sort(function(a, b) { return a - b; });
+        var dayLefts = Object.keys(days).map(Number).sort(function(a, b) { return a - b; });
+
+        console.log('VR Export: FP/FPV parsing - months:', Object.keys(months).length, 'days:', Object.keys(days).length, 'values:', values.length);
+
+        if (monthTops.length > 0 && dayLefts.length > 0 && values.length > 0) {
+            values.forEach(function(v) {
+                var monthTop = monthTops.reduce(function(prev, curr) {
+                    return Math.abs(curr - v.top) < Math.abs(prev - v.top) ? curr : prev;
+                });
+                var dayLeft = dayLefts.reduce(function(prev, curr) {
+                    return Math.abs(curr - v.left) < Math.abs(prev - v.left) ? curr : prev;
+                });
+
+                var entry = {
+                    manad: months[monthTop],
+                    dag: days[dayLeft],
+                    typ: v.type,
+                    ar: 2026,
+                    visas: v.type === 'FRI' ? 'FP' : 'FPV'
+                };
+                ledigheter.push(entry);
+            });
+
+            ledigheter.sort(function(a, b) {
+                var monthDiff = MONTH_NAMES.indexOf(a.manad) - MONTH_NAMES.indexOf(b.manad);
+                return monthDiff !== 0 ? monthDiff : a.dag - b.dag;
+            });
+        }
+
+        VR.fpfpvData = ledigheter;
+        console.log('VR Export: Parsed', ledigheter.length, 'FP/FPV days');
     };
 
     // ===== SHOW EXPORT VIEW =====
     VR.showExportView = function() {
+        // Try to get user info from multiple sources
         var user = VR.getFirebaseUser ? VR.getFirebaseUser() : null;
-        var anstNr = user ? user.anstNr : (VR.anstNr || '');
-        var namn = user ? user.namn : (VR.userName || '');
+        var anstNr = user ? user.anstNr : '';
+        var namn = user ? user.namn : '';
+
+        // If no Firebase user, try to get from CrewWeb page
+        if ((!anstNr || !namn) && VR.getCrewWebUserInfo) {
+            var crewWebInfo = VR.getCrewWebUserInfo();
+            if (crewWebInfo) {
+                if (!anstNr && crewWebInfo.anstNr) anstNr = crewWebInfo.anstNr;
+                if (!namn && crewWebInfo.namn) namn = crewWebInfo.namn;
+                // Save for later use
+                if (anstNr && namn && VR.setFirebaseUser) {
+                    VR.setFirebaseUser(anstNr, namn);
+                }
+            }
+        }
+
+        // Fallback to VR properties
+        if (!anstNr) anstNr = VR.anstNr || '';
+        if (!namn) namn = VR.userName || VR.anstNamn || '';
 
         var schemaCount = VR.allSchemaData ? Object.keys(VR.allSchemaData).length : 0;
         var fpfpvCount = VR.fpfpvData ? VR.fpfpvData.length : 0;
 
         var html = '<style>\
-.vr-export-header{background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:24px;padding:32px;margin-bottom:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.2)}\
-.vr-export-header-title{font-size:32px;font-weight:700;color:#fff;margin-bottom:10px}\
-.vr-export-header-sub{font-size:18px;color:rgba(255,255,255,0.7)}\
-.vr-export-user{display:flex;align-items:center;gap:20px;background:#fff;border-radius:20px;padding:24px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.08)}\
-.vr-export-avatar{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff}\
+.vr-export-header{background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:28px;margin-bottom:16px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.15)}\
+.vr-export-header-title{font-size:28px;font-weight:700;color:#fff;margin-bottom:8px}\
+.vr-export-header-sub{font-size:16px;color:rgba(255,255,255,0.7)}\
+.vr-export-user{display:flex;align-items:center;gap:16px;background:#fff;border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}\
+.vr-export-avatar{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff}\
 .vr-export-user-info{flex:1}\
-.vr-export-user-name{font-size:24px;font-weight:700;color:#1a1a2e}\
-.vr-export-user-id{font-size:16px;color:#666;margin-top:4px}\
-.vr-export-stats{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}\
-.vr-export-stat-card{background:#fff;border-radius:20px;padding:24px 16px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.08)}\
-.vr-export-stat-label{font-size:16px;color:#666;margin-bottom:8px}\
-.vr-export-stat-num{font-size:36px;font-weight:700;color:#1a1a2e;margin-bottom:12px}\
-.vr-export-stat-btn{padding:10px 16px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:#f0f0f0;color:#666;transition:all 0.2s}\
-.vr-export-stat-btn:hover{background:#e5e5e5}\
-.vr-export-actions{background:#fff;border-radius:20px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:16px}\
-.vr-export-btn{width:100%;padding:20px;border:none;border-radius:16px;font-size:20px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:12px}\
-.vr-export-btn.primary{background:linear-gradient(135deg,#34C759 0%,#30D158 100%);color:#fff;margin-bottom:14px}\
-.vr-export-btn.primary:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(52,199,89,0.4)}\
-.vr-export-btn.primary:disabled{background:#ccc;transform:none;box-shadow:none;cursor:not-allowed}\
+.vr-export-user-name{font-size:20px;font-weight:700;color:#1a1a2e}\
+.vr-export-user-id{font-size:14px;color:#666;margin-top:2px}\
+.vr-export-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}\
+.vr-export-stat-card{background:#fff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06)}\
+.vr-export-stat-icon{font-size:32px;margin-bottom:8px}\
+.vr-export-stat-num{font-size:28px;font-weight:700;color:#1a1a2e}\
+.vr-export-stat-label{font-size:14px;color:#666;margin-top:4px}\
+.vr-export-actions{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:12px}\
+.vr-export-btn{width:100%;padding:18px;border:none;border-radius:14px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:10px}\
+.vr-export-btn.primary{background:linear-gradient(135deg,#34C759 0%,#30D158 100%);color:#fff;margin-bottom:12px}\
+.vr-export-btn.primary:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(52,199,89,0.4)}\
 .vr-export-btn.secondary{background:#f0f0f0;color:#666}\
 .vr-export-btn.secondary:hover{background:#e5e5e5}\
-.vr-export-btn.delete{background:#fff;color:#FF3B30;border:2px solid #FF3B30}\
-.vr-export-btn.delete:hover{background:#FFF5F5}\
-.vr-export-status{text-align:center;padding:18px;font-size:18px;border-radius:14px;margin-bottom:14px}\
+.vr-export-btn.danger{background:linear-gradient(135deg,#FF3B30 0%,#FF453A 100%);color:#fff}\
+.vr-export-status{text-align:center;padding:16px;font-size:16px;border-radius:12px;margin-bottom:12px}\
 .vr-export-status.success{background:#E8F5E9;color:#2E7D32}\
 .vr-export-status.error{background:#FFEBEE;color:#C62828}\
 .vr-export-status.loading{background:#E3F2FD;color:#1565C0}\
+.vr-export-danger-zone{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid #FFEBEE}\
+.vr-export-danger-title{font-size:16px;font-weight:600;color:#C62828;margin-bottom:8px}\
+.vr-export-danger-text{font-size:14px;color:#666;margin-bottom:16px}\
 </style>';
 
-        html += '<div style="max-width:520px;margin:0 auto">';
+        html += '<div style="max-width:500px;margin:0 auto">';
 
         // Header
         html += '<div class="vr-export-header">';
@@ -395,17 +397,17 @@
         html += '<input type="hidden" id="vrExportAnstNr" value="' + anstNr + '">';
         html += '<input type="hidden" id="vrExportNamn" value="' + namn + '">';
 
-        // Stats with update buttons
+        // Stats
         html += '<div class="vr-export-stats">';
         html += '<div class="vr-export-stat-card">';
-        html += '<div class="vr-export-stat-label">Schemadagar</div>';
+        html += '<div class="vr-export-stat-icon">📅</div>';
         html += '<div class="vr-export-stat-num">' + schemaCount + '</div>';
-        html += '<button class="vr-export-stat-btn" onclick="VR.reloadSchemaForExport()">🔄 Uppdatera</button>';
+        html += '<div class="vr-export-stat-label">Schemadagar</div>';
         html += '</div>';
         html += '<div class="vr-export-stat-card">';
-        html += '<div class="vr-export-stat-label">FP/FPV-dagar</div>';
+        html += '<div class="vr-export-stat-icon">🏖️</div>';
         html += '<div class="vr-export-stat-num">' + fpfpvCount + '</div>';
-        html += '<button class="vr-export-stat-btn" onclick="VR.reloadFPFPVForExport()">🔄 Uppdatera</button>';
+        html += '<div class="vr-export-stat-label">FP/FPV-dagar</div>';
         html += '</div>';
         html += '</div>';
 
@@ -418,9 +420,13 @@
         html += '<span>💾</span> Exportera manuellt (CSV)</button>';
         html += '</div>';
 
-        // Delete button (simple)
-        html += '<button class="vr-export-btn delete" onclick="VR.confirmDeleteFirebaseData()">';
-        html += '<span>🗑️</span> Radera din data från Vem jobbar idag?</button>';
+        // Danger zone
+        html += '<div class="vr-export-danger-zone">';
+        html += '<div class="vr-export-danger-title">⚠️ Farozon</div>';
+        html += '<div class="vr-export-danger-text">Ta bort all din data från Vem jobbar idag?</div>';
+        html += '<button class="vr-export-btn danger" onclick="VR.confirmDeleteFirebaseData()">';
+        html += '<span>🗑️</span> Ta bort min data</button>';
+        html += '</div>';
 
         html += '</div>';
 
@@ -715,19 +721,16 @@
 
     // ===== CONFIRM DELETE =====
     VR.confirmDeleteFirebaseData = function() {
-        var user = VR.getFirebaseUser ? VR.getFirebaseUser() : null;
-        var namn = user ? user.namn : 'din';
-
         var modal = document.createElement('div');
         modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999999;display:flex;align-items:center;justify-content:center;padding:20px';
         modal.innerHTML = '\
-            <div style="background:#fff;border-radius:24px;padding:32px;max-width:420px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3)">\
-                <div style="font-size:56px;margin-bottom:20px">🗑️</div>\
-                <div style="font-size:24px;font-weight:700;color:#1a1a2e;margin-bottom:14px">Radera ' + namn + 's data?</div>\
-                <div style="font-size:17px;color:#666;margin-bottom:28px;line-height:1.5">Din data kommer tas bort från Vem jobbar idag?<br><span style="color:#999;font-size:14px">(Endast din egen data påverkas)</span></div>\
-                <div style="display:flex;gap:14px">\
-                    <button onclick="this.closest(\'div[style*=fixed]\').remove()" style="flex:1;padding:16px;border:none;border-radius:14px;font-size:18px;font-weight:600;background:#f0f0f0;color:#666;cursor:pointer">Avbryt</button>\
-                    <button onclick="VR.executeDeleteFirebaseData();this.closest(\'div[style*=fixed]\').remove()" style="flex:1;padding:16px;border:none;border-radius:14px;font-size:18px;font-weight:600;background:#FF3B30;color:#fff;cursor:pointer">Radera</button>\
+            <div style="background:#fff;border-radius:20px;padding:30px;max-width:400px;text-align:center">\
+                <div style="font-size:48px;margin-bottom:16px">⚠️</div>\
+                <div style="font-size:22px;font-weight:700;color:#1a1a2e;margin-bottom:12px">Ta bort all data?</div>\
+                <div style="font-size:16px;color:#666;margin-bottom:24px">Detta tar bort ditt schema och all data från Firebase. Åtgärden kan inte ångras.</div>\
+                <div style="display:flex;gap:12px">\
+                    <button onclick="this.closest(\'div[style*=fixed]\').remove()" style="flex:1;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:600;background:#f0f0f0;color:#666;cursor:pointer">Avbryt</button>\
+                    <button onclick="VR.executeDeleteFirebaseData();this.closest(\'div[style*=fixed]\').remove()" style="flex:1;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:600;background:#FF3B30;color:#fff;cursor:pointer">Ta bort</button>\
                 </div>\
             </div>';
         document.body.appendChild(modal);
@@ -737,21 +740,21 @@
     VR.executeDeleteFirebaseData = function() {
         var statusEl = document.getElementById('vrExportStatus');
         if (statusEl) {
-            statusEl.innerHTML = '<div class="vr-export-status loading">⏳ Tar bort data...</div>';
+            statusEl.innerHTML = '<div class="vr-export-status">⏳ Tar bort data...</div>';
         }
 
         VR.initFirebase(function(success) {
             if (!success) {
-                if (statusEl) statusEl.innerHTML = '<div class="vr-export-status error">❌ Kunde inte ansluta till Firebase</div>';
+                if (statusEl) statusEl.innerHTML = '<div class="vr-export-error">Kunde inte ansluta till Firebase</div>';
                 return;
             }
 
             VR.deleteMyFirebaseData(function(success, message) {
                 if (statusEl) {
                     if (success) {
-                        statusEl.innerHTML = '<div class="vr-export-status success">✅ ' + message + '</div>';
+                        statusEl.innerHTML = '<div class="vr-export-success">✅ ' + message + '</div>';
                     } else {
-                        statusEl.innerHTML = '<div class="vr-export-status error">❌ ' + message + '</div>';
+                        statusEl.innerHTML = '<div class="vr-export-error">❌ ' + message + '</div>';
                     }
                 }
             });
