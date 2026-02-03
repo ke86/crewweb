@@ -1,4 +1,4 @@
-// VR CrewWeb - FP/FPV (Fridagar) - V.1.34
+// VR CrewWeb - FP/FPV (Fridagar) - V.1.35
 (function() {
     'use strict';
 
@@ -415,6 +415,10 @@
 .vr-fp-helg-badge{padding:8px 14px;border-radius:10px;font-size:14px;font-weight:700}\
 .vr-fp-helg-badge.FP{background:#34C759;color:#fff}\
 .vr-fp-helg-badge.FPV{background:#E8F5E9;color:#34C759;border:2px dashed #34C759}\
+.vr-fp-cal-day.today{box-shadow:inset 0 0 0 3px #007AFF;background:#E3F2FD}\
+.vr-fp-cal-day.today.FP{box-shadow:inset 0 0 0 3px #007AFF}\
+.vr-fp-cal-day.today.FPV{box-shadow:inset 0 0 0 3px #007AFF}\
+.vr-fp-month-header.next-year{background:linear-gradient(180deg,#4a4a6a 0%,#3a3a5a 100%)}\
 </style>';
     };
 
@@ -447,10 +451,22 @@
     // ===== BUILD CALENDAR VIEW =====
     VR.buildFPCalendarView = function(ledigheter) {
         var html = '';
+        var today = new Date();
+        var todayDay = today.getDate();
+        var todayMonth = today.getMonth();
+        var todayYear = today.getFullYear();
 
-        MONTH_NAMES.forEach(function(month, monthIndex) {
-            // Filtrera dagar för denna månad (samma som listvyn)
-            var daysInMonth = ledigheter.filter(function(d) { return d.manad === month; });
+        // Hjälpfunktion för att bygga en månad
+        function buildMonth(month, monthIndex, year, isNextYear) {
+            var monthHtml = '';
+
+            // Filtrera dagar för denna månad och år
+            var daysInMonth = ledigheter.filter(function(d) {
+                if (isNextYear) {
+                    return d.manad === month && d.ar === year;
+                }
+                return d.manad === month && (!d.ar || d.ar === year);
+            });
 
             // Skapa enkel lookup med bara dagnummer som nyckel
             var dayTypes = {};
@@ -458,41 +474,44 @@
                 dayTypes[d.dag] = d.visas;
             });
 
-            var firstDay = new Date(YEAR, monthIndex, 1).getDay();
+            var firstDay = new Date(year, monthIndex, 1).getDay();
             var startDay = firstDay === 0 ? 6 : firstDay - 1;
-            var totalDays = new Date(YEAR, monthIndex + 1, 0).getDate();
+            var totalDays = new Date(year, monthIndex + 1, 0).getDate();
 
-            html += '<div class="vr-fp-month" data-month="' + month + '">';
-            html += '<div class="vr-fp-month-header">' + month + ' ' + YEAR + '<span class="vr-fp-month-count">' + daysInMonth.length + ' lediga</span></div>';
-            html += '<div class="vr-fp-cal-container"><div class="vr-fp-cal-grid">';
+            monthHtml += '<div class="vr-fp-month" data-month="' + month + '" data-year="' + year + '">';
+            monthHtml += '<div class="vr-fp-month-header' + (isNextYear ? ' next-year' : '') + '">' + month + ' ' + year + '<span class="vr-fp-month-count">' + daysInMonth.length + ' lediga</span></div>';
+            monthHtml += '<div class="vr-fp-cal-container"><div class="vr-fp-cal-grid">';
 
             // Weekday headers
-            html += '<div class="vr-fp-weekday-header"></div>';
+            monthHtml += '<div class="vr-fp-weekday-header"></div>';
             ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].forEach(function(d) {
-                html += '<div class="vr-fp-weekday">' + d + '</div>';
+                monthHtml += '<div class="vr-fp-weekday">' + d + '</div>';
             });
 
             var currentDay = 1;
             var firstWeek = true;
 
             while (currentDay <= totalDays) {
-                var weekNum = VR.getWeekNumber(new Date(YEAR, monthIndex, currentDay));
-                html += '<div class="vr-fp-week-num">v' + weekNum + '</div>';
+                var weekNum = VR.getWeekNumber(new Date(year, monthIndex, currentDay));
+                monthHtml += '<div class="vr-fp-week-num">v' + weekNum + '</div>';
 
                 for (var i = 0; i < 7; i++) {
                     if ((firstWeek && i < startDay) || currentDay > totalDays) {
-                        html += '<div class="vr-fp-cal-day empty"></div>';
+                        monthHtml += '<div class="vr-fp-cal-day empty"></div>';
                     } else {
-                        // Enkel lookup med dagnummer
                         var type = dayTypes[currentDay] || '';
                         var typeClass = type ? ' ' + type : '';
 
-                        html += '<div class="vr-fp-cal-day' + typeClass + '">';
-                        html += '<span class="day-num">' + currentDay + '</span>';
+                        // Kolla om det är dagens datum
+                        var isToday = (currentDay === todayDay && monthIndex === todayMonth && year === todayYear);
+                        if (isToday) typeClass += ' today';
+
+                        monthHtml += '<div class="vr-fp-cal-day' + typeClass + '">';
+                        monthHtml += '<span class="day-num">' + currentDay + '</span>';
                         if (type) {
-                            html += '<span class="day-label">' + type + '</span>';
+                            monthHtml += '<span class="day-label">' + type + '</span>';
                         }
-                        html += '</div>';
+                        monthHtml += '</div>';
 
                         currentDay++;
                     }
@@ -500,8 +519,17 @@
                 firstWeek = false;
             }
 
-            html += '</div></div></div>';
+            monthHtml += '</div></div></div>';
+            return monthHtml;
+        }
+
+        // Bygg alla månader för YEAR (2026)
+        MONTH_NAMES.forEach(function(month, monthIndex) {
+            html += buildMonth(month, monthIndex, YEAR, false);
         });
+
+        // Lägg till Januari nästa år (2027)
+        html += buildMonth('Januari', 0, YEAR + 1, true);
 
         return html;
     };
@@ -618,5 +646,5 @@
         console.log('VR: Exporterade', VR.fpfpvData.length, 'dagar till kalender');
     };
 
-    console.log('VR: FP/FPV loaded (V.1.34)');
+    console.log('VR: FP/FPV loaded (V.1.35)');
 })();

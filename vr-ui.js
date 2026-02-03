@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.1.34';
+    VR.VERSION = 'V.1.35';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -118,41 +118,99 @@
         menu.id = VR.ID.menu;
         menu.style.cssText = 'position:fixed;top:0;left:-320px;width:300px;height:100%;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);z-index:99999991;transition:left 0.3s ease;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;flex-direction:column;box-shadow:5px 0 30px rgba(0,0,0,0.5)';
 
-        var menuItems = [
-            { icon: '📅', label: 'Schema', action: 'doSchema', color: '#007AFF' },
-            { icon: '🇩🇰', label: 'SR-Tillägg', action: 'doSRTillagg', color: '#C41E3A' },
-            { icon: '⏰', label: 'Komp', action: 'doKomp', color: '#34C759' },
-            { icon: '🌙', label: 'OB', action: 'doOB', color: '#AF52DE' },
-            { icon: '⏱️', label: 'Övertid', action: 'doOvertid', color: '#FF9500' },
-            { icon: '🏠', label: 'Frånvaro', action: 'doFranvaro', color: '#FF6B6B' },
-            { icon: '🏖️', label: 'FP/FPV', action: 'doFPFPV', color: '#FF2D55' },
-            { icon: '🔮', label: 'Förväntat', action: 'doForvantad', color: '#9B59B6' },
-            { icon: '📊', label: 'Statistik', action: 'doStatistik', color: '#FF9500' },
-            { icon: '💰', label: 'Lön', action: 'doLon', color: '#4CAF50' },
-            { icon: '👤', label: 'Anställddata', action: 'doAnstallddata', color: '#5AC8FA' },
-            { icon: '👥', label: 'Vem jobbar?', action: 'doWhosWorking', color: '#FF6F00' }
+        // Kategoriserad menystruktur
+        var menuCategories = [
+            {
+                id: 'schema',
+                icon: '📅',
+                label: 'Schema & Kalender',
+                color: '#007AFF',
+                items: [
+                    { icon: '📅', label: 'Schema', action: 'doSchema', color: '#007AFF' },
+                    { icon: '🏖️', label: 'FP/FPV', action: 'doFPFPV', color: '#34C759' },
+                    { icon: '👥', label: 'Vem jobbar?', action: 'doWhosWorking', color: '#FF6F00' }
+                ]
+            },
+            {
+                id: 'lon',
+                icon: '💰',
+                label: 'Lön & Ersättning',
+                color: '#4CAF50',
+                items: [
+                    { icon: '💰', label: 'Lön', action: 'doLon', color: '#4CAF50' },
+                    { icon: '⏱️', label: 'Övertid', action: 'doOvertid', color: '#FF9500' },
+                    { icon: '🌙', label: 'OB', action: 'doOB', color: '#AF52DE' },
+                    { icon: '⏰', label: 'Komp', action: 'doKomp', color: '#34C759' },
+                    { icon: '🇩🇰', label: 'SR-Tillägg', action: 'doSRTillagg', color: '#C41E3A' },
+                    { icon: '🏠', label: 'Frånvaro', action: 'doFranvaro', color: '#FF6B6B' }
+                ]
+            },
+            {
+                id: 'ovrigt',
+                icon: '👤',
+                label: 'Övrigt',
+                color: '#5AC8FA',
+                items: [
+                    { icon: '👤', label: 'Anställddata', action: 'doAnstallddata', color: '#5AC8FA' },
+                    { icon: '📊', label: 'Statistik', action: 'doStatistik', color: '#FF9500' },
+                    { icon: '🔮', label: 'Förväntat', action: 'doForvantad', color: '#9B59B6' }
+                ]
+            }
         ];
 
         // Role display - use detected role from SR_RATE if available
         var roleIcon = VR.userRole === 'Tågvärd' ? '🎫' : (VR.userRole === 'Lokförare' ? '🚂' : '');
         var roleText = VR.userRole ? (roleIcon + ' ' + VR.userRole) : '';
 
-        var menuHTML = '<div style="padding:30px 24px;border-bottom:1px solid rgba(255,255,255,0.1)">\
+        var menuHTML = '<style>\
+.vrMenuCategory{border-bottom:1px solid rgba(255,255,255,0.05)}\
+.vrMenuCategoryHeader{display:flex;align-items:center;gap:14px;padding:16px 24px;cursor:pointer;transition:background 0.2s}\
+.vrMenuCategoryHeader:hover{background:rgba(255,255,255,0.05)}\
+.vrMenuCategoryIcon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}\
+.vrMenuCategoryLabel{flex:1;font-size:18px;font-weight:700;color:#fff}\
+.vrMenuCategoryArrow{font-size:14px;color:rgba(255,255,255,0.4);transition:transform 0.2s}\
+.vrMenuCategory.open .vrMenuCategoryArrow{transform:rotate(90deg)}\
+.vrMenuCategoryItems{display:none;padding-bottom:8px}\
+.vrMenuCategory.open .vrMenuCategoryItems{display:block}\
+.vrMenuSubItem{display:flex;align-items:center;gap:14px;padding:14px 24px 14px 40px;cursor:pointer;transition:background 0.2s}\
+.vrMenuSubItem:hover{background:rgba(255,255,255,0.08)}\
+.vrMenuSubIcon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}\
+.vrMenuSubLabel{font-size:18px;font-weight:500;color:rgba(255,255,255,0.9)}\
+</style>';
+
+        menuHTML += '<div style="padding:24px 24px 20px;border-bottom:1px solid rgba(255,255,255,0.1)">\
             <div style="display:flex;justify-content:space-between;align-items:center">\
-                <div style="font-size:28px;font-weight:700;color:#fff">CrewWeb</div>\
-                <div style="font-size:14px;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:8px">' + VR.VERSION + '</div>\
+                <div style="font-size:26px;font-weight:700;color:#fff">CrewWeb</div>\
+                <div style="font-size:13px;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:8px">' + VR.VERSION + '</div>\
             </div>' +
-            (roleText ? '<div style="font-size:16px;color:rgba(255,255,255,0.5);margin-top:4px">' + roleText + '</div>' : '') +
+            (roleText ? '<div style="font-size:15px;color:rgba(255,255,255,0.5);margin-top:4px">' + roleText + '</div>' : '') +
         '</div>';
 
-        menuHTML += '<div style="flex:1;padding:18px 0;overflow-y:auto">';
+        menuHTML += '<div style="flex:1;padding:12px 0;overflow-y:auto">';
 
-        for (var i = 0; i < menuItems.length; i++) {
-            var item = menuItems[i];
-            menuHTML += '<div class="vrMenuItem" data-action="' + item.action + '" style="display:flex;align-items:center;gap:18px;padding:20px 24px;cursor:pointer;transition:background 0.2s ease">\
-                <div style="width:50px;height:50px;border-radius:14px;background:' + item.color + ';display:flex;align-items:center;justify-content:center;font-size:26px">' + item.icon + '</div>\
-                <div style="font-size:22px;font-weight:600;color:#fff">' + item.label + '</div>\
-            </div>';
+        // Bygg kategorier
+        for (var c = 0; c < menuCategories.length; c++) {
+            var cat = menuCategories[c];
+            // Första kategorin öppen som default
+            var openClass = c === 0 ? ' open' : '';
+
+            menuHTML += '<div class="vrMenuCategory' + openClass + '" data-category="' + cat.id + '">';
+            menuHTML += '<div class="vrMenuCategoryHeader">';
+            menuHTML += '<div class="vrMenuCategoryIcon" style="background:' + cat.color + '">' + cat.icon + '</div>';
+            menuHTML += '<div class="vrMenuCategoryLabel">' + cat.label + '</div>';
+            menuHTML += '<div class="vrMenuCategoryArrow">▶</div>';
+            menuHTML += '</div>';
+            menuHTML += '<div class="vrMenuCategoryItems">';
+
+            for (var i = 0; i < cat.items.length; i++) {
+                var item = cat.items[i];
+                menuHTML += '<div class="vrMenuSubItem vrMenuItem" data-action="' + item.action + '">';
+                menuHTML += '<div class="vrMenuSubIcon" style="background:' + item.color + '">' + item.icon + '</div>';
+                menuHTML += '<div class="vrMenuSubLabel">' + item.label + '</div>';
+                menuHTML += '</div>';
+            }
+
+            menuHTML += '</div></div>';
         }
 
         menuHTML += '</div>';
@@ -178,7 +236,16 @@
         menu.innerHTML = menuHTML;
         document.body.appendChild(menu);
 
-        // Add hover effects and click handlers
+        // Kategori expand/collapse handlers
+        var categoryHeaders = menu.querySelectorAll('.vrMenuCategoryHeader');
+        for (var k = 0; k < categoryHeaders.length; k++) {
+            categoryHeaders[k].onclick = function() {
+                var category = this.parentElement;
+                category.classList.toggle('open');
+            };
+        }
+
+        // Add hover effects and click handlers for menu items
         var items = menu.querySelectorAll('.vrMenuItem');
         for (var j = 0; j < items.length; j++) {
             items[j].onmouseenter = function() {
@@ -191,7 +258,8 @@
                     this.style.background = 'rgba(255,59,48,0.2)';
                 }
             };
-            items[j].onclick = function() {
+            items[j].onclick = function(e) {
+                e.stopPropagation(); // Förhindra att kategori-klick triggas
                 var action = this.getAttribute('data-action');
                 VR.closeMenu();
                 if (VR[action]) {
