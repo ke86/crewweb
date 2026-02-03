@@ -1,4 +1,4 @@
-// VR CrewWeb - Export to Firebase - V.1.39
+// VR CrewWeb - Export to Firebase - V.1.40
 (function() {
     'use strict';
 
@@ -27,97 +27,368 @@
         return initials || '??';
     };
 
-    // ===== EXPORT VIEW =====
+    // ===== EXPORT VIEW (with auto-load) =====
     VR.doExport = function() {
         VR.stopTimer();
         VR.closeOverlay();
 
+        var schemaCount = VR.allSchemaData ? Object.keys(VR.allSchemaData).length : 0;
+        var fpfpvCount = VR.fpfpvData ? VR.fpfpvData.length : 0;
+
+        // If data is missing, auto-load it
+        if (schemaCount === 0 || fpfpvCount === 0) {
+            VR.showLoader('Förbereder Export');
+            VR.updateLoader(5, 'Laddar data...');
+            VR.autoLoadForExport();
+            return;
+        }
+
+        // Data already loaded, show export view
+        VR.showExportView();
+    };
+
+    // ===== AUTO LOAD DATA FOR EXPORT =====
+    VR.autoLoadForExport = function() {
+        var schemaCount = VR.allSchemaData ? Object.keys(VR.allSchemaData).length : 0;
+        var fpfpvCount = VR.fpfpvData ? VR.fpfpvData.length : 0;
+
+        // Step 1: Load Schema if missing
+        if (schemaCount === 0) {
+            VR.updateLoader(10, 'Laddar Schema...');
+            VR.loadSchemaForExport(function() {
+                // Step 2: Load FP/FPV if missing
+                if (fpfpvCount === 0) {
+                    VR.updateLoader(50, 'Laddar FP/FPV...');
+                    VR.loadFPFPVForExport(function() {
+                        VR.updateLoader(100, 'Klar!');
+                        setTimeout(function() {
+                            VR.hideLoader();
+                            VR.showExportView();
+                        }, 300);
+                    });
+                } else {
+                    VR.updateLoader(100, 'Klar!');
+                    setTimeout(function() {
+                        VR.hideLoader();
+                        VR.showExportView();
+                    }, 300);
+                }
+            });
+        } else if (fpfpvCount === 0) {
+            // Only need FP/FPV
+            VR.updateLoader(50, 'Laddar FP/FPV...');
+            VR.loadFPFPVForExport(function() {
+                VR.updateLoader(100, 'Klar!');
+                setTimeout(function() {
+                    VR.hideLoader();
+                    VR.showExportView();
+                }, 300);
+            });
+        }
+    };
+
+    // ===== LOAD SCHEMA FOR EXPORT (silent) =====
+    VR.loadSchemaForExport = function(callback) {
+        // Check if already on workdays page
+        var tbl = document.querySelector('#workdays table');
+        if (tbl) {
+            VR.updateLoader(20, 'Sidan redan laddad...');
+            VR.fetchSchemaDataForExport(callback);
+            return;
+        }
+
+        // Open folder menu and find Arbetsdag
+        VR.clickFolder();
+        setTimeout(function() {
+            var n = 0;
+            var findTimer = setInterval(function() {
+                n++;
+                var el = VR.findMenuItem('Arbetsdag');
+                if (el) {
+                    clearInterval(findTimer);
+                    VR.updateLoader(25, 'Öppnar Arbetsdag...');
+                    el.click();
+                    VR.waitForSchemaForExport(callback);
+                } else if (n > 20) {
+                    clearInterval(findTimer);
+                    console.log('VR: Could not find Arbetsdag menu');
+                    if (callback) callback();
+                }
+            }, 400);
+        }, 600);
+    };
+
+    // ===== WAIT FOR SCHEMA FOR EXPORT =====
+    VR.waitForSchemaForExport = function(callback) {
+        var n = 0;
+        var waitTimer = setInterval(function() {
+            n++;
+            VR.updateLoader(30 + Math.min(n, 15), 'Väntar på sidan...');
+            var tbl = document.querySelector('#workdays table');
+            if (tbl) {
+                clearInterval(waitTimer);
+                VR.fetchSchemaDataForExport(callback);
+            } else if (n > 30) {
+                clearInterval(waitTimer);
+                console.log('VR: Timeout waiting for workdays');
+                if (callback) callback();
+            }
+        }, 400);
+    };
+
+    // ===== FETCH SCHEMA DATA FOR EXPORT =====
+    VR.fetchSchemaDataForExport = function(callback) {
+        var now = new Date();
+        var startDate = new Date(2025, 11, 14);
+        var endDate = new Date(now.getFullYear(), 11, 31);
+
+        var d1 = startDate.getDate() + '-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
+        var d2 = endDate.getDate() + '-' + ('0' + (endDate.getMonth() + 1)).slice(-2) + '-' + endDate.getFullYear();
+
+        VR.updateLoader(35, 'Sätter datum...');
+        VR.setDates(d1, d2);
+        VR.clickFetch();
+
+        var lastRowCount = 0;
+        var stableCount = 0;
+        var n = 0;
+
+        var dataTimer = setInterval(function() {
+            n++;
+            VR.updateLoader(35 + Math.min(n, 10), 'Laddar schema...');
+
+            var rows = document.querySelectorAll('#workdays table tr');
+            var rowCount = rows.length;
+
+            if (rowCount === lastRowCount && rowCount > 10) {
+                stableCount++;
+            } else {
+                stableCount = 0;
+            }
+            lastRowCount = rowCount;
+
+            if (stableCount >= 3 || n > 50) {
+                clearInterval(dataTimer);
+                VR.parseSchemaDataForExport();
+                if (callback) callback();
+            }
+        }, 400);
+    };
+
+    // ===== PARSE SCHEMA DATA FOR EXPORT =====
+    VR.parseSchemaDataForExport = function() {
+        var tbl = VR.findLargestTable();
+        if (!tbl) return;
+
+        var rows = tbl.querySelectorAll('tr');
+        var dd = {};
+        var currentDate = '';
+
+        for (var i = 1; i < rows.length; i++) {
+            var c = rows[i].querySelectorAll('td');
+            if (c.length < 4) continue;
+
+            var dt = c[2] ? c[2].textContent.trim() : '';
+            if (dt && dt.indexOf('-') > -1) {
+                currentDate = dt;
+            }
+            if (!currentDate) continue;
+
+            var en = {
+                dt: currentDate,
+                ps: c[3] ? c[3].textContent.trim() : '',
+                sP: c[4] ? c[4].textContent.trim() : '',
+                eP: c[5] ? c[5].textContent.trim() : '',
+                ai: c[6] ? c[6].textContent.trim() : '',
+                lb: c[7] ? c[7].textContent.trim() : '',
+                u1: c[8] ? c[8].textContent.trim() : '',
+                tn: c[9] ? c[9].textContent.trim() : '',
+                pr: c[10] ? c[10].textContent.trim() : '',
+                pt: c[11] ? c[11].textContent.trim() : '',
+                cd: c[12] ? c[12].textContent.trim() : '',
+                km: c[13] ? c[13].textContent.trim() : '',
+                sa: c[14] ? c[14].textContent.trim() : '',
+                isHeader: dt && dt.indexOf('-') > -1
+            };
+
+            if (!dd[currentDate]) dd[currentDate] = [];
+            dd[currentDate].push(en);
+        }
+
+        VR.allSchemaData = dd;
+        console.log('VR: Parsed', Object.keys(dd).length, 'dates for export');
+    };
+
+    // ===== LOAD FP/FPV FOR EXPORT =====
+    VR.loadFPFPVForExport = function(callback) {
+        // Navigate to FP/FPV page
+        VR.clickFolder();
+        setTimeout(function() {
+            var n = 0;
+            var findTimer = setInterval(function() {
+                n++;
+                var el = VR.findMenuItem('FP-förläggning');
+                if (el) {
+                    clearInterval(findTimer);
+                    VR.updateLoader(60, 'Öppnar FP-förläggning...');
+                    el.click();
+                    VR.waitForFPFPVForExport(callback);
+                } else if (n > 20) {
+                    clearInterval(findTimer);
+                    console.log('VR: Could not find FP-förläggning menu');
+                    if (callback) callback();
+                }
+            }, 400);
+        }, 600);
+    };
+
+    // ===== WAIT FOR FP/FPV FOR EXPORT =====
+    VR.waitForFPFPVForExport = function(callback) {
+        var n = 0;
+        var waitTimer = setInterval(function() {
+            n++;
+            VR.updateLoader(65 + Math.min(n, 20), 'Väntar på FP-data...');
+
+            // Look for GridCell elements
+            var cells = document.querySelectorAll('.GridCell');
+            if (cells.length > 10) {
+                clearInterval(waitTimer);
+                VR.updateLoader(90, 'Parsar FP-data...');
+                setTimeout(function() {
+                    VR.parseFPFPVForExport();
+                    if (callback) callback();
+                }, 500);
+            } else if (n > 40) {
+                clearInterval(waitTimer);
+                console.log('VR: Timeout waiting for FP/FPV data');
+                if (callback) callback();
+            }
+        }, 400);
+    };
+
+    // ===== PARSE FP/FPV FOR EXPORT =====
+    VR.parseFPFPVForExport = function() {
+        var cells = document.querySelectorAll('.GridCell');
+        var fpData = [];
+
+        cells.forEach(function(cell) {
+            var txt = cell.textContent.trim().toUpperCase();
+            if (txt === 'FP' || txt === 'FPV' || txt === 'FV' || txt === 'FP2') {
+                var style = cell.getAttribute('style') || '';
+                var topMatch = style.match(/top:\s*([\d.]+)px/);
+                var leftMatch = style.match(/left:\s*([\d.]+)px/);
+
+                if (topMatch && leftMatch) {
+                    var top = parseFloat(topMatch[1]);
+                    var left = parseFloat(leftMatch[1]);
+                    var row = Math.round((top - 20) / 21);
+                    var col = Math.round((left - 3) / 26);
+
+                    if (row >= 0 && row < 12 && col >= 1 && col <= 31) {
+                        fpData.push({
+                            manad: VR.MONTHS[row],
+                            dag: col,
+                            ar: 2026,
+                            visas: txt === 'FV' ? 'FPV' : txt
+                        });
+                    }
+                }
+            }
+        });
+
+        VR.fpfpvData = fpData;
+        console.log('VR: Parsed', fpData.length, 'FP/FPV days for export');
+    };
+
+    // ===== SHOW EXPORT VIEW =====
+    VR.showExportView = function() {
         var user = VR.getFirebaseUser ? VR.getFirebaseUser() : null;
         var anstNr = user ? user.anstNr : (VR.anstNr || '');
         var namn = user ? user.namn : (VR.userName || '');
 
-        // Check if we have schema data
         var schemaCount = VR.allSchemaData ? Object.keys(VR.allSchemaData).length : 0;
         var fpfpvCount = VR.fpfpvData ? VR.fpfpvData.length : 0;
 
         var html = '<style>\
-.vr-export-container{max-width:600px;margin:0 auto}\
-.vr-export-card{background:#fff;border-radius:20px;padding:24px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.08)}\
-.vr-export-title{font-size:24px;font-weight:700;color:#1a1a2e;margin-bottom:8px}\
-.vr-export-subtitle{font-size:16px;color:#666;margin-bottom:20px}\
-.vr-export-stat{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0}\
-.vr-export-stat:last-child{border-bottom:none}\
-.vr-export-stat-label{font-size:16px;color:#666}\
-.vr-export-stat-value{font-size:16px;font-weight:600;color:#1a1a2e}\
-.vr-export-stat-value.missing{color:#FF3B30}\
-.vr-export-stat-value.ok{color:#34C759}\
-.vr-export-btn{width:100%;padding:18px;border:none;border-radius:14px;font-size:18px;font-weight:600;cursor:pointer;margin-top:12px;transition:all 0.2s}\
-.vr-export-btn.primary{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff}\
-.vr-export-btn.primary:disabled{background:#ccc;cursor:not-allowed}\
+.vr-export-header{background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:28px;margin-bottom:16px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.15)}\
+.vr-export-header-title{font-size:28px;font-weight:700;color:#fff;margin-bottom:8px}\
+.vr-export-header-sub{font-size:16px;color:rgba(255,255,255,0.7)}\
+.vr-export-user{display:flex;align-items:center;gap:16px;background:#fff;border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}\
+.vr-export-avatar{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff}\
+.vr-export-user-info{flex:1}\
+.vr-export-user-name{font-size:20px;font-weight:700;color:#1a1a2e}\
+.vr-export-user-id{font-size:14px;color:#666;margin-top:2px}\
+.vr-export-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}\
+.vr-export-stat-card{background:#fff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06)}\
+.vr-export-stat-icon{font-size:32px;margin-bottom:8px}\
+.vr-export-stat-num{font-size:28px;font-weight:700;color:#1a1a2e}\
+.vr-export-stat-label{font-size:14px;color:#666;margin-top:4px}\
+.vr-export-actions{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:12px}\
+.vr-export-btn{width:100%;padding:18px;border:none;border-radius:14px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:10px}\
+.vr-export-btn.primary{background:linear-gradient(135deg,#34C759 0%,#30D158 100%);color:#fff;margin-bottom:12px}\
+.vr-export-btn.primary:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(52,199,89,0.4)}\
 .vr-export-btn.secondary{background:#f0f0f0;color:#666}\
-.vr-export-btn.danger{background:#FF3B30;color:#fff}\
-.vr-export-status{text-align:center;padding:20px;font-size:16px;color:#666}\
-.vr-export-input{width:100%;padding:14px;border:2px solid #e0e0e0;border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box}\
-.vr-export-input:focus{border-color:#667eea;outline:none}\
-.vr-export-label{font-size:14px;font-weight:600;color:#666;margin-bottom:6px;display:block}\
-.vr-export-success{background:#E8F5E9;border-radius:12px;padding:16px;text-align:center;color:#2E7D32}\
-.vr-export-error{background:#FFEBEE;border-radius:12px;padding:16px;text-align:center;color:#C62828}\
+.vr-export-btn.secondary:hover{background:#e5e5e5}\
+.vr-export-btn.danger{background:linear-gradient(135deg,#FF3B30 0%,#FF453A 100%);color:#fff}\
+.vr-export-status{text-align:center;padding:16px;font-size:16px;border-radius:12px;margin-bottom:12px}\
+.vr-export-status.success{background:#E8F5E9;color:#2E7D32}\
+.vr-export-status.error{background:#FFEBEE;color:#C62828}\
+.vr-export-status.loading{background:#E3F2FD;color:#1565C0}\
+.vr-export-danger-zone{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid #FFEBEE}\
+.vr-export-danger-title{font-size:16px;font-weight:600;color:#C62828;margin-bottom:8px}\
+.vr-export-danger-text{font-size:14px;color:#666;margin-bottom:16px}\
 </style>';
 
-        html += '<div class="vr-export-container">';
+        html += '<div style="max-width:500px;margin:0 auto">';
 
-        // User info card
-        html += '<div class="vr-export-card">';
-        html += '<div class="vr-export-title">📤 Exportera till Firebase</div>';
-        html += '<div class="vr-export-subtitle">Ladda upp ditt schema så att det kan delas</div>';
-
-        html += '<label class="vr-export-label">Anställningsnummer</label>';
-        html += '<input type="text" id="vrExportAnstNr" class="vr-export-input" value="' + anstNr + '" placeholder="T.ex. 302113">';
-
-        html += '<label class="vr-export-label">Namn</label>';
-        html += '<input type="text" id="vrExportNamn" class="vr-export-input" value="' + namn + '" placeholder="T.ex. Kenny Eriksson">';
-
+        // Header
+        html += '<div class="vr-export-header">';
+        html += '<div class="vr-export-header-title">📤 Exportera</div>';
+        html += '<div class="vr-export-header-sub">Dela ditt schema med kollegor</div>';
         html += '</div>';
 
-        // Data status card
-        html += '<div class="vr-export-card">';
-        html += '<div class="vr-export-title">📊 Data att exportera</div>';
-
-        html += '<div class="vr-export-stat">';
-        html += '<span class="vr-export-stat-label">Schema-dagar</span>';
-        html += '<span class="vr-export-stat-value ' + (schemaCount > 0 ? 'ok' : 'missing') + '">' + (schemaCount > 0 ? schemaCount + ' dagar' : 'Ej laddat') + '</span>';
+        // User info (non-editable)
+        html += '<div class="vr-export-user">';
+        html += '<div class="vr-export-avatar">' + VR.getInitials(namn) + '</div>';
+        html += '<div class="vr-export-user-info">';
+        html += '<div class="vr-export-user-name">' + (namn || 'Okänt namn') + '</div>';
+        html += '<div class="vr-export-user-id">Anst.nr: ' + (anstNr || '—') + '</div>';
+        html += '</div>';
         html += '</div>';
 
-        html += '<div class="vr-export-stat">';
-        html += '<span class="vr-export-stat-label">FP/FPV-dagar</span>';
-        html += '<span class="vr-export-stat-value ' + (fpfpvCount > 0 ? 'ok' : 'missing') + '">' + (fpfpvCount > 0 ? fpfpvCount + ' dagar' : 'Ej laddat') + '</span>';
+        // Hidden inputs for export functions
+        html += '<input type="hidden" id="vrExportAnstNr" value="' + anstNr + '">';
+        html += '<input type="hidden" id="vrExportNamn" value="' + namn + '">';
+
+        // Stats
+        html += '<div class="vr-export-stats">';
+        html += '<div class="vr-export-stat-card">';
+        html += '<div class="vr-export-stat-icon">📅</div>';
+        html += '<div class="vr-export-stat-num">' + schemaCount + '</div>';
+        html += '<div class="vr-export-stat-label">Schemadagar</div>';
+        html += '</div>';
+        html += '<div class="vr-export-stat-card">';
+        html += '<div class="vr-export-stat-icon">🏖️</div>';
+        html += '<div class="vr-export-stat-num">' + fpfpvCount + '</div>';
+        html += '<div class="vr-export-stat-label">FP/FPV-dagar</div>';
+        html += '</div>';
         html += '</div>';
 
-        if (schemaCount === 0) {
-            html += '<button class="vr-export-btn secondary" onclick="VR.doSchema()">Ladda Schema först</button>';
-        }
-        if (fpfpvCount === 0) {
-            html += '<button class="vr-export-btn secondary" onclick="VR.doFPFPV()">Ladda FP/FPV först</button>';
-        }
-
-        html += '</div>';
-
-        // Export button card
-        html += '<div class="vr-export-card">';
+        // Export actions
+        html += '<div class="vr-export-actions">';
         html += '<div id="vrExportStatus"></div>';
-
-        var canExport = schemaCount > 0 || fpfpvCount > 0;
-        html += '<button id="vrExportBtn" class="vr-export-btn primary" ' + (canExport ? '' : 'disabled') + ' onclick="VR.executeExport()">📤 Exportera till Firebase</button>';
-
-        html += '<button class="vr-export-btn secondary" onclick="VR.downloadCSV()" style="margin-top:8px">💾 Ladda ner som CSV</button>';
-
+        html += '<button id="vrExportBtn" class="vr-export-btn primary" onclick="VR.executeExport()">';
+        html += '<span>🚀</span> Exportera till Vem jobbar idag?</button>';
+        html += '<button class="vr-export-btn secondary" onclick="VR.downloadCSV()">';
+        html += '<span>💾</span> Exportera manuellt (CSV)</button>';
         html += '</div>';
 
-        // Delete data card
-        html += '<div class="vr-export-card">';
-        html += '<div class="vr-export-title">🗑️ Ta bort min data</div>';
-        html += '<div class="vr-export-subtitle">Radera all din data från Firebase</div>';
-        html += '<button class="vr-export-btn danger" onclick="VR.confirmDeleteFirebaseData()">Ta bort all min data</button>';
+        // Danger zone
+        html += '<div class="vr-export-danger-zone">';
+        html += '<div class="vr-export-danger-title">⚠️ Farozon</div>';
+        html += '<div class="vr-export-danger-text">Ta bort all din data från Vem jobbar idag?</div>';
+        html += '<button class="vr-export-btn danger" onclick="VR.confirmDeleteFirebaseData()">';
+        html += '<span>🗑️</span> Ta bort min data</button>';
         html += '</div>';
 
         html += '</div>';
@@ -132,13 +403,8 @@
         var statusEl = document.getElementById('vrExportStatus');
         var btnEl = document.getElementById('vrExportBtn');
 
-        if (!anstNr) {
-            statusEl.innerHTML = '<div class="vr-export-error">Ange anställningsnummer</div>';
-            return;
-        }
-
-        if (!namn) {
-            statusEl.innerHTML = '<div class="vr-export-error">Ange namn</div>';
+        if (!anstNr || !namn) {
+            statusEl.innerHTML = '<div class="vr-export-status error">Användardata saknas</div>';
             return;
         }
 
@@ -147,25 +413,25 @@
             VR.setFirebaseUser(anstNr, namn);
         }
 
-        statusEl.innerHTML = '<div class="vr-export-status">⏳ Ansluter till Firebase...</div>';
+        statusEl.innerHTML = '<div class="vr-export-status loading">⏳ Ansluter till Firebase...</div>';
         btnEl.disabled = true;
 
         // Initialize Firebase
         VR.initFirebase(function(success) {
             if (!success) {
-                statusEl.innerHTML = '<div class="vr-export-error">Kunde inte ansluta till Firebase</div>';
+                statusEl.innerHTML = '<div class="vr-export-status error">❌ Kunde inte ansluta till Firebase</div>';
                 btnEl.disabled = false;
                 return;
             }
 
-            statusEl.innerHTML = '<div class="vr-export-status">⏳ Laddar upp data...</div>';
+            statusEl.innerHTML = '<div class="vr-export-status loading">⏳ Laddar upp data...</div>';
 
             // Upload combined data
             VR.uploadAllDataToFirebase(anstNr, namn, function(success, message) {
                 if (success) {
-                    statusEl.innerHTML = '<div class="vr-export-success">✅ ' + message + '</div>';
+                    statusEl.innerHTML = '<div class="vr-export-status success">✅ ' + message + '</div>';
                 } else {
-                    statusEl.innerHTML = '<div class="vr-export-error">❌ ' + message + '</div>';
+                    statusEl.innerHTML = '<div class="vr-export-status error">❌ ' + message + '</div>';
                 }
                 btnEl.disabled = false;
             });
@@ -458,5 +724,5 @@
         });
     };
 
-    console.log('VR: Export module loaded (V.1.39)');
+    console.log('VR: Export module loaded (V.1.40)');
 })();
