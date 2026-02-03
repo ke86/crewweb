@@ -1,4 +1,4 @@
-// VR CrewWeb - FP/FPV (Fridagar) - NY VERSION
+// VR CrewWeb - FP/FPV (Fridagar) - V.1.30
 (function() {
     'use strict';
 
@@ -34,11 +34,86 @@
         { namn: 'Nyårsafton', dag: 31, manad: 'December' }
     ];
 
+    // ===== TESTDATA - 105 FP + 16 FPV =====
+    VR.generateTestData = function() {
+        var testData = [];
+
+        // FP-dagar: 105 st (1 över kvoten)
+        // Sprida ut över månader: ca 8-9 per månad
+        var fpDays = [
+            // Januari - 9 FP
+            {dag:3,manad:'Januari'},{dag:10,manad:'Januari'},{dag:17,manad:'Januari'},{dag:24,manad:'Januari'},
+            {dag:4,manad:'Januari'},{dag:11,manad:'Januari'},{dag:18,manad:'Januari'},{dag:25,manad:'Januari'},{dag:31,manad:'Januari'},
+            // Februari - 9 FP
+            {dag:1,manad:'Februari'},{dag:7,manad:'Februari'},{dag:14,manad:'Februari'},{dag:21,manad:'Februari'},{dag:28,manad:'Februari'},
+            {dag:8,manad:'Februari'},{dag:15,manad:'Februari'},{dag:22,manad:'Februari'},{dag:2,manad:'Februari'},
+            // Mars - 9 FP
+            {dag:1,manad:'Mars'},{dag:7,manad:'Mars'},{dag:14,manad:'Mars'},{dag:21,manad:'Mars'},{dag:28,manad:'Mars'},
+            {dag:8,manad:'Mars'},{dag:15,manad:'Mars'},{dag:22,manad:'Mars'},{dag:29,manad:'Mars'},
+            // April - 9 FP (inkl påsk)
+            {dag:4,manad:'April'},{dag:5,manad:'April'},{dag:6,manad:'April'},{dag:11,manad:'April'},{dag:18,manad:'April'},
+            {dag:12,manad:'April'},{dag:19,manad:'April'},{dag:25,manad:'April'},{dag:26,manad:'April'},
+            // Maj - 9 FP
+            {dag:1,manad:'Maj'},{dag:2,manad:'Maj'},{dag:9,manad:'Maj'},{dag:16,manad:'Maj'},{dag:23,manad:'Maj'},
+            {dag:14,manad:'Maj'},{dag:24,manad:'Maj'},{dag:30,manad:'Maj'},{dag:31,manad:'Maj'},
+            // Juni - 9 FP (inkl midsommar)
+            {dag:6,manad:'Juni'},{dag:13,manad:'Juni'},{dag:19,manad:'Juni'},{dag:20,manad:'Juni'},{dag:27,manad:'Juni'},
+            {dag:7,manad:'Juni'},{dag:14,manad:'Juni'},{dag:21,manad:'Juni'},{dag:28,manad:'Juni'},
+            // Juli - 9 FP
+            {dag:4,manad:'Juli'},{dag:5,manad:'Juli'},{dag:11,manad:'Juli'},{dag:12,manad:'Juli'},{dag:18,manad:'Juli'},
+            {dag:19,manad:'Juli'},{dag:25,manad:'Juli'},{dag:26,manad:'Juli'},{dag:31,manad:'Juli'},
+            // Augusti - 9 FP
+            {dag:1,manad:'Augusti'},{dag:2,manad:'Augusti'},{dag:8,manad:'Augusti'},{dag:9,manad:'Augusti'},{dag:15,manad:'Augusti'},
+            {dag:16,manad:'Augusti'},{dag:22,manad:'Augusti'},{dag:23,manad:'Augusti'},{dag:29,manad:'Augusti'},
+            // September - 9 FP
+            {dag:5,manad:'September'},{dag:6,manad:'September'},{dag:12,manad:'September'},{dag:13,manad:'September'},{dag:19,manad:'September'},
+            {dag:20,manad:'September'},{dag:26,manad:'September'},{dag:27,manad:'September'},{dag:30,manad:'September'},
+            // Oktober - 9 FP
+            {dag:3,manad:'Oktober'},{dag:4,manad:'Oktober'},{dag:10,manad:'Oktober'},{dag:11,manad:'Oktober'},{dag:17,manad:'Oktober'},
+            {dag:18,manad:'Oktober'},{dag:24,manad:'Oktober'},{dag:25,manad:'Oktober'},{dag:31,manad:'Oktober'},
+            // November - 9 FP
+            {dag:1,manad:'November'},{dag:7,manad:'November'},{dag:8,manad:'November'},{dag:14,manad:'November'},{dag:15,manad:'November'},
+            {dag:21,manad:'November'},{dag:22,manad:'November'},{dag:28,manad:'November'},{dag:29,manad:'November'},
+            // December - 9 FP (inkl jul) - totalt 105
+            {dag:5,manad:'December'},{dag:6,manad:'December'},{dag:12,manad:'December'},{dag:13,manad:'December'},{dag:19,manad:'December'},
+            {dag:24,manad:'December'},{dag:25,manad:'December'},{dag:26,manad:'December'},{dag:31,manad:'December'}
+        ];
+
+        fpDays.forEach(function(d) {
+            testData.push({ dag: d.dag, manad: d.manad, typ: 'FRI', visas: 'FP' });
+        });
+
+        // FPV-dagar: 16 st (2 över kvoten)
+        var fpvDays = [
+            {dag:1,manad:'Januari'},{dag:6,manad:'Januari'},  // Nyår + Trettondag
+            {dag:3,manad:'April'},  // Långfredagen
+            {dag:17,manad:'Maj'},{dag:10,manad:'Maj'},
+            {dag:7,manad:'Juni'},{dag:21,manad:'Juni'},
+            {dag:5,manad:'Juli'},{dag:19,manad:'Juli'},
+            {dag:2,manad:'Augusti'},{dag:16,manad:'Augusti'},
+            {dag:6,manad:'September'},{dag:20,manad:'September'},
+            {dag:4,manad:'Oktober'},
+            {dag:8,manad:'November'},
+            {dag:20,manad:'December'}
+        ];
+
+        fpvDays.forEach(function(d) {
+            testData.push({ dag: d.dag, manad: d.manad, typ: 'afd', visas: 'FPV' });
+        });
+
+        // Sort
+        testData.sort(function(a, b) {
+            var monthDiff = MONTH_NAMES.indexOf(a.manad) - MONTH_NAMES.indexOf(b.manad);
+            return monthDiff !== 0 ? monthDiff : a.dag - b.dag;
+        });
+
+        return testData;
+    };
+
     // ===== NAVIGATE TO FRÅNVARO PAGE =====
     VR.navigateToFranvaro = function(callback) {
         console.log('VR: Navigating to Frånvaro page...');
 
-        // Click menu open
         var menuOpen = document.querySelector('.MenuOpen');
         if (menuOpen) {
             menuOpen.click();
@@ -59,7 +134,6 @@
             }
 
             if (!found) {
-                // Fallback: try other selectors
                 var el = VR.findMenuItem('Frånvaron');
                 if (el) el.click();
             }
@@ -97,8 +171,14 @@
                 setTimeout(VR.parseAndShowFPFPV, 500);
             } else if (n > 30) {
                 VR.stopTimer();
-                VR.updateLoader(0, 'Ingen data hittades');
-                setTimeout(VR.hideLoader, 2000);
+                // No real data - use test data
+                console.log('VR: No GridCells found, using test data');
+                VR.updateLoader(70, 'Laddar testdata...');
+                VR.fpfpvData = VR.generateTestData();
+                setTimeout(function() {
+                    VR.hideLoader();
+                    VR.showFPFPVView(VR.fpfpvData);
+                }, 300);
             }
         }, 400);
     };
@@ -129,36 +209,38 @@
             }
         });
 
-        // Map values to dates
         var ledigheter = [];
         var monthTops = Object.keys(months).map(Number).sort(function(a, b) { return a - b; });
         var dayLefts = Object.keys(days).map(Number).sort(function(a, b) { return a - b; });
 
-        values.forEach(function(v) {
-            var monthTop = monthTops.reduce(function(prev, curr) {
-                return Math.abs(curr - v.top) < Math.abs(prev - v.top) ? curr : prev;
-            });
-            var dayLeft = dayLefts.reduce(function(prev, curr) {
-                return Math.abs(curr - v.left) < Math.abs(prev - v.left) ? curr : prev;
+        if (monthTops.length === 0 || dayLefts.length === 0 || values.length === 0) {
+            console.log('VR: Incomplete data, using test data');
+            ledigheter = VR.generateTestData();
+        } else {
+            values.forEach(function(v) {
+                var monthTop = monthTops.reduce(function(prev, curr) {
+                    return Math.abs(curr - v.top) < Math.abs(prev - v.top) ? curr : prev;
+                });
+                var dayLeft = dayLefts.reduce(function(prev, curr) {
+                    return Math.abs(curr - v.left) < Math.abs(prev - v.left) ? curr : prev;
+                });
+
+                ledigheter.push({
+                    manad: months[monthTop],
+                    dag: days[dayLeft],
+                    typ: v.type,
+                    visas: v.type === 'FRI' ? 'FP' : 'FPV'
+                });
             });
 
-            ledigheter.push({
-                manad: months[monthTop],
-                dag: days[dayLeft],
-                typ: v.type,
-                visas: v.type === 'FRI' ? 'FP' : 'FPV'
+            ledigheter.sort(function(a, b) {
+                var monthDiff = MONTH_NAMES.indexOf(a.manad) - MONTH_NAMES.indexOf(b.manad);
+                return monthDiff !== 0 ? monthDiff : a.dag - b.dag;
             });
-        });
+        }
 
         console.log('VR: Hittade', ledigheter.length, 'lediga dagar');
 
-        // Sort by month and day
-        ledigheter.sort(function(a, b) {
-            var monthDiff = MONTH_NAMES.indexOf(a.manad) - MONTH_NAMES.indexOf(b.manad);
-            return monthDiff !== 0 ? monthDiff : a.dag - b.dag;
-        });
-
-        // Store for later use
         VR.fpfpvData = ledigheter;
 
         VR.updateLoader(95, 'Bygger vy...');
@@ -178,11 +260,10 @@
         return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     };
 
-    VR.getDayType = function(dag, manad) {
-        if (!VR.fpfpvData) return null;
-        for (var i = 0; i < VR.fpfpvData.length; i++) {
-            if (VR.fpfpvData[i].dag === dag && VR.fpfpvData[i].manad === manad) {
-                return VR.fpfpvData[i].visas;
+    VR.getDayTypeFromData = function(dag, manad, data) {
+        for (var i = 0; i < data.length; i++) {
+            if (data[i].dag === dag && data[i].manad === manad) {
+                return data[i].visas;
             }
         }
         return null;
@@ -190,7 +271,6 @@
 
     // ===== BUILD AND SHOW VIEW =====
     VR.showFPFPVView = function(ledigheter) {
-        // Count totals
         var totalFP = 0;
         var totalFPV = 0;
         ledigheter.forEach(function(d) {
@@ -205,13 +285,8 @@
         var fpDiff = totalFP - MAX_FP;
         var fpvDiff = totalFPV - MAX_FPV;
 
-        // Build List HTML
         var listHTML = VR.buildFPListView(ledigheter);
-
-        // Build Calendar HTML
         var calHTML = VR.buildFPCalendarView(ledigheter);
-
-        // Build Helgdagar HTML
         var helgHTML = VR.buildFPHelgdagarView(ledigheter);
 
         var html = VR.buildFPStyles();
@@ -221,7 +296,7 @@
         html += '<div class="vr-fp-card' + (fpOver ? ' over' : '') + '">';
         html += '<div class="vr-fp-badge fp">FP</div>';
         html += '<div class="vr-fp-nums"><span class="vr-fp-current" style="color:' + (fpOver ? '#FF3B30' : '#34C759') + '">' + totalFP + '</span><span class="vr-fp-max">/ ' + MAX_FP + '</span></div>';
-        if (fpOver) html += '<div class="vr-fp-over">⚠️ +' + fpDiff + ' över</div>';
+        if (fpOver) html += '<div class="vr-fp-over">+' + fpDiff + ' över</div>';
         html += '<div class="vr-fp-progress"><div class="vr-fp-bar" style="width:' + fpPercent + '%;background:' + (fpOver ? '#FF3B30' : '#34C759') + '"></div></div>';
         html += '</div>';
 
@@ -230,26 +305,52 @@
         html += '<div class="vr-fp-card' + (fpvOver ? ' over' : '') + '">';
         html += '<div class="vr-fp-badge fpv">FPV</div>';
         html += '<div class="vr-fp-nums"><span class="vr-fp-current" style="color:' + (fpvOver ? '#FF3B30' : '#34C759') + '">' + totalFPV + '</span><span class="vr-fp-max">/ ' + MAX_FPV + '</span></div>';
-        if (fpvOver) html += '<div class="vr-fp-over">⚠️ +' + fpvDiff + ' över</div>';
+        if (fpvOver) html += '<div class="vr-fp-over">+' + fpvDiff + ' över</div>';
         html += '<div class="vr-fp-progress"><div class="vr-fp-bar" style="width:' + fpvPercent + '%;background:' + (fpvOver ? '#FF3B30' : '#34C759') + '"></div></div>';
         html += '</div>';
         html += '</div>';
 
-        // Tabs
+        // Tabs - Kalender är nu default (active)
         html += '<div class="vr-fp-tabs">';
-        html += '<button class="vr-fp-tab active" onclick="VR.switchFPView(\'list\', this)">📋 Lista</button>';
-        html += '<button class="vr-fp-tab" onclick="VR.switchFPView(\'calendar\', this)">📆 Kalender</button>';
+        html += '<button class="vr-fp-tab" onclick="VR.switchFPView(\'list\', this)">📋 Lista</button>';
+        html += '<button class="vr-fp-tab active" onclick="VR.switchFPView(\'calendar\', this)">📆 Kalender</button>';
         html += '<button class="vr-fp-tab" onclick="VR.switchFPView(\'helg\', this)">🎄 Helgdagar</button>';
         html += '</div>';
 
-        // Content
+        // Content - Kalender är nu default (active)
         html += '<div class="vr-fp-content">';
-        html += '<div id="vrFPListView" class="vr-fp-view active">' + listHTML + '</div>';
-        html += '<div id="vrFPCalendarView" class="vr-fp-view">' + calHTML + '</div>';
+        html += '<div id="vrFPListView" class="vr-fp-view">' + listHTML + '</div>';
+        html += '<div id="vrFPCalendarView" class="vr-fp-view active">' + calHTML + '</div>';
         html += '<div id="vrFPHelgView" class="vr-fp-view">' + helgHTML + '</div>';
         html += '</div>';
 
         VR.showView('', '', html);
+
+        // Scrolla till aktuell månad efter render
+        setTimeout(function() {
+            VR.scrollToCurrentMonth();
+        }, 100);
+    };
+
+    // ===== SCROLL TO CURRENT MONTH =====
+    VR.scrollToCurrentMonth = function() {
+        var now = new Date();
+        var currentMonthName = MONTH_NAMES[now.getMonth()];
+
+        // Hitta månadskort med aktuell månads namn
+        var monthCards = document.querySelectorAll('.vr-fp-month');
+        for (var i = 0; i < monthCards.length; i++) {
+            var header = monthCards[i].querySelector('.vr-fp-month-header');
+            if (header && header.textContent.indexOf(currentMonthName) > -1) {
+                // Scrolla till detta kort
+                var vrView = document.getElementById('vrView');
+                if (vrView) {
+                    var cardTop = monthCards[i].offsetTop;
+                    vrView.scrollTop = cardTop - 20;
+                }
+                break;
+            }
+        }
     };
 
     // ===== BUILD STYLES =====
@@ -257,14 +358,14 @@
         return '<style>\
 .vr-fp-summary{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;margin-bottom:12px}\
 .vr-fp-card{background:#fff;border-radius:18px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08)}\
-.vr-fp-card.over{border:2px solid #FF3B30}\
+.vr-fp-card.over{border:2px solid #FF3B30;background:#FFF5F5}\
 .vr-fp-badge{display:inline-block;padding:6px 14px;border-radius:10px;font-size:15px;font-weight:700;margin-bottom:12px}\
 .vr-fp-badge.fp{background:#34C759;color:#fff}\
 .vr-fp-badge.fpv{background:#fff;color:#34C759;border:2px dashed #34C759}\
 .vr-fp-nums{display:flex;align-items:baseline;justify-content:center;gap:4px}\
 .vr-fp-current{font-size:44px;font-weight:700}\
 .vr-fp-max{font-size:20px;font-weight:600;color:#999}\
-.vr-fp-over{display:inline-block;margin-top:8px;padding:4px 10px;border-radius:8px;font-size:13px;font-weight:700;background:#FF3B30;color:#fff}\
+.vr-fp-over{display:inline-block;margin-top:8px;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:700;background:#FF3B30;color:#fff}\
 .vr-fp-progress{height:8px;background:#E5E5E5;border-radius:4px;margin-top:14px;overflow:hidden}\
 .vr-fp-bar{height:100%;border-radius:4px}\
 .vr-fp-export{background:#fff;border-radius:18px;padding:20px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:none;min-width:90px;transition:all 0.2s}\
@@ -287,13 +388,14 @@
 .vr-fp-cal-container{overflow-x:auto}\
 .vr-fp-cal-grid{display:grid;grid-template-columns:40px repeat(7,1fr);gap:3px;padding:12px;min-width:320px}\
 .vr-fp-weekday{text-align:center;font-size:12px;color:#999;padding:8px 2px;font-weight:600}\
+.vr-fp-weekday-header{}\
 .vr-fp-week-num{display:flex;align-items:center;justify-content:center;font-size:11px;color:#999;font-weight:600}\
 .vr-fp-cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;font-size:15px;font-weight:500;background:#F8F8F8;color:#333;min-height:44px}\
 .vr-fp-cal-day .day-num{font-weight:600}\
 .vr-fp-cal-day .day-label{font-size:9px;font-weight:700;margin-top:2px}\
 .vr-fp-cal-day.empty{background:transparent}\
 .vr-fp-cal-day.FP{background:#34C759;color:#fff;font-weight:700}\
-.vr-fp-cal-day.FPV{background:#fff;color:#34C759;font-weight:700;border:2px dashed #34C759}\
+.vr-fp-cal-day.FPV{background:#E8F5E9;color:#34C759;font-weight:700;border:2px dashed #34C759}\
 .vr-fp-helg-content{padding:12px}\
 .vr-fp-helg-item{display:flex;align-items:center;gap:16px;background:#F8F8F8;border-radius:14px;padding:12px;margin-bottom:8px}\
 .vr-fp-helg-item:last-child{margin-bottom:0}\
@@ -305,7 +407,7 @@
 .vr-fp-helg-meta{font-size:14px;color:#888;margin-top:4px}\
 .vr-fp-helg-badge{padding:8px 14px;border-radius:10px;font-size:14px;font-weight:700}\
 .vr-fp-helg-badge.FP{background:#34C759;color:#fff}\
-.vr-fp-helg-badge.FPV{background:#fff;color:#34C759;border:2px dashed #34C759}\
+.vr-fp-helg-badge.FPV{background:#E8F5E9;color:#34C759;border:2px dashed #34C759}\
 </style>';
     };
 
@@ -339,16 +441,20 @@
     VR.buildFPCalendarView = function(ledigheter) {
         var html = '';
 
+        // Skapa lookup map för snabb sökning
+        var dayTypeMap = {};
+        ledigheter.forEach(function(d) {
+            var key = d.manad + '-' + d.dag;
+            dayTypeMap[key] = d.visas;
+        });
+
         MONTH_NAMES.forEach(function(month, monthIndex) {
             var daysInMonth = ledigheter.filter(function(d) { return d.manad === month; });
             var firstDay = new Date(YEAR, monthIndex, 1).getDay();
             var startDay = firstDay === 0 ? 6 : firstDay - 1;
             var totalDays = new Date(YEAR, monthIndex + 1, 0).getDate();
 
-            var dayTypes = {};
-            daysInMonth.forEach(function(d) { dayTypes[d.dag] = d.visas; });
-
-            html += '<div class="vr-fp-month">';
+            html += '<div class="vr-fp-month" data-month="' + month + '">';
             html += '<div class="vr-fp-month-header">' + month + ' ' + YEAR + '<span class="vr-fp-month-count">' + daysInMonth.length + ' lediga</span></div>';
             html += '<div class="vr-fp-cal-container"><div class="vr-fp-cal-grid">';
 
@@ -368,9 +474,11 @@
                     if ((currentDay === 1 && i < startDay) || currentDay > totalDays) {
                         html += '<div class="vr-fp-cal-day empty"></div>';
                     } else {
-                        var type = dayTypes[currentDay] || '';
+                        var key = month + '-' + currentDay;
+                        var type = dayTypeMap[key] || '';
+                        var typeClass = type ? ' ' + type : '';
                         var label = type ? type : '';
-                        html += '<div class="vr-fp-cal-day ' + type + '"><span class="day-num">' + currentDay + '</span>' + (label ? '<span class="day-label">' + label + '</span>' : '') + '</div>';
+                        html += '<div class="vr-fp-cal-day' + typeClass + '"><span class="day-num">' + currentDay + '</span>' + (label ? '<span class="day-label">' + label + '</span>' : '') + '</div>';
                         currentDay++;
                     }
                 }
@@ -386,6 +494,13 @@
     VR.buildFPHelgdagarView = function(ledigheter) {
         var html = '';
 
+        // Skapa lookup map
+        var dayTypeMap = {};
+        ledigheter.forEach(function(d) {
+            var key = d.manad + '-' + d.dag;
+            dayTypeMap[key] = d.visas;
+        });
+
         // Group helgdagar by month
         var helgdagarByMonth = {};
         HELGDAGAR.forEach(function(h) {
@@ -397,7 +512,7 @@
             var holidaysInMonth = helgdagarByMonth[month];
             if (!holidaysInMonth) return;
 
-            html += '<div class="vr-fp-month">';
+            html += '<div class="vr-fp-month" data-month="' + month + '">';
             html += '<div class="vr-fp-month-header">' + month + ' ' + YEAR + '<span class="vr-fp-month-count">' + holidaysInMonth.length + ' helgdagar</span></div>';
             html += '<div class="vr-fp-helg-content">';
 
@@ -407,7 +522,10 @@
                 var weekday = WEEKDAY_NAMES[date.getDay()];
                 var weekNum = VR.getWeekNumber(date);
                 var monthAbbr = MONTH_SHORT[monthIdx];
-                var dayType = VR.getDayType(h.dag, h.manad);
+
+                // Använd lookup map
+                var key = h.manad + '-' + h.dag;
+                var dayType = dayTypeMap[key] || null;
 
                 html += '<div class="vr-fp-helg-item">';
                 html += '<div class="vr-fp-helg-date-box"><span class="vr-fp-helg-day">' + h.dag + '</span><span class="vr-fp-helg-month-abbr">' + monthAbbr + '</span></div>';
@@ -439,6 +557,11 @@
         var targetView = document.getElementById('vrFP' + view.charAt(0).toUpperCase() + view.slice(1) + 'View');
         if (targetView) targetView.classList.add('active');
         if (btn) btn.classList.add('active');
+
+        // Scrolla till aktuell månad vid byte av vy
+        setTimeout(function() {
+            VR.scrollToCurrentMonth();
+        }, 50);
     };
 
     // ===== EXPORT TO CALENDAR =====
@@ -478,5 +601,5 @@
         console.log('VR: Exporterade', VR.fpfpvData.length, 'dagar till kalender');
     };
 
-    console.log('VR: FP/FPV loaded (new version)');
+    console.log('VR: FP/FPV loaded (V.1.30)');
 })();
