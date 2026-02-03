@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.1.37';
+    VR.VERSION = 'V.1.39';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -127,8 +127,7 @@
                 color: '#007AFF',
                 items: [
                     { icon: '📅', label: 'Schema', action: 'doSchema', color: '#007AFF' },
-                    { icon: '🏖️', label: 'FP/FPV', action: 'doFPFPV', color: '#34C759' },
-                    { icon: '👥', label: 'Vem jobbar?', action: 'doWhosWorking', color: '#FF6F00' }
+                    { icon: '🏖️', label: 'FP/FPV', action: 'doFPFPV', color: '#34C759' }
                 ]
             },
             {

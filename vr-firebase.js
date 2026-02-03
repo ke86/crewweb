@@ -6,12 +6,8 @@
 
     // ===== FIREBASE CONFIG =====
     VR.FIREBASE_CONFIG = {
-        apiKey: "AIzaSyBw8RU0_DgKl4Ft_oRkDPWeaimJ4YJFhMs",
-        authDomain: "crewwebvr.firebaseapp.com",
-        projectId: "crewwebvr",
-        storageBucket: "crewwebvr.firebasestorage.app",
-        messagingSenderId: "1084692612109",
-        appId: "1:1084692612109:web:d8b596a99858e7d5158144"
+        apiKey: "AIzaSyDgiSvdMHAtsewgZTtBZ3MhFVEbJYeyxr4",
+        projectId: "vemjobbaridag"
     };
 
     // ===== SHARED PASSWORD =====
@@ -325,7 +321,7 @@
         });
     };
 
-    // ===== DELETE USER DATA =====
+    // ===== DELETE USER DATA (Vem jobbar idag? format) =====
     VR.deleteMyFirebaseData = function(callback) {
         if (!VR.firebaseReady || !VR.firebaseDb) {
             if (callback) callback(false, 'Firebase ej redo');
@@ -339,44 +335,59 @@
         }
 
         var anstNr = user.anstNr;
+        console.log('VR: Deleting data for employee', anstNr);
 
-        // First delete all schedule days
-        VR.firebaseDb.collection('schedules')
-            .doc(anstNr)
-            .collection('days')
-            .get()
-            .then(function(snapshot) {
-                var batch = VR.firebaseDb.batch();
-                var count = 0;
+        // Step 1: Delete employee document
+        var employeeRef = VR.firebaseDb.collection('employees').doc(anstNr);
+        employeeRef.delete().then(function() {
+            console.log('VR: Employee deleted');
 
-                snapshot.forEach(function(doc) {
-                    batch.delete(doc.ref);
-                    count++;
+            // Step 2: Remove this employee's shifts from all schedule documents
+            return VR.firebaseDb.collection('schedules').get();
+        }).then(function(snapshot) {
+            var updatePromises = [];
+            var updatedCount = 0;
+
+            snapshot.forEach(function(doc) {
+                var data = doc.data();
+                var shifts = data.shifts || [];
+                var originalLength = shifts.length;
+
+                // Filter out this employee's shifts
+                var filteredShifts = shifts.filter(function(s) {
+                    return s.employeeId !== anstNr;
                 });
 
-                // Also delete user document
-                var userRef = VR.firebaseDb.collection('users').doc(anstNr);
-                batch.delete(userRef);
-
-                return batch.commit().then(function() {
-                    return count;
-                });
-            })
-            .then(function(count) {
-                console.log('VR: Deleted user data,', count, 'schedule days');
-
-                // Clear local Firebase user data
-                try {
-                    localStorage.removeItem(VR.FB_USER_KEY);
-                    console.log('VR: Cleared local Firebase user data');
-                } catch (e) {}
-
-                if (callback) callback(true, count + ' dagar borttagna');
-            })
-            .catch(function(error) {
-                console.log('VR: Delete error:', error);
-                if (callback) callback(false, 'Kunde inte ta bort data');
+                // Only update if we actually removed something
+                if (filteredShifts.length < originalLength) {
+                    updatedCount++;
+                    if (filteredShifts.length === 0) {
+                        // Delete document if no shifts left
+                        updatePromises.push(doc.ref.delete());
+                    } else {
+                        // Update with filtered shifts
+                        updatePromises.push(doc.ref.set({ shifts: filteredShifts }));
+                    }
+                }
             });
+
+            return Promise.all(updatePromises).then(function() {
+                return updatedCount;
+            });
+        }).then(function(count) {
+            console.log('VR: Removed shifts from', count, 'schedule days');
+
+            // Clear local Firebase user data
+            try {
+                localStorage.removeItem(VR.FB_USER_KEY);
+                console.log('VR: Cleared local Firebase user data');
+            } catch (e) {}
+
+            if (callback) callback(true, 'Data borttagen från ' + count + ' dagar');
+        }).catch(function(error) {
+            console.log('VR: Delete error:', error);
+            if (callback) callback(false, 'Kunde inte ta bort data: ' + (error.message || error));
+        });
     };
 
     console.log('VR: Firebase module loaded');

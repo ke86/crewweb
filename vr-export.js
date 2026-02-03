@@ -1,8 +1,31 @@
-// VR CrewWeb - Export to Firebase - V.1.38
+// VR CrewWeb - Export to Firebase - V.1.39
 (function() {
     'use strict';
 
     var VR = window.VR;
+
+    // ===== BADGE TYPE HELPER =====
+    VR.getBadgeType = function(service, cd) {
+        var s = (service || '').toUpperCase();
+        var c = (cd || '').toUpperCase();
+
+        if (s === 'FP' || c === 'FRIDAG' || s === 'FRIDAG') return 'fp';
+        if (s === 'FPV' || s === 'FV' || s === 'FP2' || s === 'FP-V' || s.indexOf('FP-V') > -1) return 'fpv';
+        if (s === 'SEMESTER' || s.indexOf('SEMESTER') > -1) return 'semester';
+        if (s === 'FRÅNVARANDE' || s.indexOf('SJUK') > -1) return 'franvarande';
+        if (s.indexOf('FÖRÄLDRA') > -1) return 'foraldraledighet';
+        if (s === 'AFD') return 'afd';
+        if (s === 'RESERV' || s === 'RESERVSTAM' || s.indexOf('RESERV') > -1) return 'reserv';
+        return 'dag';
+    };
+
+    // ===== GENERATE INITIALS =====
+    VR.getInitials = function(name) {
+        if (!name) return '??';
+        var parts = name.trim().split(/\s+/);
+        var initials = parts.map(function(n) { return n[0] || ''; }).join('').substring(0, 2).toUpperCase();
+        return initials || '??';
+    };
 
     // ===== EXPORT VIEW =====
     VR.doExport = function() {
@@ -149,7 +172,7 @@
         });
     };
 
-    // ===== UPLOAD ALL DATA =====
+    // ===== UPLOAD ALL DATA (Vem jobbar idag? format) =====
     VR.uploadAllDataToFirebase = function(anstNr, namn, callback) {
         if (!VR.firebaseReady || !VR.firebaseDb) {
             if (callback) callback(false, 'Firebase ej redo');
@@ -157,11 +180,8 @@
         }
 
         try {
-            var batch = VR.firebaseDb.batch();
-            var userRef = VR.firebaseDb.collection('users').doc(anstNr);
-
-            // Prepare combined schedule data
-            var scheduleData = [];
+            // Prepare combined schedule data grouped by ISO date
+            var scheduleByDate = {}; // { "2026-02-01": { time, badge, badgeText }, ... }
 
             // Add schema data
             if (VR.allSchemaData) {
@@ -181,21 +201,23 @@
 
                             // Get tur from tn, fallback to ps
                             var tur = entry.tn || entry.ps || '';
+                            var tid = entry.pr || '-';
 
-                            scheduleData.push({
-                                datum: dateKey,
-                                tjanst: tur,
-                                tid: entry.pr || '',
-                                ps: entry.ps || '',
-                                cd: entry.cd || '',
-                                typ: 'schema'
-                            });
+                            // Convert DD-MM-YYYY to YYYY-MM-DD
+                            var parts = dateKey.split('-');
+                            var isoDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+
+                            scheduleByDate[isoDate] = {
+                                time: tid,
+                                badge: VR.getBadgeType(tur, entry.cd),
+                                badgeText: tur
+                            };
                         }
                     }
                 }
             }
 
-            // Add FP/FPV data
+            // Add FP/FPV data (overwrite schema if exists)
             if (VR.fpfpvData) {
                 var monthToNum = {
                     'Januari': '01', 'Februari': '02', 'Mars': '03', 'April': '04',
@@ -207,80 +229,83 @@
                     var year = fp.ar || 2026;
                     var monthNum = monthToNum[fp.manad] || '01';
                     var dayNum = ('0' + fp.dag).slice(-2);
-                    var dateKey = dayNum + '-' + monthNum + '-' + year;
+                    var isoDate = year + '-' + monthNum + '-' + dayNum;
 
-                    // Check if this date already exists in schema
-                    var exists = scheduleData.some(function(s) { return s.datum === dateKey; });
-
-                    if (!exists) {
-                        scheduleData.push({
-                            datum: dateKey,
-                            tjanst: fp.visas,
-                            tid: '',
-                            ps: '',
-                            cd: '',
-                            typ: fp.visas.toLowerCase()
-                        });
-                    } else {
-                        // Update existing entry with FP/FPV info
-                        scheduleData.forEach(function(s) {
-                            if (s.datum === dateKey) {
-                                s.tjanst = fp.visas;
-                                s.typ = fp.visas.toLowerCase();
-                            }
-                        });
-                    }
+                    scheduleByDate[isoDate] = {
+                        time: '-',
+                        badge: VR.getBadgeType(fp.visas, ''),
+                        badgeText: fp.visas
+                    };
                 });
             }
 
-            // Sort by date
-            scheduleData.sort(function(a, b) {
-                var partsA = a.datum.split('-');
-                var partsB = b.datum.split('-');
-                var dateA = new Date(partsA[2], partsA[1] - 1, partsA[0]);
-                var dateB = new Date(partsB[2], partsB[1] - 1, partsB[0]);
-                return dateA - dateB;
-            });
+            var dates = Object.keys(scheduleByDate);
+            console.log('VR: Uploading', dates.length, 'days to Firebase (Vem jobbar idag? format)');
 
-            // Update user document with all data
-            batch.set(userRef, {
-                namn: namn,
-                anstNr: anstNr,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                scheduleCount: scheduleData.length
-            }, { merge: true });
+            // Step 1: Save employee
+            var employeeRef = VR.firebaseDb.collection('employees').doc(anstNr);
+            employeeRef.set({
+                employeeId: anstNr,
+                name: namn,
+                initials: VR.getInitials(namn),
+                color: 'blue'
+            }).then(function() {
+                console.log('VR: Employee saved');
 
-            // Upload each day
-            var count = 0;
-            scheduleData.forEach(function(day) {
-                var dayRef = VR.firebaseDb.collection('schedules')
-                    .doc(anstNr)
-                    .collection('days')
-                    .doc(day.datum);
+                // Step 2: Upload each day's schedule
+                var completed = 0;
+                var errors = [];
 
-                batch.set(dayRef, {
-                    date: day.datum,
-                    tur: day.tjanst,
-                    tid: day.tid,
-                    ps: day.ps,
-                    cd: day.cd,
-                    typ: day.typ,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                dates.forEach(function(isoDate) {
+                    var dayData = scheduleByDate[isoDate];
+                    var scheduleRef = VR.firebaseDb.collection('schedules').doc(isoDate);
+
+                    // Get existing shifts, merge with new
+                    scheduleRef.get().then(function(doc) {
+                        var shifts = doc.exists ? (doc.data().shifts || []) : [];
+
+                        // Remove old shifts for this employee
+                        shifts = shifts.filter(function(s) { return s.employeeId !== anstNr; });
+
+                        // Add new shift
+                        shifts.push({
+                            employeeId: anstNr,
+                            time: dayData.time,
+                            badge: dayData.badge,
+                            badgeText: dayData.badgeText
+                        });
+
+                        // Save back
+                        return scheduleRef.set({ shifts: shifts });
+                    }).then(function() {
+                        completed++;
+                        if (completed === dates.length) {
+                            if (errors.length > 0) {
+                                if (callback) callback(false, 'Delvis fel: ' + errors.join(', '));
+                            } else {
+                                console.log('VR: Upload successful');
+                                if (callback) callback(true, dates.length + ' dagar uppladdade');
+                            }
+                        }
+                    }).catch(function(error) {
+                        console.log('VR: Error uploading', isoDate, error);
+                        errors.push(isoDate);
+                        completed++;
+                        if (completed === dates.length) {
+                            if (callback) callback(false, 'Fel vid uppladdning: ' + errors.length + ' dagar misslyckades');
+                        }
+                    });
                 });
-                count++;
+
+                // Handle empty schedule
+                if (dates.length === 0) {
+                    if (callback) callback(true, 'Anställd sparad (inget schema)');
+                }
+
+            }).catch(function(error) {
+                console.log('VR: Error saving employee:', error);
+                if (callback) callback(false, 'Kunde inte spara anställd: ' + (error.message || error));
             });
-
-            console.log('VR: Uploading', count, 'days to Firebase');
-
-            batch.commit()
-                .then(function() {
-                    console.log('VR: Upload successful');
-                    if (callback) callback(true, count + ' dagar uppladdade');
-                })
-                .catch(function(error) {
-                    console.log('VR: Upload error:', error);
-                    if (callback) callback(false, 'Uppladdningsfel: ' + (error.message || error));
-                });
 
         } catch (e) {
             console.log('VR: Export exception:', e);
@@ -301,19 +326,6 @@
 
         // Add schema data
         if (VR.allSchemaData) {
-            var allKeys = Object.keys(VR.allSchemaData);
-            console.log('VR Export: Found', allKeys.length, 'dates in schema');
-
-            // Debug: log first 3 entries with all their data
-            for (var dbg = 0; dbg < Math.min(3, allKeys.length); dbg++) {
-                var dbgKey = allKeys[dbg];
-                var dbgEntries = VR.allSchemaData[dbgKey];
-                console.log('VR Export: Date', dbgKey, '- entries count:', dbgEntries.length);
-                for (var de = 0; de < dbgEntries.length; de++) {
-                    console.log('  Entry', de, ':', JSON.stringify(dbgEntries[de]));
-                }
-            }
-
             for (var dateKey in VR.allSchemaData) {
                 if (VR.allSchemaData.hasOwnProperty(dateKey)) {
                     var entries = VR.allSchemaData[dateKey];
@@ -446,5 +458,5 @@
         });
     };
 
-    console.log('VR: Export module loaded (V.1.38)');
+    console.log('VR: Export module loaded (V.1.39)');
 })();
