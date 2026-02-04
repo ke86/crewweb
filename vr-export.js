@@ -1,4 +1,4 @@
-// VR CrewWeb - Export to Firebase - V.1.41
+// VR CrewWeb - Export to Firebase - V.1.42
 (function() {
     'use strict';
 
@@ -347,33 +347,31 @@
         var fpfpvCount = VR.fpfpvData ? VR.fpfpvData.length : 0;
 
         var html = '<style>\
-.vr-export-header{background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:28px;margin-bottom:16px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.15)}\
-.vr-export-header-title{font-size:28px;font-weight:700;color:#fff;margin-bottom:8px}\
-.vr-export-header-sub{font-size:16px;color:rgba(255,255,255,0.7)}\
-.vr-export-user{display:flex;align-items:center;gap:16px;background:#fff;border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}\
-.vr-export-avatar{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff}\
-.vr-export-user-info{flex:1}\
-.vr-export-user-name{font-size:20px;font-weight:700;color:#1a1a2e}\
-.vr-export-user-id{font-size:14px;color:#666;margin-top:2px}\
-.vr-export-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}\
-.vr-export-stat-card{background:#fff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06)}\
-.vr-export-stat-icon{font-size:32px;margin-bottom:8px}\
-.vr-export-stat-num{font-size:28px;font-weight:700;color:#1a1a2e}\
-.vr-export-stat-label{font-size:14px;color:#666;margin-top:4px}\
-.vr-export-actions{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:12px}\
-.vr-export-btn{width:100%;padding:18px;border:none;border-radius:14px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:10px}\
-.vr-export-btn.primary{background:linear-gradient(135deg,#34C759 0%,#30D158 100%);color:#fff;margin-bottom:12px}\
+.vr-export-header{background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:32px 24px;margin-bottom:20px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.15)}\
+.vr-export-header-title{font-size:32px;font-weight:700;color:#fff;margin-bottom:10px}\
+.vr-export-header-sub{font-size:18px;color:rgba(255,255,255,0.7)}\
+.vr-export-user{display:flex;align-items:center;gap:20px;background:#fff;border-radius:18px;padding:24px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}\
+.vr-export-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;flex-shrink:0}\
+.vr-export-user-info{flex:1;min-width:0}\
+.vr-export-user-name{font-size:22px;font-weight:700;color:#1a1a2e;word-wrap:break-word}\
+.vr-export-user-id{font-size:16px;color:#666;margin-top:4px}\
+.vr-export-stats{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}\
+.vr-export-stat-card{background:#fff;border-radius:18px;padding:24px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06)}\
+.vr-export-stat-icon{font-size:40px;margin-bottom:10px}\
+.vr-export-stat-num{font-size:36px;font-weight:700;color:#1a1a2e}\
+.vr-export-stat-label{font-size:16px;color:#666;margin-top:6px}\
+.vr-export-actions{background:#fff;border-radius:18px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:16px}\
+.vr-export-btn{width:100%;padding:20px;border:none;border-radius:14px;font-size:19px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:12px}\
+.vr-export-btn.primary{background:linear-gradient(135deg,#34C759 0%,#30D158 100%);color:#fff;margin-bottom:14px}\
 .vr-export-btn.primary:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(52,199,89,0.4)}\
 .vr-export-btn.secondary{background:#f0f0f0;color:#666}\
 .vr-export-btn.secondary:hover{background:#e5e5e5}\
 .vr-export-btn.danger{background:linear-gradient(135deg,#FF3B30 0%,#FF453A 100%);color:#fff}\
-.vr-export-status{text-align:center;padding:16px;font-size:16px;border-radius:12px;margin-bottom:12px}\
+.vr-export-status{text-align:center;padding:18px;font-size:17px;border-radius:14px;margin-bottom:14px}\
 .vr-export-status.success{background:#E8F5E9;color:#2E7D32}\
 .vr-export-status.error{background:#FFEBEE;color:#C62828}\
 .vr-export-status.loading{background:#E3F2FD;color:#1565C0}\
-.vr-export-danger-zone{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid #FFEBEE}\
-.vr-export-danger-title{font-size:16px;font-weight:600;color:#C62828;margin-bottom:8px}\
-.vr-export-danger-text{font-size:14px;color:#666;margin-bottom:16px}\
+.vr-export-danger-zone{background:#fff;border-radius:18px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid #FFEBEE}\
 </style>';
 
         html += '<div style="max-width:500px;margin:0 auto">';
@@ -420,12 +418,10 @@
         html += '<span>💾</span> Exportera manuellt (CSV)</button>';
         html += '</div>';
 
-        // Danger zone
+        // Delete data button
         html += '<div class="vr-export-danger-zone">';
-        html += '<div class="vr-export-danger-title">⚠️ Farozon</div>';
-        html += '<div class="vr-export-danger-text">Ta bort all din data från Vem jobbar idag?</div>';
         html += '<button class="vr-export-btn danger" onclick="VR.confirmDeleteFirebaseData()">';
-        html += '<span>🗑️</span> Ta bort min data</button>';
+        html += '<span>🗑️</span> Radera din uppladdade data</button>';
         html += '</div>';
 
         html += '</div>';
@@ -761,5 +757,5 @@
         });
     };
 
-    console.log('VR: Export module loaded (V.1.41)');
+    console.log('VR: Export module loaded (V.1.42)');
 })();
