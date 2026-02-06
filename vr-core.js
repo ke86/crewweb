@@ -53,10 +53,53 @@
     VR.CHURCH_TAX = 1.0;        // Kyrkskatt %
     VR.BURIAL_FEE = 0.29;       // Begravningsavgift %
 
-    // Tax settings (defaults)
+    // ===== PERSISTENT SETTINGS (localStorage) =====
+    var SETTINGS_KEY = 'vr_settings';
+
+    VR.loadSettings = function() {
+        try {
+            var raw = localStorage.getItem(SETTINGS_KEY);
+            if (raw) {
+                var saved = JSON.parse(raw);
+                console.log('VR: Settings loaded from localStorage:', JSON.stringify(saved));
+                return saved;
+            }
+        } catch (e) {
+            console.log('VR: Could not load settings:', e);
+        }
+        return null;
+    };
+
+    VR.saveSettings = function(partial) {
+        try {
+            var current = VR.loadSettings() || {};
+            // Merge partial into current
+            for (var key in partial) {
+                if (partial.hasOwnProperty(key) && partial[key] !== undefined && partial[key] !== '') {
+                    current[key] = partial[key];
+                }
+            }
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(current));
+            console.log('VR: Settings saved:', JSON.stringify(current));
+            return true;
+        } catch (e) {
+            console.log('VR: Could not save settings:', e);
+            return false;
+        }
+    };
+
+    VR.getSetting = function(key) {
+        var all = VR.loadSettings();
+        return all ? all[key] : undefined;
+    };
+
+    // Initialize taxSettings and userRole from saved settings
+    var savedSettings = VR.loadSettings() || {};
+
+    // Tax settings (defaults, overridden by saved)
     VR.taxSettings = {
-        municipality: 'Malmö',
-        churchTax: true
+        municipality: savedSettings.municipality || 'Malmö',
+        churchTax: savedSettings.churchTax !== undefined ? savedSettings.churchTax : true
     };
 
     // Get total tax rate

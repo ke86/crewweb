@@ -99,6 +99,14 @@
             VR.setFirebaseUser(VR._exportUserInfo.anstNr, VR._exportUserInfo.namn);
         }
 
+        // Save to localStorage for future sessions
+        if (VR.saveSettings) {
+            var toSave = {};
+            if (VR._exportUserInfo.anstNr) toSave.anstNr = VR._exportUserInfo.anstNr;
+            if (VR._exportUserInfo.namn) toSave.namn = VR._exportUserInfo.namn;
+            VR.saveSettings(toSave);
+        }
+
         console.log('VR: Captured user info - anstNr:', VR._exportUserInfo.anstNr, 'namn:', VR._exportUserInfo.namn);
     };
 
@@ -536,7 +544,15 @@
             }
         }
 
-        // Fallback 3: VR properties
+        // Fallback 3: Saved settings (localStorage)
+        if (!anstNr || !namn) {
+            if (VR.getSetting) {
+                if (!anstNr) anstNr = VR.getSetting('anstNr') || '';
+                if (!namn) namn = VR.getSetting('namn') || '';
+            }
+        }
+
+        // Fallback 4: VR properties
         if (!anstNr) anstNr = VR.anstNr || '';
         if (!namn) namn = VR.userName || VR.anstNamn || '';
 
@@ -966,5 +982,5 @@
         });
     };
 
-    console.log('VR: Export module loaded (V.1.45)');
+    console.log('VR: Export module loaded (V.1.47)');
 })();
