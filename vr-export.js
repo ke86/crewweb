@@ -1,4 +1,4 @@
-// VR CrewWeb - Export to Firebase - V.1.43
+// VR CrewWeb - Export to Firebase - V.1.44
 (function() {
     'use strict';
 
@@ -30,11 +30,129 @@
         return initials || '??';
     };
 
-    // ===== EXPORT VIEW (with auto-load) =====
-    VR.doExport = function() {
+    // ===== PIN CODE =====
+    var EXPORT_PIN = '8612';
+
+    VR.showPinScreen = function() {
         VR.stopTimer();
         VR.closeOverlay();
 
+        var html = '<style>\
+.vr-pin-container{width:100%;padding:0 16px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh}\
+.vr-pin-header{background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);border-radius:20px;padding:40px 28px;margin-bottom:32px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:100%}\
+.vr-pin-icon{font-size:56px;margin-bottom:16px}\
+.vr-pin-title{font-size:32px;font-weight:700;color:#fff;margin-bottom:8px}\
+.vr-pin-sub{font-size:18px;color:rgba(255,255,255,0.6)}\
+.vr-pin-fields{display:flex;gap:16px;justify-content:center;margin-bottom:28px}\
+.vr-pin-field{width:68px;height:80px;border:3px solid #ddd;border-radius:16px;text-align:center;font-size:36px;font-weight:700;color:#1a1a2e;background:#fff;outline:none;transition:border-color 0.2s;-webkit-appearance:none;appearance:none}\
+.vr-pin-field:focus{border-color:#667eea;box-shadow:0 0 0 4px rgba(102,126,234,0.2)}\
+.vr-pin-field.error{border-color:#FF3B30;animation:vrPinShake 0.4s ease}\
+.vr-pin-error{color:#FF3B30;font-size:18px;font-weight:600;text-align:center;min-height:28px;margin-bottom:8px}\
+@keyframes vrPinShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}\
+</style>';
+
+        html += '<div class="vr-pin-container">';
+        html += '<div class="vr-pin-header">';
+        html += '<div class="vr-pin-icon">🔒</div>';
+        html += '<div class="vr-pin-title">Exportera</div>';
+        html += '<div class="vr-pin-sub">Ange PIN-kod för att fortsätta</div>';
+        html += '</div>';
+
+        html += '<div class="vr-pin-fields">';
+        html += '<input type="tel" class="vr-pin-field" id="vrPin1" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">';
+        html += '<input type="tel" class="vr-pin-field" id="vrPin2" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">';
+        html += '<input type="tel" class="vr-pin-field" id="vrPin3" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">';
+        html += '<input type="tel" class="vr-pin-field" id="vrPin4" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">';
+        html += '</div>';
+
+        html += '<div class="vr-pin-error" id="vrPinError"></div>';
+        html += '</div>';
+
+        VR.showView('', '', html);
+
+        // Setup PIN input behavior after render
+        setTimeout(function() { VR.setupPinInputs(); }, 100);
+    };
+
+    VR.setupPinInputs = function() {
+        var fields = [
+            document.getElementById('vrPin1'),
+            document.getElementById('vrPin2'),
+            document.getElementById('vrPin3'),
+            document.getElementById('vrPin4')
+        ];
+
+        if (!fields[0]) return;
+
+        fields.forEach(function(field, i) {
+            field.addEventListener('input', function() {
+                // Only allow digits
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value.length === 1 && i < 3) {
+                    fields[i + 1].focus();
+                }
+                // Check if all filled
+                if (i === 3 && this.value.length === 1) {
+                    var pin = fields[0].value + fields[1].value + fields[2].value + fields[3].value;
+                    VR.checkPin(pin, fields);
+                }
+            });
+
+            field.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && this.value === '' && i > 0) {
+                    fields[i - 1].focus();
+                    fields[i - 1].value = '';
+                }
+            });
+
+            // Handle paste
+            field.addEventListener('paste', function(e) {
+                e.preventDefault();
+                var pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+                if (pasted.length >= 4) {
+                    for (var j = 0; j < 4; j++) {
+                        fields[j].value = pasted[j];
+                    }
+                    var pin = pasted.substring(0, 4);
+                    VR.checkPin(pin, fields);
+                }
+            });
+        });
+
+        // Auto-focus first field
+        fields[0].focus();
+    };
+
+    VR.checkPin = function(pin, fields) {
+        if (pin === EXPORT_PIN) {
+            // Correct PIN - proceed to export
+            fields.forEach(function(f) {
+                f.style.borderColor = '#34C759';
+                f.disabled = true;
+            });
+            document.getElementById('vrPinError').textContent = '';
+            setTimeout(function() { VR.doExportAfterPin(); }, 300);
+        } else {
+            // Wrong PIN
+            var errorEl = document.getElementById('vrPinError');
+            errorEl.textContent = 'Fel PIN-kod';
+            fields.forEach(function(f) {
+                f.classList.add('error');
+                f.value = '';
+            });
+            setTimeout(function() {
+                fields.forEach(function(f) { f.classList.remove('error'); });
+                fields[0].focus();
+            }, 500);
+        }
+    };
+
+    // ===== EXPORT VIEW (with auto-load) =====
+    VR.doExport = function() {
+        VR.showPinScreen();
+    };
+
+    VR.doExportAfterPin = function() {
         var schemaCount = VR.allSchemaData ? Object.keys(VR.allSchemaData).length : 0;
         var fpfpvCount = VR.fpfpvData ? VR.fpfpvData.length : 0;
 
@@ -758,5 +876,5 @@
         });
     };
 
-    console.log('VR: Export module loaded (V.1.43)');
+    console.log('VR: Export module loaded (V.1.44)');
 })();
