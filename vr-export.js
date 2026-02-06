@@ -1,4 +1,4 @@
-// VR CrewWeb - Export to Firebase - V.1.44
+// VR CrewWeb - Export to Firebase - V.1.45
 (function() {
     'use strict';
 
@@ -28,6 +28,78 @@
         var parts = name.trim().split(/\s+/);
         var initials = parts.map(function(n) { return n[0] || ''; }).join('').substring(0, 2).toUpperCase();
         return initials || '??';
+    };
+
+    // ===== CAPTURE USER INFO FROM PAGE =====
+    VR._exportUserInfo = { anstNr: '', namn: '' };
+
+    VR.captureUserInfo = function() {
+        console.log('VR: Capturing user info from page...');
+
+        // 1. AnstNr from div.CurrentUser (always present, contains "3021132026-02-0613:20:33")
+        if (!VR._exportUserInfo.anstNr) {
+            var currentUserDiv = document.querySelector('div.CurrentUser');
+            if (currentUserDiv) {
+                var cuText = (currentUserDiv.textContent || '').trim();
+                var match6 = cuText.match(/^(\d{6})/);
+                if (match6) {
+                    VR._exportUserInfo.anstNr = match6[1];
+                    console.log('VR: Got anstNr from CurrentUser div:', match6[1]);
+                }
+            }
+        }
+
+        // 2. Namn from "Anställds namn:" label (only visible on Arbetsdag page)
+        if (!VR._exportUserInfo.namn) {
+            var allDivs = document.querySelectorAll('div, span, label');
+            for (var i = 0; i < allDivs.length; i++) {
+                var el = allDivs[i];
+                var text = (el.textContent || '').trim();
+                if (text.length > 40) continue;
+
+                var textLower = text.toLowerCase();
+                if (textLower === 'anställds namn:' || textLower === 'anställds namn') {
+                    var nextEl = el.nextElementSibling;
+                    if (nextEl) {
+                        var namnVal = (nextEl.value || nextEl.textContent || '').trim();
+                        if (namnVal && namnVal.length >= 3 && namnVal.length <= 50 && namnVal.indexOf(':') === -1) {
+                            VR._exportUserInfo.namn = namnVal;
+                            console.log('VR: Got namn from label sibling:', namnVal);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Fallback: anstNr from "Anställd nr.:" label
+        if (!VR._exportUserInfo.anstNr) {
+            var allEls = document.querySelectorAll('div, span, label');
+            for (var j = 0; j < allEls.length; j++) {
+                var el2 = allEls[j];
+                var text2 = (el2.textContent || '').trim().toLowerCase();
+                if (text2.length > 30) continue;
+                if (text2 === 'anställd nr.:' || text2 === 'anställd nr:' || text2 === 'anställd nr.' || text2 === 'anställd nr') {
+                    var nextEl2 = el2.nextElementSibling;
+                    if (nextEl2) {
+                        var nrVal = (nextEl2.value || nextEl2.textContent || '').trim();
+                        var nrMatch = nrVal.match(/(\d{6})/);
+                        if (nrMatch) {
+                            VR._exportUserInfo.anstNr = nrMatch[1];
+                            console.log('VR: Got anstNr from label sibling:', nrMatch[1]);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Save to Firebase user if both found
+        if (VR._exportUserInfo.anstNr && VR._exportUserInfo.namn && VR.setFirebaseUser) {
+            VR.setFirebaseUser(VR._exportUserInfo.anstNr, VR._exportUserInfo.namn);
+        }
+
+        console.log('VR: Captured user info - anstNr:', VR._exportUserInfo.anstNr, 'namn:', VR._exportUserInfo.namn);
     };
 
     // ===== PIN CODE =====
@@ -259,6 +331,9 @@
 
     // ===== FETCH SCHEMA DATA FOR EXPORT =====
     VR.fetchSchemaDataForExport = function(callback) {
+        // Capture user info NOW while on Arbetsdag page (namn is visible here)
+        VR.captureUserInfo();
+
         var now = new Date();
         var startDate = new Date(2025, 11, 14);
         var endDate = new Date(now.getFullYear(), 11, 31);
@@ -439,27 +514,42 @@
 
     // ===== SHOW EXPORT VIEW =====
     VR.showExportView = function() {
-        // Try to get user info from multiple sources
-        var user = VR.getFirebaseUser ? VR.getFirebaseUser() : null;
-        var anstNr = user ? user.anstNr : '';
-        var namn = user ? user.namn : '';
+        // Primary source: captured during page loading
+        var anstNr = VR._exportUserInfo.anstNr || '';
+        var namn = VR._exportUserInfo.namn || '';
 
-        // If no Firebase user, try to get from CrewWeb page
-        if ((!anstNr || !namn) && VR.getCrewWebUserInfo) {
-            var crewWebInfo = VR.getCrewWebUserInfo();
-            if (crewWebInfo) {
-                if (!anstNr && crewWebInfo.anstNr) anstNr = crewWebInfo.anstNr;
-                if (!namn && crewWebInfo.namn) namn = crewWebInfo.namn;
-                // Save for later use
-                if (anstNr && namn && VR.setFirebaseUser) {
-                    VR.setFirebaseUser(anstNr, namn);
-                }
+        // Fallback 1: Firebase user
+        if (!anstNr || !namn) {
+            var user = VR.getFirebaseUser ? VR.getFirebaseUser() : null;
+            if (user) {
+                if (!anstNr && user.anstNr) anstNr = user.anstNr;
+                if (!namn && user.namn) namn = user.namn;
             }
         }
 
-        // Fallback to VR properties
+        // Fallback 2: getUserInfoFromCrewWeb (vr-whosworking.js)
+        if ((!anstNr || !namn) && VR.getUserInfoFromCrewWeb) {
+            var crewWebInfo = VR.getUserInfoFromCrewWeb();
+            if (crewWebInfo) {
+                if (!anstNr && crewWebInfo.anstNr) anstNr = crewWebInfo.anstNr;
+                if (!namn && crewWebInfo.namn) namn = crewWebInfo.namn;
+            }
+        }
+
+        // Fallback 3: VR properties
         if (!anstNr) anstNr = VR.anstNr || '';
         if (!namn) namn = VR.userName || VR.anstNamn || '';
+
+        // Try one more capture from CurrentUser div for anstNr
+        if (!anstNr) {
+            var cuDiv = document.querySelector('div.CurrentUser');
+            if (cuDiv) {
+                var cuMatch = (cuDiv.textContent || '').match(/^(\d{6})/);
+                if (cuMatch) anstNr = cuMatch[1];
+            }
+        }
+
+        console.log('VR: Export view user info - anstNr:', anstNr, 'namn:', namn);
 
         var schemaCount = VR.allSchemaData ? Object.keys(VR.allSchemaData).length : 0;
         var fpfpvCount = VR.fpfpvData ? VR.fpfpvData.length : 0;
@@ -876,5 +966,5 @@
         });
     };
 
-    console.log('VR: Export module loaded (V.1.44)');
+    console.log('VR: Export module loaded (V.1.45)');
 })();
