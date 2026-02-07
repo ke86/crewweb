@@ -80,6 +80,10 @@
                     VR.updateLoader(20, 'Klickar på Löneredovisningar...');
                     lone.click();
                     VR.waitForLonePage(callback);
+                } else if (n % 5 === 0 && n < 25) {
+                    // Retry clickFolder every 5 attempts (menu may have toggled closed)
+                    console.log('VR: Retry clickFolder (attempt ' + n + ')');
+                    VR.clickFolder();
                 } else if (n > 25) {
                     VR.stopTimer();
                     VR.updateLoader(0, 'Timeout - hittade ej Löneredovisningar');
