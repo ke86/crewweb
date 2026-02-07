@@ -73,7 +73,8 @@
     };
 
     // ===== LOAD BOTH MONTHS AUTOMATICALLY =====
-    VR.loadBothMonths = function() {
+    // Optional callback: if provided, call it instead of showing SR view
+    VR.loadBothMonths = function(callback) {
         var now = new Date();
         var currentMonth = now.getMonth();
         var currentYear = now.getFullYear();
@@ -97,19 +98,27 @@
                         VR.updateLoader(75, 'Expanderar ' + toExpandCount + ' dagar...');
                         VR.expandTPDays(function() {
                             var count = VR.getSRDataArray().length;
+                            if (callback) {
+                                callback();
+                            } else {
+                                VR.updateLoader(100, 'Klar! ' + count + ' Danmark-dagar');
+                                setTimeout(function() {
+                                    VR.hideLoader();
+                                    VR.showSRView();
+                                }, 400);
+                            }
+                        });
+                    } else {
+                        var count = VR.getSRDataArray().length;
+                        if (callback) {
+                            callback();
+                        } else {
                             VR.updateLoader(100, 'Klar! ' + count + ' Danmark-dagar');
                             setTimeout(function() {
                                 VR.hideLoader();
                                 VR.showSRView();
                             }, 400);
-                        });
-                    } else {
-                        var count = VR.getSRDataArray().length;
-                        VR.updateLoader(100, 'Klar! ' + count + ' Danmark-dagar');
-                        setTimeout(function() {
-                            VR.hideLoader();
-                            VR.showSRView();
-                        }, 400);
+                        }
                     }
                 });
             }, 800); // Longer delay between months for mobile
