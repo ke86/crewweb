@@ -80,16 +80,6 @@
 .vr-lon-status-badge.missing{background:#FFF3E0;color:#E65100}\
 .vr-lon-fetch-btn{width:100%;padding:22px;border:none;border-radius:16px;font-size:22px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(135deg,#007AFF 0%,#5856D6 100%);color:#fff;box-shadow:0 4px 16px rgba(0,122,255,0.3);margin-bottom:16px}\
 .vr-lon-fetch-btn:active{transform:scale(0.97)}\
-.vr-lon-progress{background:#fff;border-radius:18px;padding:28px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);text-align:center;display:none}\
-.vr-lon-progress-bar{width:100%;height:8px;background:#E5E5EA;border-radius:4px;overflow:hidden;margin:20px 0}\
-.vr-lon-progress-fill{height:100%;background:linear-gradient(90deg,#007AFF,#5856D6);border-radius:4px;transition:width 0.4s ease;width:0%}\
-.vr-lon-progress-step{font-size:18px;color:#333;font-weight:600;margin-bottom:8px}\
-.vr-lon-progress-detail{font-size:16px;color:#888}\
-.vr-lon-step-list{text-align:left;margin-top:20px}\
-.vr-lon-step{display:flex;align-items:center;gap:12px;padding:10px 0;font-size:17px;color:#999}\
-.vr-lon-step.active{color:#007AFF;font-weight:600}\
-.vr-lon-step.done{color:#34C759}\
-.vr-lon-step.error{color:#FF3B30}\
 .vr-lon-info{background:#E3F2FD;border-radius:14px;padding:18px;font-size:16px;color:#1565C0;line-height:1.5}\
 </style>';
 
@@ -128,18 +118,6 @@
         html += '<button class="vr-lon-fetch-btn" id="vrLonFetchBtn" onclick="VR.fetchAllLonData()">';
         html += '<span>📊</span> Hämta all data & beräkna</button>';
 
-        // Progress panel (hidden initially)
-        html += '<div class="vr-lon-progress" id="vrLonProgress">';
-        html += '<div class="vr-lon-progress-step" id="vrLonProgressStep">Förbereder...</div>';
-        html += '<div class="vr-lon-progress-bar"><div class="vr-lon-progress-fill" id="vrLonProgressFill"></div></div>';
-        html += '<div class="vr-lon-progress-detail" id="vrLonProgressDetail"></div>';
-        html += '<div class="vr-lon-step-list" id="vrLonStepList">';
-        html += '<div class="vr-lon-step" id="vrStep1">⬜ Steg 1: Hämta OB, Övertid & Frånvaro</div>';
-        html += '<div class="vr-lon-step" id="vrStep2">⬜ Steg 2: Hämta SR-tillägg (Danmark)</div>';
-        html += '<div class="vr-lon-step" id="vrStep3">⬜ Steg 3: Beräkna lön</div>';
-        html += '</div>';
-        html += '</div>';
-
         // Info box
         html += '<div class="vr-lon-info">';
         html += '<strong>💡 Obs:</strong> Arbete i t.ex. januari → tillägg/avdrag på <strong>februari-lönen</strong>. ';
@@ -177,59 +155,32 @@
             badge + '</div>';
     };
 
-    // ===== HIDE/SHOW VR OVERLAY DURING NAVIGATION =====
-    VR.hideOverlayForNav = function() {
-        var vrView = document.getElementById(VR.ID.view || 'vrView');
-        if (vrView) {
-            vrView.style.display = 'none';
-            console.log('VR: Overlay hidden for navigation');
-        }
-    };
-
-    VR.showOverlayAfterNav = function() {
-        var vrView = document.getElementById(VR.ID.view || 'vrView');
-        if (vrView) {
-            vrView.style.display = '';
-            console.log('VR: Overlay restored');
-        }
-    };
-
     // ===== FETCH ALL DATA SEQUENTIALLY =====
     VR.fetchAllLonData = function() {
-        // Hide button, show progress
-        var btn = document.getElementById('vrLonFetchBtn');
-        var progress = document.getElementById('vrLonProgress');
-        if (btn) btn.style.display = 'none';
-        if (progress) progress.style.display = 'block';
+        // Remove the showView overlay and switch to loader (same as OB, Övertid etc.)
+        var vrView = document.getElementById(VR.ID.view || 'vrView');
+        if (vrView) vrView.remove();
 
-        VR.updateLonProgress('Startar...', 5, 'Navigerar till löneredovisningar...');
-        VR.setLonStep(1, 'active');
-
-        // IMPORTANT: Hide VR overlay so CrewWeb menu is accessible
-        VR.hideOverlayForNav();
+        VR.showLoader('Lönberäkning');
+        VR.updateLoader(5, 'Navigerar till löneredovisningar...');
 
         // Step 1: Navigate to Löneredovisningar and parse OB + Övertid + Frånvaro
         VR.navigateToLoneredovisningar(function() {
-            VR.updateLonProgress('Steg 1/3: Löneredovisningar', 15, 'Ställer in datum och hämtar...');
+            VR.updateLoader(15, 'Steg 1/3: Ställer in datum...');
             VR.setupLonePageAndFetch(function() {
-                VR.updateLonProgress('Steg 1/3: Parsar data...', 30, 'OB, Övertid, Frånvaro...');
+                VR.updateLoader(35, 'Steg 1/3: Parsar OB, Övertid, Frånvaro...');
                 VR.parseAllLoneData();
 
-                VR.setLonStep(1, 'done');
-                VR.setLonStep(2, 'active');
-
                 // Step 2: Fetch SR-tillägg (from Arbetsdag page)
-                VR.updateLonProgress('Steg 2/3: SR-tillägg', 45, 'Laddar Danmark-resor...');
+                VR.updateLoader(45, 'Steg 2/3: Hämtar SR-tillägg...');
 
                 // Check if SR data already exists
                 var hasSR = VR.srData && Object.keys(VR.srData).length > 0;
                 if (hasSR) {
-                    VR.updateLonProgress('Steg 2/3: SR redan hämtad', 65, VR.srData ? Object.keys(VR.srData).length + ' dagar' : '');
-                    VR.setLonStep(2, 'done');
+                    VR.updateLoader(70, 'Steg 2/3: SR redan hämtad');
                     VR.finalizeLonCalculation();
                 } else {
                     VR.fetchSRForLon(function() {
-                        VR.setLonStep(2, 'done');
                         VR.finalizeLonCalculation();
                     });
                 }
@@ -366,7 +317,7 @@
         // SR data comes from doSRTillagg which loads Arbetsdag page
         // We reuse the SR loading logic
         if (VR.loadBothMonths) {
-            VR.updateLonProgress('Steg 2/3: SR-tillägg', 50, 'Öppnar Arbetsdag...');
+            VR.updateLoader(50, 'Steg 2/3: Öppnar Arbetsdag...');
 
             // Navigate to Arbetsdag
             VR.clickFolder();
@@ -377,7 +328,7 @@
                     var el = VR.findMenuItem('Arbetsdag');
                     if (el) {
                         clearInterval(findTimer);
-                        VR.updateLonProgress('Steg 2/3: SR-tillägg', 55, 'Laddar Arbetsdag...');
+                        VR.updateLoader(55, 'Steg 2/3: Laddar Arbetsdag...');
                         el.click();
 
                         // Wait for workdays table
@@ -387,12 +338,12 @@
                             var tbl = document.querySelector('#workdays table');
                             if (tbl || w > 30) {
                                 clearInterval(waitTimer);
-                                VR.updateLonProgress('Steg 2/3: SR-tillägg', 60, 'Söker Danmark-resor...');
+                                VR.updateLoader(60, 'Steg 2/3: Söker Danmark-resor...');
 
                                 // Use SR-tillägg loading
                                 VR.loadBothMonths(function() {
-                                    VR.updateLonProgress('Steg 2/3: SR klar', 70,
-                                        VR.srData ? Object.keys(VR.srData).length + ' Danmark-dagar' : 'Inga dagar');
+                                    var srCount = VR.srData ? Object.keys(VR.srData).length : 0;
+                                    VR.updateLoader(75, 'Steg 2/3: SR klar (' + srCount + ' dagar)');
                                     if (callback) callback();
                                 });
                             }
@@ -400,7 +351,7 @@
                     } else if (n > 20) {
                         clearInterval(findTimer);
                         console.log('VR Lön: Could not find Arbetsdag menu for SR');
-                        VR.updateLonProgress('Steg 2/3: SR', 70, 'Kunde ej hämta SR');
+                        VR.updateLoader(75, 'Steg 2/3: Kunde ej hämta SR');
                         if (callback) callback();
                     }
                 }, 400);
@@ -413,11 +364,7 @@
 
     // ===== FINALIZE CALCULATION =====
     VR.finalizeLonCalculation = function() {
-        // Restore VR overlay before showing results
-        VR.showOverlayAfterNav();
-
-        VR.setLonStep(3, 'active');
-        VR.updateLonProgress('Steg 3/3: Beräknar', 85, 'Sammanställer lön...');
+        VR.updateLoader(85, 'Steg 3/3: Beräknar lön...');
 
         // Detect role if not set
         if (!VR.userRole) {
@@ -425,35 +372,12 @@
         }
 
         setTimeout(function() {
-            VR.updateLonProgress('Klar!', 100, '');
-            VR.setLonStep(3, 'done');
+            VR.updateLoader(100, 'Klar!');
 
             setTimeout(function() {
                 VR.collectLonData();
             }, 500);
         }, 300);
-    };
-
-    // ===== PROGRESS UI HELPERS =====
-    VR.updateLonProgress = function(step, percent, detail) {
-        var stepEl = document.getElementById('vrLonProgressStep');
-        var fillEl = document.getElementById('vrLonProgressFill');
-        var detailEl = document.getElementById('vrLonProgressDetail');
-
-        if (stepEl) stepEl.textContent = step;
-        if (fillEl) fillEl.style.width = percent + '%';
-        if (detailEl) detailEl.textContent = detail || '';
-    };
-
-    VR.setLonStep = function(num, state) {
-        var el = document.getElementById('vrStep' + num);
-        if (!el) return;
-
-        el.className = 'vr-lon-step ' + state;
-
-        var icons = { active: '🔄', done: '✅', error: '❌' };
-        var text = el.textContent.substring(2); // Remove old icon
-        el.textContent = (icons[state] || '⬜') + ' ' + text;
     };
 
     // ===== FETCH ROLE =====

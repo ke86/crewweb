@@ -83,8 +83,6 @@
                 } else if (n > 25) {
                     VR.stopTimer();
                     VR.updateLoader(0, 'Timeout - hittade ej Löneredovisningar');
-                    // Restore overlay if hidden for navigation
-                    if (VR.showOverlayAfterNav) VR.showOverlayAfterNav();
                     setTimeout(VR.hideLoader, 2000);
                 }
             }, 400);
@@ -104,7 +102,6 @@
             } else if (n > 30) {
                 VR.stopTimer();
                 VR.updateLoader(0, 'Sidan laddades ej');
-                if (VR.showOverlayAfterNav) VR.showOverlayAfterNav();
                 setTimeout(VR.hideLoader, 2000);
             }
         }, 400);
@@ -182,7 +179,6 @@
                     } else {
                         console.log('VR: Hämta button NOT found');
                         VR.updateLoader(0, 'Hämta-knapp ej hittad');
-                        if (VR.showOverlayAfterNav) VR.showOverlayAfterNav();
                         setTimeout(VR.hideLoader, 2000);
                     }
                 }, 400);
@@ -206,7 +202,6 @@
             } else if (n > 60) {
                 VR.stopTimer();
                 VR.updateLoader(0, 'Timeout - ingen data');
-                if (VR.showOverlayAfterNav) VR.showOverlayAfterNav();
                 setTimeout(VR.hideLoader, 2000);
             }
         }, 400);
