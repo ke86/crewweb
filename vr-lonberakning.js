@@ -177,6 +177,23 @@
             badge + '</div>';
     };
 
+    // ===== HIDE/SHOW VR OVERLAY DURING NAVIGATION =====
+    VR.hideOverlayForNav = function() {
+        var vrView = document.getElementById(VR.ID.view || 'vrView');
+        if (vrView) {
+            vrView.style.display = 'none';
+            console.log('VR: Overlay hidden for navigation');
+        }
+    };
+
+    VR.showOverlayAfterNav = function() {
+        var vrView = document.getElementById(VR.ID.view || 'vrView');
+        if (vrView) {
+            vrView.style.display = '';
+            console.log('VR: Overlay restored');
+        }
+    };
+
     // ===== FETCH ALL DATA SEQUENTIALLY =====
     VR.fetchAllLonData = function() {
         // Hide button, show progress
@@ -187,6 +204,9 @@
 
         VR.updateLonProgress('Startar...', 5, 'Navigerar till löneredovisningar...');
         VR.setLonStep(1, 'active');
+
+        // IMPORTANT: Hide VR overlay so CrewWeb menu is accessible
+        VR.hideOverlayForNav();
 
         // Step 1: Navigate to Löneredovisningar and parse OB + Övertid + Frånvaro
         VR.navigateToLoneredovisningar(function() {
@@ -393,6 +413,9 @@
 
     // ===== FINALIZE CALCULATION =====
     VR.finalizeLonCalculation = function() {
+        // Restore VR overlay before showing results
+        VR.showOverlayAfterNav();
+
         VR.setLonStep(3, 'active');
         VR.updateLonProgress('Steg 3/3: Beräknar', 85, 'Sammanställer lön...');
 
