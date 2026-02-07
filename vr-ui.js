@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.1.47';
+    VR.VERSION = 'V.1.48';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';
@@ -665,10 +665,18 @@
 
     // ===== INIT =====
     VR.init = function() {
+        // Remove splash screen with fade-out
+        var splash = document.getElementById('vrSplash');
+        if (splash) {
+            splash.style.transition = 'opacity 0.3s ease';
+            splash.style.opacity = '0';
+            setTimeout(function() { splash.remove(); }, 300);
+        }
+
         // Role will be detected from tour numbers in SR-Tillägg
         VR.createHeader();
         VR.fetchHeaderInfo();
-        console.log('VR: Initialized');
+        console.log('VR: Initialized ' + VR.VERSION);
     };
 
     console.log('VR: UI loaded');
