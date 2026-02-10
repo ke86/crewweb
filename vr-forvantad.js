@@ -267,15 +267,18 @@
             return { start: jsonMatch.start, slut: jsonMatch.slut, source: 'json' };
         }
 
-        // 2. Reserv-turer (fixed times)
-        if (RESERV_TIDER[turnr]) {
-            return { start: RESERV_TIDER[turnr].start, slut: RESERV_TIDER[turnr].slut, source: 'reserv' };
+        // 2. Reserv-turer (case-insensitive, handle spaces)
+        var turnrNorm = turnr.replace(/\s+/g, '');
+        for (var rKey in RESERV_TIDER) {
+            if (turnrNorm.toLowerCase() === rKey.toLowerCase()) {
+                return { start: RESERV_TIDER[rKey].start, slut: RESERV_TIDER[rKey].slut, source: 'reserv' };
+            }
         }
 
-        // 3. Suffix matching (last 3 digits)
-        var suffixMatch = turnr.match(/(\d{3})\w*$/);
-        if (suffixMatch) {
-            var suffix = suffixMatch[1];
+        // 3. Suffix matching — extract all digits, take last 3
+        var digitsOnly = turnr.replace(/\D/g, '');
+        if (digitsOnly.length >= 3) {
+            var suffix = digitsOnly.slice(-3);
             if (SUFFIX_TIDER[suffix]) {
                 return { start: SUFFIX_TIDER[suffix].start, slut: SUFFIX_TIDER[suffix].slut, source: 'suffix' };
             }
@@ -322,7 +325,7 @@
 
             // Match date headers: "DD-MM-YYYY - Weekday" or "DD-MM-YYYY - Weekday - TURNR"
             // TURNR can be: digits (15208), digits+letter (12173B), or Reserv1-4
-            var dateMatch = text.match(/^(\d{1,2})-(\d{2})-(\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)(?:\s*-\s*((?:\d{4,6}\w*|Reserv\d)))?/i);
+            var dateMatch = text.match(/^(\d{1,2})-(\d{2})-(\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)(?:\s*-\s*((?:\d{4,6}\w*|[Rr]eserv\s*\d)))?/i);
 
             if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE') {
                 var directText = '';
