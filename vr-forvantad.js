@@ -1,4 +1,4 @@
-// VR CrewWeb - Förväntat Schema (V.1.53 - PIN-lås, Reserv-turer, suffix-matchning)
+// VR CrewWeb - Förväntat Schema (V.1.54 - Större PIN/lista, ikoner)
 (function() {
     'use strict';
 
@@ -14,7 +14,7 @@
         'Reserv4': { start: '14:30', slut: '22:30' }
     };
 
-    // Suffix matching: last 3 digits → fixed times
+    // Suffix matching: last 3 digits -> fixed times
     var SUFFIX_TIDER = {
         '291': { start: '03:45', slut: '11:00' },
         '281': { start: '05:00', slut: '12:00' }
@@ -41,6 +41,65 @@
         return { month: month, year: year };
     };
 
+    // ===== ICON LOGIC FOR FORVANTAD (same rules as getTurIcons in vr-core.js) =====
+    VR.getForvantadIcons = function(tn) {
+        if (!tn) return '';
+        var tnU = tn.toUpperCase();
+        var icons = '';
+
+        // Check for "Ändrad Reserv" format: NNNNNN-NNNNNN
+        var isAndradReserv = /^\d{6}-\d{6}/.test(tn);
+
+        if (isAndradReserv) {
+            icons += '<span style="display:inline-block;background:#DC2626;color:#fff;font-size:16px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:6px;vertical-align:middle">R</span>';
+            icons += '<span style="display:inline-block;background:#EAB308;color:#fff;font-size:14px;font-weight:700;padding:3px 7px;border-radius:6px;margin-left:4px;vertical-align:middle">Ändrad</span>';
+            return icons;
+        }
+
+        // Reserv types (text starting with RESERV)
+        if (tnU.indexOf('RESERV') === 0) {
+            icons += '<span style="display:inline-block;background:#9333EA;color:#fff;font-size:16px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:6px;vertical-align:middle">R</span>';
+            if (tnU.indexOf('TP') > -1) {
+                icons += '<span style="display:inline-block;background:#EAB308;color:#fff;font-size:14px;font-weight:700;padding:3px 7px;border-radius:6px;margin-left:4px;vertical-align:middle">Ändrad</span>';
+            }
+            return icons;
+        }
+
+        // Position 4 (index 3) = 8 or 9 -> R badge (ändrad reserv)
+        var c4 = tn.length >= 4 ? tn.charAt(3) : '';
+        if (c4 === '8' || c4 === '9') {
+            icons += '<span style="display:inline-block;background:#DC2626;color:#fff;font-size:16px;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:6px;vertical-align:middle">R</span>';
+            if (tnU.indexOf('TP') > -1) {
+                icons += '<span style="display:inline-block;background:#EAB308;color:#fff;font-size:14px;font-weight:700;padding:3px 7px;border-radius:6px;margin-left:4px;vertical-align:middle">Ändrad</span>';
+            }
+            return icons;
+        }
+
+        var c3 = tn.length >= 3 ? tn.charAt(2) : '';
+        var c6 = tn.length >= 6 ? tn.charAt(5) : '';
+
+        // Country flag based on 3rd character (1,3 = Sverige, 2,4 = Danmark)
+        if (c3 === '1' || c3 === '3') {
+            icons += '<span style="margin-left:5px;font-size:20px;vertical-align:middle">\ud83c\uddf8\ud83c\uddea</span>';
+        } else if (c3 === '2' || c3 === '4') {
+            icons += '<span style="margin-left:5px;font-size:20px;vertical-align:middle">\ud83c\udde9\ud83c\uddf0</span>';
+        }
+
+        // Shift indicator (A/B)
+        if (c6.toUpperCase() === 'A') {
+            icons += '<span style="display:inline-block;background:#fff;color:#222;font-size:14px;font-weight:700;padding:4px 8px 6px 8px;margin-left:4px;vertical-align:middle;clip-path:polygon(0 0,100% 0,100% 75%,85% 100%,70% 75%,50% 100%,30% 75%,15% 100%,0 75%);box-shadow:0 1px 3px rgba(0,0,0,0.2)">1</span>';
+        } else if (c6.toUpperCase() === 'B') {
+            icons += '<span style="display:inline-block;background:#fff;color:#222;font-size:14px;font-weight:700;padding:6px 8px 4px 8px;margin-left:4px;vertical-align:middle;clip-path:polygon(0 25%,15% 0,30% 25%,50% 0,70% 25%,85% 0,100% 25%,100% 100%,0 100%);box-shadow:0 1px 3px rgba(0,0,0,0.2)">2</span>';
+        }
+
+        // Check if contains TP -> add Ändrad badge (yellow)
+        if (tnU.indexOf('TP') > -1) {
+            icons += '<span style="display:inline-block;background:#EAB308;color:#fff;font-size:14px;font-weight:700;padding:3px 7px;border-radius:6px;margin-left:4px;vertical-align:middle">Ändrad</span>';
+        }
+
+        return icons;
+    };
+
     // ===== PIN LOCK DIALOG =====
     VR.showPinDialog = function(callback) {
         // If already authenticated this session, skip
@@ -54,20 +113,20 @@
         overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999990;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)';
 
         var box = document.createElement('div');
-        box.style.cssText = 'background:#1C1C1E;border-radius:28px;padding:48px 40px;width:420px;max-width:90vw;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5)';
+        box.style.cssText = 'background:#1C1C1E;border-radius:36px;padding:56px 48px;width:600px;max-width:94vw;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.6)';
 
         box.innerHTML = '\
-<div style="font-size:56px;margin-bottom:12px">🔒</div>\
-<div style="font-size:28px;font-weight:700;color:#fff;margin-bottom:6px">Inställningar</div>\
-<div style="font-size:18px;color:rgba(255,255,255,0.4);margin-bottom:36px">Ange PIN-kod</div>\
-<div id="vrPinDots" style="display:flex;gap:20px;justify-content:center;margin-bottom:36px">\
-<div class="vrPinDot" style="width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
-<div class="vrPinDot" style="width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
-<div class="vrPinDot" style="width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
-<div class="vrPinDot" style="width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div style="font-size:72px;margin-bottom:16px">\ud83d\udd12</div>\
+<div style="font-size:36px;font-weight:700;color:#fff;margin-bottom:8px">Inst\u00e4llningar</div>\
+<div style="font-size:22px;color:rgba(255,255,255,0.4);margin-bottom:40px">Ange PIN-kod</div>\
+<div id="vrPinDots" style="display:flex;gap:24px;justify-content:center;margin-bottom:40px">\
+<div class="vrPinDot" style="width:36px;height:36px;border-radius:50%;border:4px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div class="vrPinDot" style="width:36px;height:36px;border-radius:50%;border:4px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div class="vrPinDot" style="width:36px;height:36px;border-radius:50%;border:4px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div class="vrPinDot" style="width:36px;height:36px;border-radius:50%;border:4px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
 </div>\
-<div id="vrPinError" style="font-size:18px;color:#FF3B30;margin-bottom:24px;min-height:24px"></div>\
-<div id="vrPinPad" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px"></div>';
+<div id="vrPinError" style="font-size:22px;color:#FF3B30;margin-bottom:28px;min-height:28px"></div>\
+<div id="vrPinPad" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;max-width:420px;margin:0 auto"></div>';
 
         overlay.appendChild(box);
         document.body.appendChild(overlay);
@@ -78,14 +137,14 @@
         var padEl = box.querySelector('#vrPinPad');
 
         // Build number pad
-        var keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+        var keys = ['1','2','3','4','5','6','7','8','9','','0','\u232b'];
         for (var k = 0; k < keys.length; k++) {
             var btn = document.createElement('div');
             if (keys[k] === '') {
                 btn.style.cssText = 'visibility:hidden';
             } else {
-                var isBackspace = keys[k] === '⌫';
-                btn.style.cssText = 'width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:' + (isBackspace ? '30px' : '34px') + ';font-weight:500;color:#fff;cursor:pointer;transition:background 0.15s;background:rgba(255,255,255,0.1);margin:0 auto;user-select:none;-webkit-user-select:none';
+                var isBackspace = keys[k] === '\u232b';
+                btn.style.cssText = 'width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:' + (isBackspace ? '40px' : '44px') + ';font-weight:500;color:#fff;cursor:pointer;transition:background 0.15s;background:rgba(255,255,255,0.1);margin:0 auto;user-select:none;-webkit-user-select:none';
                 btn.setAttribute('data-key', keys[k]);
                 btn.onmousedown = function() { this.style.background = 'rgba(255,255,255,0.25)'; };
                 btn.onmouseup = function() { this.style.background = 'rgba(255,255,255,0.1)'; };
@@ -125,13 +184,13 @@
 
         // Add shake animation
         var style = document.createElement('style');
-        style.textContent = '@keyframes vrPinShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}';
+        style.textContent = '@keyframes vrPinShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-14px)}40%,80%{transform:translateX(14px)}}';
         document.head.appendChild(style);
 
         function handleKey(key) {
             errorEl.textContent = '';
 
-            if (key === '⌫') {
+            if (key === '\u232b') {
                 if (enteredPin.length > 0) {
                     enteredPin = enteredPin.slice(0, -1);
                     updateDots();
@@ -229,8 +288,8 @@
         if (!turerData || !turerData.turer) return lookup;
 
         var weekdayMap = {
-            'Måndag': 'Mån', 'Tisdag': 'Tis', 'Onsdag': 'Ons',
-            'Torsdag': 'Tor', 'Fredag': 'Fre', 'Lördag': 'Lör', 'Söndag': 'Sön'
+            'M\u00e5ndag': 'M\u00e5n', 'Tisdag': 'Tis', 'Onsdag': 'Ons',
+            'Torsdag': 'Tor', 'Fredag': 'Fre', 'L\u00f6rdag': 'L\u00f6r', 'S\u00f6ndag': 'S\u00f6n'
         };
         VR._weekdayMap = weekdayMap;
 
@@ -275,7 +334,7 @@
             }
         }
 
-        // 3. Suffix matching — extract all digits, take last 3
+        // 3. Suffix matching -- extract all digits, take last 3
         var digitsOnly = turnr.replace(/\D/g, '');
         if (digitsOnly.length >= 3) {
             var suffix = digitsOnly.slice(-3);
@@ -293,8 +352,8 @@
         VR.showPinDialog(function() {
             VR.stopTimer();
             VR.closeOverlay();
-            VR.showLoader('Förväntat Schema');
-            VR.updateLoader(5, 'Beräknar period...');
+            VR.showLoader('F\u00f6rv\u00e4ntat Schema');
+            VR.updateLoader(5, 'Ber\u00e4knar period...');
 
             var target = VR.getNextUnreleasedMonth();
             VR.forvantadStartMonth = target.month;
@@ -308,7 +367,7 @@
         });
     };
 
-    // ===== PARSE ALL FUTURE MONTHS FROM LÖNEREDOVISNINGAR =====
+    // ===== PARSE ALL FUTURE MONTHS FROM LONEREDOVISNINGAR =====
     VR.parseForvantadData = function() {
         VR.updateLoader(80, 'Analyserar data...');
 
@@ -324,8 +383,7 @@
             var text = el.textContent || '';
 
             // Match date headers: "DD-MM-YYYY - Weekday" or "DD-MM-YYYY - Weekday - TURNR"
-            // TURNR can be: digits (15208), digits+letter (12173B), or Reserv1-4
-            var dateMatch = text.match(/^(\d{1,2})-(\d{2})-(\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)(?:\s*-\s*((?:\d{4,6}\w*|[Rr]eserv\s*\d)))?/i);
+            var dateMatch = text.match(/^(\d{1,2})-(\d{2})-(\d{4})\s*-\s*(M\u00e5ndag|Tisdag|Onsdag|Torsdag|Fredag|L\u00f6rdag|S\u00f6ndag)(?:\s*-\s*((?:\d{4,6}\w*|[Rr]eserv\s*\d)))?/i);
 
             if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE') {
                 var directText = '';
@@ -391,19 +449,19 @@
                         var col1 = cells[0] ? cells[0].textContent.trim() : '';
                         var col2 = cells[1] ? cells[1].textContent.trim() : '';
 
-                        if (col1.toLowerCase() === 'löneslag') continue;
+                        if (col1.toLowerCase() === 'l\u00f6neslag') continue;
 
-                        if (col1.indexOf('S.Frånvaro') > -1 && col1.indexOf('FRIDAG') > -1) {
+                        if (col1.indexOf('S.Fr\u00e5nvaro') > -1 && col1.indexOf('FRIDAG') > -1) {
                             if (VR.forvantadAllDays[dk]) {
                                 VR.forvantadAllDays[dk].fp = 'FP';
                             }
-                        } else if (col1.indexOf('S.Frånvaro') > -1 && (col1.indexOf('FV') > -1 || col1.indexOf('FP2') > -1 || col1.indexOf('FP-V') > -1)) {
+                        } else if (col1.indexOf('S.Fr\u00e5nvaro') > -1 && (col1.indexOf('FV') > -1 || col1.indexOf('FP2') > -1 || col1.indexOf('FP-V') > -1)) {
                             if (VR.forvantadAllDays[dk]) {
                                 VR.forvantadAllDays[dk].fp = 'FPV';
                             }
                         }
 
-                        if (col1 === 'L.Hb' || col1 === 'L.Storhelgstillägg') {
+                        if (col1 === 'L.Hb' || col1 === 'L.Storhelgstill\u00e4gg') {
                             var timeMatch = col2.match(/(\d+):(\d+)/);
                             if (timeMatch && VR.forvantadAllDays[dk]) {
                                 var hours = parseInt(timeMatch[1], 10);
@@ -420,7 +478,7 @@
         var monthCount = Object.keys(monthsFound).length;
         console.log('VR: Parsed ' + dayCount + ' days across ' + monthCount + ' months');
 
-        VR.updateLoader(88, 'Hämtar turdata...');
+        VR.updateLoader(88, 'H\u00e4mtar turdata...');
         VR.loadTurerJSON(function(turerData) {
             VR.forvantadLookup = VR.buildTurerLookup(turerData);
             VR.updateLoader(95, 'Bygger vy...');
@@ -432,7 +490,7 @@
     VR.renderForvantad = function() {
         var monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
                           'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
-        var weekdayNames = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
+        var weekdayNames = ['S\u00f6n', 'M\u00e5n', 'Tis', 'Ons', 'Tor', 'Fre', 'L\u00f6r'];
         var lookup = VR.forvantadLookup || {};
 
         var today = new Date();
@@ -443,7 +501,7 @@
 
         if (sortedKeys.length === 0) {
             VR.hideLoader();
-            VR.showView('', '', '<div style="padding:40px;text-align:center;color:#999;font-size:16px">Ingen data hittades</div>');
+            VR.showView('', '', '<div style="padding:40px;text-align:center;color:#999;font-size:22px">Ingen data hittades</div>');
             return;
         }
 
@@ -555,7 +613,7 @@
         if (monthGroups.length === 1) {
             periodText = firstMonth.name + ' ' + firstMonth.year;
         } else {
-            periodText = firstMonth.name + ' – ' + lastMonth.name + ' ' + lastMonth.year;
+            periodText = firstMonth.name + ' \u2013 ' + lastMonth.name + ' ' + lastMonth.year;
         }
 
         // Build HTML
@@ -589,15 +647,15 @@
     VR.buildForvantadHeader = function(periodText, matchedCount, totalTurDays, monthCount) {
         var matchLine = '';
         if (totalTurDays > 0) {
-            matchLine = '<div style="font-size:12px;color:#4CD964;margin-top:3px">✓ ' + matchedCount + '/' + totalTurDays + ' turer matchade</div>';
+            matchLine = '<div style="font-size:16px;color:#4CD964;margin-top:4px">\u2713 ' + matchedCount + '/' + totalTurDays + ' turer matchade</div>';
         } else {
-            matchLine = '<div style="font-size:12px;color:#FF9500;margin-top:3px">Ingen turdata tillgänglig</div>';
+            matchLine = '<div style="font-size:16px;color:#FF9500;margin-top:4px">Ingen turdata tillg\u00e4nglig</div>';
         }
 
         return '\
-<div style="background:#fff;border-radius:16px;padding:14px 20px;margin-bottom:12px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">\
-<div style="font-size:22px;font-weight:700;color:#333">' + periodText + '</div>\
-<div style="font-size:13px;color:#8E8E93;margin-top:4px">Förväntat schema · ' + monthCount + ' månader (ej officiellt)</div>\
+<div style="background:#fff;border-radius:20px;padding:18px 24px;margin-bottom:14px;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,0.08)">\
+<div style="font-size:28px;font-weight:700;color:#333">' + periodText + '</div>\
+<div style="font-size:16px;color:#8E8E93;margin-top:5px">F\u00f6rv\u00e4ntat schema \u00b7 ' + monthCount + ' m\u00e5nader (ej officiellt)</div>\
 ' + matchLine + '\
 </div>';
     };
@@ -614,19 +672,21 @@
     VR.buildMonthSection = function(group, isFirst) {
         var html = '';
 
+        // Month header
         html += '\
-<div style="background:#1C1C1E;border-radius:' + (isFirst ? '27px 27px' : '16px 16px') + ' 0 0;padding:14px 16px;margin-top:' + (isFirst ? '0' : '16px') + ';display:flex;justify-content:space-between;align-items:center">\
-<div style="font-size:17px;font-weight:700;color:#fff">' + group.name + ' ' + group.year + '</div>\
-<div style="font-size:12px;color:rgba(255,255,255,0.5)">' + group.days.length + ' dagar</div>\
+<div style="background:#1C1C1E;border-radius:' + (isFirst ? '27px 27px' : '20px 20px') + ' 0 0;padding:18px 20px;margin-top:' + (isFirst ? '0' : '18px') + ';display:flex;justify-content:space-between;align-items:center">\
+<div style="font-size:22px;font-weight:700;color:#fff">' + group.name + ' ' + group.year + '</div>\
+<div style="font-size:15px;color:rgba(255,255,255,0.5)">' + group.days.length + ' dagar</div>\
 </div>';
 
+        // Column headers
         html += '\
-<div style="display:grid;grid-template-columns:1.4fr 0.6fr 0.6fr 0.6fr 0.8fr;gap:6px;padding:10px 16px;background:#2C2C2E">\
-<div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px">Dag</div>\
-<div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px">Start</div>\
-<div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px">Slut</div>\
-<div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px">Tid</div>\
-<div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;text-align:right">Tur</div>\
+<div style="display:grid;grid-template-columns:1.2fr 0.6fr 0.6fr 0.6fr 1.2fr;gap:8px;padding:12px 20px;background:#2C2C2E">\
+<div style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px">Dag</div>\
+<div style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px">Start</div>\
+<div style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px">Slut</div>\
+<div style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px">Tid</div>\
+<div style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;text-align:right">Tur</div>\
 </div>';
 
         html += '<div style="background:#fff;border-radius:0 0 27px 27px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.08)">';
@@ -646,22 +706,22 @@
                 rowBg = weekendBg || bgCol;
             }
 
-            html += '<div style="display:grid;grid-template-columns:1.4fr 0.6fr 0.6fr 0.6fr 0.8fr;gap:6px;padding:11px 16px;background:' + rowBg + ';border-bottom:1px solid #EBEBEB;align-items:center">';
+            html += '<div style="display:grid;grid-template-columns:1.2fr 0.6fr 0.6fr 0.6fr 1.2fr;gap:8px;padding:14px 20px;background:' + rowBg + ';border-bottom:1px solid #EBEBEB;align-items:center">';
 
-            // Day column
+            // Day column - much larger
             var dayColor = day.isFree ? '#fff' : (noData ? '#999' : (day.isWeekend ? '#FF9500' : '#333'));
             var dayLabel = day.weekday + ' ' + ('0' + day.day).slice(-2);
             html += '<div style="color:' + dayColor + '">';
-            html += '<div style="font-size:15px;font-weight:700;line-height:1.2">' + dayLabel + '</div>';
+            html += '<div style="font-size:22px;font-weight:700;line-height:1.3">' + dayLabel + '</div>';
             if (day.isFree) {
-                html += '<div style="font-size:11px;font-weight:500;opacity:0.85">' + day.freeType + '</div>';
+                html += '<div style="font-size:15px;font-weight:500;opacity:0.85">' + day.freeType + '</div>';
             }
             html += '</div>';
 
             // Determine display values
-            var startVal = '—';
-            var slutVal = '—';
-            var tidVal = '—';
+            var startVal = '\u2014';
+            var slutVal = '\u2014';
+            var tidVal = '\u2014';
             var turVal = '';
             var isResolved = !!day.resolved;
 
@@ -696,18 +756,22 @@
             var dimColor = day.isFree ? '#fff' : '#aaa';
             var accentColor = isResolved ? '#007AFF' : valColor;
 
-            var sColor = (startVal === '?' || startVal === '~' || startVal === '—') ? dimColor : accentColor;
-            html += '<div style="font-size:15px;font-weight:' + (isResolved ? '700' : '400') + ';color:' + sColor + '">' + startVal + '</div>';
+            // Start time - larger
+            var sColor = (startVal === '?' || startVal === '~' || startVal === '\u2014') ? dimColor : accentColor;
+            html += '<div style="font-size:22px;font-weight:' + (isResolved ? '700' : '400') + ';color:' + sColor + '">' + startVal + '</div>';
 
-            var eColor = (slutVal === '?' || slutVal === '~' || slutVal === '—') ? dimColor : accentColor;
-            html += '<div style="font-size:15px;font-weight:' + (isResolved ? '700' : '400') + ';color:' + eColor + '">' + slutVal + '</div>';
+            // End time - larger
+            var eColor = (slutVal === '?' || slutVal === '~' || slutVal === '\u2014') ? dimColor : accentColor;
+            html += '<div style="font-size:22px;font-weight:' + (isResolved ? '700' : '400') + ';color:' + eColor + '">' + slutVal + '</div>';
 
-            var tColor = (tidVal === '?' || tidVal === '~' || tidVal === '—') ? dimColor : valColor;
-            html += '<div style="font-size:14px;color:' + tColor + '">' + tidVal + '</div>';
+            // Duration - larger
+            var tColor = (tidVal === '?' || tidVal === '~' || tidVal === '\u2014') ? dimColor : valColor;
+            html += '<div style="font-size:20px;color:' + tColor + '">' + tidVal + '</div>';
 
-            // Tour badge
+            // Tour badge with icons - larger
             if (turVal) {
                 var sourceLabel = day.resolved ? VR.getSourceLabel(day.resolved.source) : '';
+                var turIcons = VR.getForvantadIcons(turVal);
                 var turBg, turTxtColor;
                 if (day.resolved && day.resolved.source === 'json') {
                     turBg = 'rgba(0,122,255,0.1)'; turTxtColor = '#007AFF';
@@ -719,11 +783,11 @@
                     turBg = 'rgba(0,0,0,0.05)'; turTxtColor = '#999';
                 }
                 var badgeText = sourceLabel ? turVal + ' ' + sourceLabel : turVal;
-                html += '<div style="text-align:right"><span style="font-size:11px;font-weight:600;color:' + turTxtColor + ';background:' + turBg + ';padding:3px 7px;border-radius:6px;display:inline-block">' + badgeText + '</span></div>';
+                html += '<div style="text-align:right;line-height:1.4"><span style="font-size:16px;font-weight:600;color:' + turTxtColor + ';background:' + turBg + ';padding:5px 10px;border-radius:8px;display:inline-block">' + badgeText + '</span>' + turIcons + '</div>';
             } else if (day.isFree || noData) {
                 html += '<div></div>';
             } else {
-                html += '<div style="text-align:right;font-size:12px;color:#ccc">—</div>';
+                html += '<div style="text-align:right;font-size:16px;color:#ccc">\u2014</div>';
             }
 
             html += '</div>';
@@ -733,5 +797,5 @@
         return html;
     };
 
-    console.log('VR: Förväntat loaded');
+    console.log('VR: F\u00f6rv\u00e4ntat loaded');
 })();
