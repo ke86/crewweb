@@ -1,4 +1,4 @@
-// VR CrewWeb - Inställningar / Förväntat Schema (V.1.53 - PIN-lås, Reserv-turer)
+// VR CrewWeb - Förväntat Schema (V.1.53 - PIN-lås, Reserv-turer, suffix-matchning)
 (function() {
     'use strict';
 
@@ -6,7 +6,7 @@
     var BASE = 'https://ke86.github.io/crewweb/';
     var PIN_CODE = '8612';
 
-    // ===== RESERV TOUR FIXED TIMES =====
+    // ===== FIXED TIMES FOR SPECIAL TOURS =====
     var RESERV_TIDER = {
         'Reserv1': { start: '05:00', slut: '13:00' },
         'Reserv2': { start: '07:00', slut: '15:00' },
@@ -14,210 +14,10 @@
         'Reserv4': { start: '14:30', slut: '22:30' }
     };
 
-    // ===== PIN LOCK =====
-    VR.doInstallningar = function() {
-        VR.closeOverlay();
-
-        // If already unlocked this session, go straight
-        if (VR._pinUnlocked) {
-            VR.showInstallningarMenu();
-            return;
-        }
-
-        VR.showPinDialog(function() {
-            VR._pinUnlocked = true;
-            VR.showInstallningarMenu();
-        });
-    };
-
-    VR.showPinDialog = function(onSuccess) {
-        var old = document.getElementById('vrPinOverlay');
-        if (old) old.remove();
-
-        var overlay = document.createElement('div');
-        overlay.id = 'vrPinOverlay';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999995;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif';
-
-        var entered = '';
-        var maxLen = 4;
-
-        function renderDots() {
-            var dots = '';
-            for (var i = 0; i < maxLen; i++) {
-                var filled = i < entered.length;
-                dots += '<div style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,0.5);background:' + (filled ? '#fff' : 'transparent') + ';margin:0 8px;transition:background 0.15s"></div>';
-            }
-            return dots;
-        }
-
-        function renderKeypad() {
-            var keys = [
-                ['1','2','3'],
-                ['4','5','6'],
-                ['7','8','9'],
-                ['','0','⌫']
-            ];
-            var html = '';
-            for (var r = 0; r < keys.length; r++) {
-                html += '<div style="display:flex;justify-content:center;gap:16px;margin-bottom:12px">';
-                for (var c = 0; c < keys[r].length; c++) {
-                    var k = keys[r][c];
-                    if (k === '') {
-                        html += '<div style="width:72px;height:72px"></div>';
-                    } else {
-                        html += '<div class="vrPinKey" data-key="' + k + '" style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:' + (k === '⌫' ? '24px' : '28px') + ';color:#fff;cursor:pointer;user-select:none;transition:background 0.15s;-webkit-tap-highlight-color:transparent">' + k + '</div>';
-                    }
-                }
-                html += '</div>';
-            }
-            return html;
-        }
-
-        overlay.innerHTML = '\
-<div style="background:#1C1C1E;border-radius:24px;padding:30px 24px;width:300px;max-width:90vw;text-align:center">\
-    <div style="font-size:13px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔒 Låst</div>\
-    <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:24px">Ange PIN-kod</div>\
-    <div id="vrPinDots" style="display:flex;justify-content:center;margin-bottom:28px">' + renderDots() + '</div>\
-    <div id="vrPinError" style="font-size:13px;color:#FF3B30;margin-bottom:12px;min-height:18px"></div>\
-    <div id="vrPinKeypad">' + renderKeypad() + '</div>\
-    <div style="margin-top:16px"><span id="vrPinCancel" style="font-size:15px;color:rgba(255,255,255,0.4);cursor:pointer">Avbryt</span></div>\
-</div>';
-
-        document.body.appendChild(overlay);
-
-        // Cancel
-        document.getElementById('vrPinCancel').onclick = function() {
-            overlay.remove();
-        };
-
-        // Tap outside to close
-        overlay.onclick = function(e) {
-            if (e.target === overlay) overlay.remove();
-        };
-
-        // Key handlers
-        var pinKeys = overlay.querySelectorAll('.vrPinKey');
-        for (var i = 0; i < pinKeys.length; i++) {
-            pinKeys[i].ontouchstart = function() {
-                this.style.background = 'rgba(255,255,255,0.3)';
-            };
-            pinKeys[i].ontouchend = function() {
-                this.style.background = 'rgba(255,255,255,0.12)';
-            };
-            pinKeys[i].onmousedown = function() {
-                this.style.background = 'rgba(255,255,255,0.3)';
-            };
-            pinKeys[i].onmouseup = function() {
-                this.style.background = 'rgba(255,255,255,0.12)';
-            };
-            pinKeys[i].onclick = function(e) {
-                e.stopPropagation();
-                var key = this.getAttribute('data-key');
-
-                if (key === '⌫') {
-                    entered = entered.slice(0, -1);
-                } else if (entered.length < maxLen) {
-                    entered += key;
-                }
-
-                document.getElementById('vrPinDots').innerHTML = renderDots();
-                document.getElementById('vrPinError').textContent = '';
-
-                // Check PIN when 4 digits entered
-                if (entered.length === maxLen) {
-                    if (entered === PIN_CODE) {
-                        // Success — flash green and continue
-                        var dots = document.getElementById('vrPinDots');
-                        if (dots) {
-                            var allDots = dots.querySelectorAll('div');
-                            for (var d = 0; d < allDots.length; d++) {
-                                allDots[d].style.background = '#4CD964';
-                                allDots[d].style.borderColor = '#4CD964';
-                            }
-                        }
-                        setTimeout(function() {
-                            overlay.remove();
-                            onSuccess();
-                        }, 300);
-                    } else {
-                        // Wrong PIN — shake and reset
-                        document.getElementById('vrPinError').textContent = 'Fel PIN-kod';
-                        var dotsEl = document.getElementById('vrPinDots');
-                        if (dotsEl) {
-                            dotsEl.style.animation = 'vrPinShake 0.4s ease';
-                            var allD = dotsEl.querySelectorAll('div');
-                            for (var x = 0; x < allD.length; x++) {
-                                allD[x].style.background = '#FF3B30';
-                                allD[x].style.borderColor = '#FF3B30';
-                            }
-                            setTimeout(function() {
-                                entered = '';
-                                document.getElementById('vrPinDots').innerHTML = renderDots();
-                                dotsEl.style.animation = '';
-                            }, 600);
-                        }
-                    }
-                }
-            };
-        }
-
-        // Add shake animation if not already present
-        if (!document.getElementById('vrPinStyle')) {
-            var style = document.createElement('style');
-            style.id = 'vrPinStyle';
-            style.textContent = '@keyframes vrPinShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}';
-            document.head.appendChild(style);
-        }
-    };
-
-    // ===== INSTÄLLNINGAR MENU (after PIN unlock) =====
-    VR.showInstallningarMenu = function() {
-        var html = '\
-<div style="background:#fff;border-radius:16px;padding:14px 20px;margin-bottom:12px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.08)">\
-<div style="font-size:22px;font-weight:700;color:#333">⚙️ Inställningar</div>\
-<div style="font-size:13px;color:#8E8E93;margin-top:4px">Välj funktion</div>\
-</div>\
-<div style="display:flex;flex-direction:column;gap:10px">';
-
-        var menuItems = [
-            { icon: '📅', label: 'Förväntat Schema', desc: 'Visa turer & tider för kommande månader', action: 'doForvantad', color: '#9B59B6' }
-        ];
-
-        for (var i = 0; i < menuItems.length; i++) {
-            var m = menuItems[i];
-            html += '\
-<div class="vrSettingsItem" data-action="' + m.action + '" style="background:#fff;border-radius:16px;padding:18px 20px;box-shadow:0 3px 10px rgba(0,0,0,0.06);cursor:pointer;display:flex;align-items:center;gap:14px;transition:transform 0.15s,box-shadow 0.15s">\
-<div style="width:48px;height:48px;border-radius:14px;background:' + m.color + ';display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">' + m.icon + '</div>\
-<div style="flex:1">\
-<div style="font-size:16px;font-weight:700;color:#333">' + m.label + '</div>\
-<div style="font-size:13px;color:#8E8E93;margin-top:2px">' + m.desc + '</div>\
-</div>\
-<div style="font-size:18px;color:#ccc">›</div>\
-</div>';
-        }
-
-        html += '</div>';
-
-        VR.showView('', '', html);
-
-        // Bind click handlers
-        setTimeout(function() {
-            var items = document.querySelectorAll('.vrSettingsItem');
-            for (var j = 0; j < items.length; j++) {
-                items[j].onclick = function() {
-                    var action = this.getAttribute('data-action');
-                    if (VR[action]) VR[action]();
-                };
-                items[j].onmouseenter = function() {
-                    this.style.transform = 'scale(1.01)';
-                    this.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
-                };
-                items[j].onmouseleave = function() {
-                    this.style.transform = 'scale(1)';
-                    this.style.boxShadow = '0 3px 10px rgba(0,0,0,0.06)';
-                };
-            }
-        }, 100);
+    // Suffix matching: last 3 digits → fixed times
+    var SUFFIX_TIDER = {
+        '291': { start: '03:45', slut: '11:00' },
+        '281': { start: '05:00', slut: '12:00' }
     };
 
     // ===== DETERMINE NEXT UNRELEASED MONTH =====
@@ -239,6 +39,153 @@
         }
 
         return { month: month, year: year };
+    };
+
+    // ===== PIN LOCK DIALOG =====
+    VR.showPinDialog = function(callback) {
+        // If already authenticated this session, skip
+        if (VR._pinAuthenticated) {
+            callback();
+            return;
+        }
+
+        var overlay = document.createElement('div');
+        overlay.id = 'vrPinOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999990;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)';
+
+        var box = document.createElement('div');
+        box.style.cssText = 'background:#1C1C1E;border-radius:20px;padding:32px 28px;width:280px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5)';
+
+        box.innerHTML = '\
+<div style="font-size:36px;margin-bottom:8px">🔒</div>\
+<div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:4px">Inställningar</div>\
+<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:24px">Ange PIN-kod</div>\
+<div id="vrPinDots" style="display:flex;gap:12px;justify-content:center;margin-bottom:24px">\
+<div class="vrPinDot" style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div class="vrPinDot" style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div class="vrPinDot" style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div class="vrPinDot" style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+</div>\
+<div id="vrPinError" style="font-size:13px;color:#FF3B30;margin-bottom:16px;min-height:18px"></div>\
+<div id="vrPinPad" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px"></div>';
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        var enteredPin = '';
+        var dots = box.querySelectorAll('.vrPinDot');
+        var errorEl = box.querySelector('#vrPinError');
+        var padEl = box.querySelector('#vrPinPad');
+
+        // Build number pad
+        var keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+        for (var k = 0; k < keys.length; k++) {
+            var btn = document.createElement('div');
+            if (keys[k] === '') {
+                btn.style.cssText = 'visibility:hidden';
+            } else {
+                var isBackspace = keys[k] === '⌫';
+                btn.style.cssText = 'width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:' + (isBackspace ? '22px' : '26px') + ';font-weight:500;color:#fff;cursor:pointer;transition:background 0.15s;background:rgba(255,255,255,0.1);margin:0 auto;user-select:none;-webkit-user-select:none';
+                btn.setAttribute('data-key', keys[k]);
+                btn.onmousedown = function() { this.style.background = 'rgba(255,255,255,0.25)'; };
+                btn.onmouseup = function() { this.style.background = 'rgba(255,255,255,0.1)'; };
+                btn.onmouseleave = function() { this.style.background = 'rgba(255,255,255,0.1)'; };
+                btn.ontouchstart = function(e) { e.preventDefault(); this.style.background = 'rgba(255,255,255,0.25)'; };
+                btn.ontouchend = function(e) {
+                    e.preventDefault();
+                    this.style.background = 'rgba(255,255,255,0.1)';
+                    handleKey(this.getAttribute('data-key'));
+                };
+                btn.onclick = function() {
+                    handleKey(this.getAttribute('data-key'));
+                };
+            }
+            btn.textContent = keys[k];
+            padEl.appendChild(btn);
+        }
+
+        function updateDots() {
+            for (var i = 0; i < 4; i++) {
+                if (i < enteredPin.length) {
+                    dots[i].style.background = '#9B59B6';
+                    dots[i].style.borderColor = '#9B59B6';
+                } else {
+                    dots[i].style.background = 'transparent';
+                    dots[i].style.borderColor = 'rgba(255,255,255,0.3)';
+                }
+            }
+        }
+
+        function shakeDots() {
+            var container = box.querySelector('#vrPinDots');
+            container.style.animation = 'none';
+            container.offsetHeight; // trigger reflow
+            container.style.animation = 'vrPinShake 0.4s ease';
+        }
+
+        // Add shake animation
+        var style = document.createElement('style');
+        style.textContent = '@keyframes vrPinShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}';
+        document.head.appendChild(style);
+
+        function handleKey(key) {
+            errorEl.textContent = '';
+
+            if (key === '⌫') {
+                if (enteredPin.length > 0) {
+                    enteredPin = enteredPin.slice(0, -1);
+                    updateDots();
+                }
+                return;
+            }
+
+            if (enteredPin.length >= 4) return;
+
+            enteredPin += key;
+            updateDots();
+
+            if (enteredPin.length === 4) {
+                setTimeout(function() {
+                    if (enteredPin === PIN_CODE) {
+                        VR._pinAuthenticated = true;
+                        // Success animation
+                        for (var i = 0; i < 4; i++) {
+                            dots[i].style.background = '#34C759';
+                            dots[i].style.borderColor = '#34C759';
+                        }
+                        setTimeout(function() {
+                            overlay.style.transition = 'opacity 0.25s';
+                            overlay.style.opacity = '0';
+                            setTimeout(function() {
+                                overlay.remove();
+                                style.remove();
+                                callback();
+                            }, 250);
+                        }, 300);
+                    } else {
+                        // Wrong PIN
+                        errorEl.textContent = 'Fel PIN-kod';
+                        shakeDots();
+                        for (var j = 0; j < 4; j++) {
+                            dots[j].style.background = '#FF3B30';
+                            dots[j].style.borderColor = '#FF3B30';
+                        }
+                        setTimeout(function() {
+                            enteredPin = '';
+                            updateDots();
+                        }, 600);
+                    }
+                }, 150);
+            }
+        }
+
+        // Close on overlay tap (outside box)
+        overlay.onclick = function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+                style.remove();
+            }
+        };
     };
 
     // ===== LOAD TOUR JSON DATA =====
@@ -306,40 +253,55 @@
         return lookup;
     };
 
-    // ===== CHECK IF RESERV TOUR =====
-    VR.getReservTider = function(turnr) {
+    // ===== RESOLVE TOUR TIMES (priority chain) =====
+    VR.resolveTourTimes = function(turnr, weekdayFull, weekdayAbbr, lookup) {
         if (!turnr) return null;
-        // Match "Reserv1", "Reserv2", etc. (case-insensitive, with or without spaces)
-        var clean = turnr.replace(/\s+/g, '');
-        for (var key in RESERV_TIDER) {
-            if (clean.toLowerCase() === key.toLowerCase()) {
-                return RESERV_TIDER[key];
+
+        var weekdayMap = VR._weekdayMap || {};
+        var abbr = weekdayFull ? (weekdayMap[weekdayFull] || weekdayAbbr) : weekdayAbbr;
+
+        // 1. JSON lookup (exact turnr + weekday)
+        var lookupKey = turnr + '_' + abbr;
+        var jsonMatch = lookup[lookupKey] || null;
+        if (jsonMatch) {
+            return { start: jsonMatch.start, slut: jsonMatch.slut, source: 'json' };
+        }
+
+        // 2. Reserv-turer (fixed times)
+        if (RESERV_TIDER[turnr]) {
+            return { start: RESERV_TIDER[turnr].start, slut: RESERV_TIDER[turnr].slut, source: 'reserv' };
+        }
+
+        // 3. Suffix matching (last 3 digits)
+        var suffixMatch = turnr.match(/(\d{3})\w*$/);
+        if (suffixMatch) {
+            var suffix = suffixMatch[1];
+            if (SUFFIX_TIDER[suffix]) {
+                return { start: SUFFIX_TIDER[suffix].start, slut: SUFFIX_TIDER[suffix].slut, source: 'suffix' };
             }
         }
-        // Also match partial: "Res1", "R1", "RESERV 1"
-        var resMatch = turnr.match(/[Rr](?:eserv)?\s*([1-4])/);
-        if (resMatch) {
-            var resKey = 'Reserv' + resMatch[1];
-            return RESERV_TIDER[resKey] || null;
-        }
+
         return null;
     };
 
     // ===== MAIN FUNCTION =====
     VR.doForvantad = function() {
-        VR.stopTimer();
-        VR.closeOverlay();
-        VR.showLoader('Förväntat Schema');
-        VR.updateLoader(5, 'Beräknar period...');
+        // Show PIN dialog first
+        VR.showPinDialog(function() {
+            VR.stopTimer();
+            VR.closeOverlay();
+            VR.showLoader('Förväntat Schema');
+            VR.updateLoader(5, 'Beräknar period...');
 
-        var target = VR.getNextUnreleasedMonth();
-        VR.forvantadStartMonth = target.month;
-        VR.forvantadStartYear = target.year;
-        VR.forvantadAllDays = {};
+            var target = VR.getNextUnreleasedMonth();
+            VR.forvantadStartMonth = target.month;
+            VR.forvantadStartYear = target.year;
+            VR.forvantadAllDays = {};
 
-        VR.updateLoader(10, 'Navigerar...');
-        VR.navigateToLoneredovisningar(function() {
-            VR.setupLonePageAndFetch(VR.parseForvantadData);
+            VR.updateLoader(10, 'Navigerar...');
+            VR.navigateToLoneredovisningar(function() {
+                VR.setupLonePageAndFetch(VR.parseForvantadData);
+            });
         });
     };
 
@@ -359,8 +321,8 @@
             var text = el.textContent || '';
 
             // Match date headers: "DD-MM-YYYY - Weekday" or "DD-MM-YYYY - Weekday - TURNR"
-            // TURNR can be numeric (15208) or text (Reserv1, Reserv 2, etc.)
-            var dateMatch = text.match(/^(\d{1,2})-(\d{2})-(\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)(?:\s*-\s*(.+))?$/i);
+            // TURNR can be: digits (15208), digits+letter (12173B), or Reserv1-4
+            var dateMatch = text.match(/^(\d{1,2})-(\d{2})-(\d{4})\s*-\s*(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)(?:\s*-\s*((?:\d{4,6}\w*|Reserv\d)))?/i);
 
             if (dateMatch && el.tagName !== 'BODY' && el.tagName !== 'TABLE') {
                 var directText = '';
@@ -372,17 +334,15 @@
                 if (directText.match(/^\d{1,2}-\d{2}-\d{4}/)) {
                     var parsedMonth = parseInt(dateMatch[2], 10) - 1;
                     var parsedYear = parseInt(dateMatch[3], 10);
-                    var rawTurnr = dateMatch[5] ? dateMatch[5].trim() : null;
 
                     currentDateParsed = {
                         day: parseInt(dateMatch[1], 10),
                         month: parsedMonth,
                         year: parsedYear,
                         weekday: dateMatch[4],
-                        turnr: rawTurnr
+                        turnr: dateMatch[5] || null
                     };
 
-                    // Only process months >= start month
                     var isRelevant = (parsedYear > startYear) ||
                         (parsedYear === startYear && parsedMonth >= startMonth);
 
@@ -404,8 +364,8 @@
                             };
                         }
 
-                        if (rawTurnr) {
-                            VR.forvantadAllDays[dayKey].turnr = rawTurnr;
+                        if (currentDateParsed.turnr) {
+                            VR.forvantadAllDays[dayKey].turnr = currentDateParsed.turnr;
                         }
                     }
                 }
@@ -431,9 +391,13 @@
                         if (col1.toLowerCase() === 'löneslag') continue;
 
                         if (col1.indexOf('S.Frånvaro') > -1 && col1.indexOf('FRIDAG') > -1) {
-                            if (VR.forvantadAllDays[dk]) VR.forvantadAllDays[dk].fp = 'FP';
+                            if (VR.forvantadAllDays[dk]) {
+                                VR.forvantadAllDays[dk].fp = 'FP';
+                            }
                         } else if (col1.indexOf('S.Frånvaro') > -1 && (col1.indexOf('FV') > -1 || col1.indexOf('FP2') > -1 || col1.indexOf('FP-V') > -1)) {
-                            if (VR.forvantadAllDays[dk]) VR.forvantadAllDays[dk].fp = 'FPV';
+                            if (VR.forvantadAllDays[dk]) {
+                                VR.forvantadAllDays[dk].fp = 'FPV';
+                            }
                         }
 
                         if (col1 === 'L.Hb' || col1 === 'L.Storhelgstillägg') {
@@ -467,7 +431,6 @@
                           'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
         var weekdayNames = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
         var lookup = VR.forvantadLookup || {};
-        var weekdayMap = VR._weekdayMap || {};
 
         var today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -481,7 +444,7 @@
             return;
         }
 
-        // Determine which months we have data for
+        // Determine which months have data
         var monthsMap = {};
         for (var k = 0; k < sortedKeys.length; k++) {
             var rec = allDays[sortedKeys[k]];
@@ -516,20 +479,14 @@
                 var fp = dayRec ? dayRec.fp : null;
                 var obMin = dayRec ? dayRec.obMinutes : 0;
 
-                // Check Reserv tours first
-                var reservMatch = VR.getReservTider(turnr);
-
-                // Then check JSON lookup
-                var tourMatch = null;
-                if (!reservMatch && turnr) {
+                // Resolve tour times using priority chain
+                var resolved = null;
+                if (turnr) {
+                    totalTurDays++;
                     var wdFull = dayRec ? dayRec.weekday : null;
-                    var abbr = wdFull ? (weekdayMap[wdFull] || weekdayName) : weekdayName;
-                    var lookupKey = turnr + '_' + abbr;
-                    tourMatch = lookup[lookupKey] || null;
+                    resolved = VR.resolveTourTimes(turnr, wdFull, weekdayName, lookup);
+                    if (resolved) matchedCount++;
                 }
-
-                if (turnr) totalTurDays++;
-                if (reservMatch || tourMatch) matchedCount++;
 
                 var dayData = {
                     day: d,
@@ -544,27 +501,17 @@
                     endTime: null,
                     duration: null,
                     turnr: turnr,
-                    hasTourMatch: !!(reservMatch || tourMatch),
-                    isReserv: !!reservMatch
+                    resolved: resolved
                 };
 
                 // Determine times
                 if (fp) {
                     // Free day
-                } else if (reservMatch) {
-                    dayData.startTime = reservMatch.start;
-                    dayData.endTime = reservMatch.slut;
-                    var rsP = reservMatch.start.split(':');
-                    var reP = reservMatch.slut.split(':');
-                    var rsMin = parseInt(rsP[0], 10) * 60 + parseInt(rsP[1], 10);
-                    var reMin = parseInt(reP[0], 10) * 60 + parseInt(reP[1], 10);
-                    if (reMin < rsMin) reMin += 24 * 60;
-                    dayData.duration = reMin - rsMin;
-                } else if (tourMatch) {
-                    dayData.startTime = tourMatch.start;
-                    dayData.endTime = tourMatch.slut;
-                    var sP = tourMatch.start.split(':');
-                    var eP = tourMatch.slut.split(':');
+                } else if (resolved) {
+                    dayData.startTime = resolved.start;
+                    dayData.endTime = resolved.slut;
+                    var sP = resolved.start.split(':');
+                    var eP = resolved.slut.split(':');
                     var sMin = parseInt(sP[0], 10) * 60 + parseInt(sP[1], 10);
                     var eMin = parseInt(eP[0], 10) * 60 + parseInt(eP[1], 10);
                     if (eMin < sMin) eMin += 24 * 60;
@@ -596,7 +543,7 @@
             });
         }
 
-        console.log('VR: Matched ' + matchedCount + '/' + totalTurDays + ' tours (incl. Reserv)');
+        console.log('VR: Resolved ' + matchedCount + '/' + totalTurDays + ' tours');
 
         // Period text
         var firstMonth = monthGroups[0];
@@ -608,6 +555,7 @@
             periodText = firstMonth.name + ' – ' + lastMonth.name + ' ' + lastMonth.year;
         }
 
+        // Build HTML
         var html = VR.buildForvantadHeader(periodText, matchedCount, totalTurDays, monthGroups.length);
 
         for (var gi = 0; gi < monthGroups.length; gi++) {
@@ -651,6 +599,14 @@
 </div>';
     };
 
+    // ===== SOURCE LABEL =====
+    VR.getSourceLabel = function(source) {
+        if (source === 'json') return '';
+        if (source === 'reserv') return 'R';
+        if (source === 'suffix') return 'S';
+        return '';
+    };
+
     // ===== BUILD MONTH SECTION =====
     VR.buildMonthSection = function(group, isFirst) {
         var html = '';
@@ -683,15 +639,13 @@
                 rowBg = day.freeType === 'FPV' ? '#4CD964' : '#34C759';
             } else if (noData) {
                 rowBg = '#F0F0F0';
-            } else if (day.isReserv) {
-                rowBg = 'rgba(255,149,0,0.08)';
             } else {
                 rowBg = weekendBg || bgCol;
             }
 
             html += '<div style="display:grid;grid-template-columns:1.4fr 0.6fr 0.6fr 0.6fr 0.8fr;gap:6px;padding:11px 16px;background:' + rowBg + ';border-bottom:1px solid #EBEBEB;align-items:center">';
 
-            // DAY
+            // Day column
             var dayColor = day.isFree ? '#fff' : (noData ? '#999' : (day.isWeekend ? '#FF9500' : '#333'));
             var dayLabel = day.weekday + ' ' + ('0' + day.day).slice(-2);
             html += '<div style="color:' + dayColor + '">';
@@ -701,22 +655,23 @@
             }
             html += '</div>';
 
-            // VALUES
+            // Determine display values
             var startVal = '—';
             var slutVal = '—';
             var tidVal = '—';
             var turVal = '';
+            var isResolved = !!day.resolved;
 
             if (day.isFree) {
                 startVal = ''; slutVal = ''; tidVal = ''; turVal = '';
             } else if (noData) {
                 startVal = '?'; slutVal = '?'; tidVal = '?'; turVal = '';
-            } else if (day.hasTourMatch) {
+            } else if (isResolved) {
                 startVal = day.startTime;
                 slutVal = day.endTime;
                 tidVal = VR.formatDuration(day.duration);
                 turVal = day.turnr;
-            } else if (day.turnr && !day.hasTourMatch) {
+            } else if (day.turnr) {
                 turVal = day.turnr;
                 if (day.hasOB && day.startTime) {
                     startVal = day.startTime; slutVal = '~'; tidVal = '~';
@@ -733,34 +688,35 @@
                 startVal = day.startTime; slutVal = day.endTime; tidVal = '~';
             }
 
-            // COLORS
+            // Colors
             var valColor = day.isFree ? '#fff' : (noData ? '#aaa' : '#333');
             var dimColor = day.isFree ? '#fff' : '#aaa';
-            var accentColor = day.isReserv ? '#FF9500' : (day.hasTourMatch ? '#007AFF' : valColor);
+            var accentColor = isResolved ? '#007AFF' : valColor;
 
             var sColor = (startVal === '?' || startVal === '~' || startVal === '—') ? dimColor : accentColor;
-            html += '<div style="font-size:15px;font-weight:' + (day.hasTourMatch ? '700' : '400') + ';color:' + sColor + '">' + startVal + '</div>';
+            html += '<div style="font-size:15px;font-weight:' + (isResolved ? '700' : '400') + ';color:' + sColor + '">' + startVal + '</div>';
 
             var eColor = (slutVal === '?' || slutVal === '~' || slutVal === '—') ? dimColor : accentColor;
-            html += '<div style="font-size:15px;font-weight:' + (day.hasTourMatch ? '700' : '400') + ';color:' + eColor + '">' + slutVal + '</div>';
+            html += '<div style="font-size:15px;font-weight:' + (isResolved ? '700' : '400') + ';color:' + eColor + '">' + slutVal + '</div>';
 
             var tColor = (tidVal === '?' || tidVal === '~' || tidVal === '—') ? dimColor : valColor;
             html += '<div style="font-size:14px;color:' + tColor + '">' + tidVal + '</div>';
 
-            // TUR badge
+            // Tour badge
             if (turVal) {
+                var sourceLabel = day.resolved ? VR.getSourceLabel(day.resolved.source) : '';
                 var turBg, turTxtColor;
-                if (day.isReserv) {
-                    turBg = 'rgba(255,149,0,0.15)';
-                    turTxtColor = '#FF9500';
-                } else if (day.hasTourMatch) {
-                    turBg = 'rgba(0,122,255,0.1)';
-                    turTxtColor = '#007AFF';
+                if (day.resolved && day.resolved.source === 'json') {
+                    turBg = 'rgba(0,122,255,0.1)'; turTxtColor = '#007AFF';
+                } else if (day.resolved && day.resolved.source === 'reserv') {
+                    turBg = 'rgba(155,89,182,0.12)'; turTxtColor = '#9B59B6';
+                } else if (day.resolved && day.resolved.source === 'suffix') {
+                    turBg = 'rgba(76,217,100,0.12)'; turTxtColor = '#2ECC71';
                 } else {
-                    turBg = 'rgba(0,0,0,0.05)';
-                    turTxtColor = '#999';
+                    turBg = 'rgba(0,0,0,0.05)'; turTxtColor = '#999';
                 }
-                html += '<div style="text-align:right"><span style="font-size:11px;font-weight:600;color:' + turTxtColor + ';background:' + turBg + ';padding:3px 7px;border-radius:6px;display:inline-block">' + turVal + '</span></div>';
+                var badgeText = sourceLabel ? turVal + ' ' + sourceLabel : turVal;
+                html += '<div style="text-align:right"><span style="font-size:11px;font-weight:600;color:' + turTxtColor + ';background:' + turBg + ';padding:3px 7px;border-radius:6px;display:inline-block">' + badgeText + '</span></div>';
             } else if (day.isFree || noData) {
                 html += '<div></div>';
             } else {
