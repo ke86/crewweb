@@ -54,20 +54,20 @@
         overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999990;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)';
 
         var box = document.createElement('div');
-        box.style.cssText = 'background:#1C1C1E;border-radius:20px;padding:32px 28px;width:280px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5)';
+        box.style.cssText = 'background:#1C1C1E;border-radius:28px;padding:48px 40px;width:420px;max-width:90vw;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5)';
 
         box.innerHTML = '\
-<div style="font-size:36px;margin-bottom:8px">🔒</div>\
-<div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:4px">Inställningar</div>\
-<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:24px">Ange PIN-kod</div>\
-<div id="vrPinDots" style="display:flex;gap:12px;justify-content:center;margin-bottom:24px">\
-<div class="vrPinDot" style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
-<div class="vrPinDot" style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
-<div class="vrPinDot" style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
-<div class="vrPinDot" style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div style="font-size:56px;margin-bottom:12px">🔒</div>\
+<div style="font-size:28px;font-weight:700;color:#fff;margin-bottom:6px">Inställningar</div>\
+<div style="font-size:18px;color:rgba(255,255,255,0.4);margin-bottom:36px">Ange PIN-kod</div>\
+<div id="vrPinDots" style="display:flex;gap:20px;justify-content:center;margin-bottom:36px">\
+<div class="vrPinDot" style="width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div class="vrPinDot" style="width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div class="vrPinDot" style="width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
+<div class="vrPinDot" style="width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);transition:all 0.15s"></div>\
 </div>\
-<div id="vrPinError" style="font-size:13px;color:#FF3B30;margin-bottom:16px;min-height:18px"></div>\
-<div id="vrPinPad" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px"></div>';
+<div id="vrPinError" style="font-size:18px;color:#FF3B30;margin-bottom:24px;min-height:24px"></div>\
+<div id="vrPinPad" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px"></div>';
 
         overlay.appendChild(box);
         document.body.appendChild(overlay);
@@ -85,7 +85,7 @@
                 btn.style.cssText = 'visibility:hidden';
             } else {
                 var isBackspace = keys[k] === '⌫';
-                btn.style.cssText = 'width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:' + (isBackspace ? '22px' : '26px') + ';font-weight:500;color:#fff;cursor:pointer;transition:background 0.15s;background:rgba(255,255,255,0.1);margin:0 auto;user-select:none;-webkit-user-select:none';
+                btn.style.cssText = 'width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:' + (isBackspace ? '30px' : '34px') + ';font-weight:500;color:#fff;cursor:pointer;transition:background 0.15s;background:rgba(255,255,255,0.1);margin:0 auto;user-select:none;-webkit-user-select:none';
                 btn.setAttribute('data-key', keys[k]);
                 btn.onmousedown = function() { this.style.background = 'rgba(255,255,255,0.25)'; };
                 btn.onmouseup = function() { this.style.background = 'rgba(255,255,255,0.1)'; };
