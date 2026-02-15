@@ -1,10 +1,24 @@
-// VR CrewWeb - Förväntat Schema (V.1.54 - Större PIN/lista, ikoner)
+// VR CrewWeb - Förväntat Schema (V.1.54 - Större PIN/lista, ikoner, skyddad PIN/URL)
 (function() {
     'use strict';
 
     var VR = window.VR;
-    var BASE = 'https://ke86.github.io/crewweb/';
-    var PIN_CODE = '8612';
+    var BASE = atob('aHR0cHM6Ly9rZTg2LmdpdGh1Yi5pby9jcmV3d2ViLw==');
+    var PIN_HASH = '900cb8e36b717b81b9dbbb51cfae997cf5236c36afea5ba7100d005ad52d1cbc';
+
+    // SHA-256 hash helper (async)
+    function hashPIN(pin) {
+        var encoder = new TextEncoder();
+        var data = encoder.encode(pin);
+        return crypto.subtle.digest('SHA-256', data).then(function(buffer) {
+            var arr = new Uint8Array(buffer);
+            var hex = '';
+            for (var i = 0; i < arr.length; i++) {
+                hex += ('0' + arr[i].toString(16)).slice(-2);
+            }
+            return hex;
+        });
+    }
 
     // ===== FIXED TIMES FOR SPECIAL TOURS =====
     var RESERV_TIDER = {
@@ -204,8 +218,8 @@
             updateDots();
 
             if (enteredPin.length === 4) {
-                setTimeout(function() {
-                    if (enteredPin === PIN_CODE) {
+                hashPIN(enteredPin).then(function(hashed) {
+                    if (hashed === PIN_HASH) {
                         VR._pinAuthenticated = true;
                         // Success animation
                         for (var i = 0; i < 4; i++) {
@@ -234,7 +248,7 @@
                             updateDots();
                         }, 600);
                     }
-                }, 150);
+                });
             }
         }
 
