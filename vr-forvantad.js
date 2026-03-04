@@ -458,6 +458,8 @@
     };
 
     // ===== RESOLVE TOUR TIMES =====
+    function isValidTime(t) { return typeof t === 'string' && /^\d{1,2}:\d{2}$/.test(t); }
+
     VR.resolveTourTimes = function(turnr, weekdayFull, weekdayAbbr, lookup) {
         if (!turnr) return null;
         var weekdayMap = VR._weekdayMap || {};
@@ -465,7 +467,7 @@
 
         var lookupKey = turnr + '_' + abbr;
         var jsonMatch = lookup[lookupKey] || null;
-        if (jsonMatch) return { start: jsonMatch.start, slut: jsonMatch.slut, source: 'json' };
+        if (jsonMatch && isValidTime(jsonMatch.start) && isValidTime(jsonMatch.slut)) return { start: jsonMatch.start, slut: jsonMatch.slut, source: 'json' };
 
         var turnrNorm = turnr.replace(/\s+/g, '');
         for (var rKey in RESERV_TIDER) {
@@ -627,7 +629,7 @@
                 var dayData = { day: d, weekday: weekdayName, isWeekend: isWeekend, hasData: hasData, isFree: !!fp, freeType: fp, hasOB: obMin > 0, obMinutes: obMin, startTime: null, endTime: null, duration: null, turnr: turnr, resolved: resolved };
 
                 if (fp) { /* free */ }
-                else if (resolved) {
+                else if (resolved && isValidTime(resolved.start) && isValidTime(resolved.slut)) {
                     dayData.startTime = resolved.start; dayData.endTime = resolved.slut;
                     var sP = resolved.start.split(':'), eP = resolved.slut.split(':');
                     var sMin = parseInt(sP[0], 10) * 60 + parseInt(sP[1], 10);
