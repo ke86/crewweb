@@ -5,7 +5,7 @@
     var VR = window.VR;
 
     // Version
-    VR.VERSION = 'V.1.61';
+    VR.VERSION = 'V.1.62';
 
     // Add menu ID
     VR.ID.menu = 'vrMenu';

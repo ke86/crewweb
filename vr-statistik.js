@@ -421,9 +421,17 @@
 
         var html = '';
 
-        // Settings UI at top
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,0.08)">';
-        html += '<div style="font-size:24px;font-weight:700;color:#333;margin-bottom:16px">⚙️ Inställningar</div>';
+        // Settings UI at top - header (always visible)
+        var settingsExpanded = localStorage.getItem('VR_settingsExpanded') === 'true';
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,0.08);cursor:pointer" onclick="VR.toggleSettings()">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+        html += '<div style="font-size:24px;font-weight:700;color:#333">⚙️ Inställningar</div>';
+        html += '<div id="vr-settings-toggle" style="font-size:28px;color:#007AFF;user-select:none">' + (settingsExpanded ? '▲' : '▼') + '</div>';
+        html += '</div>';
+        html += '</div>';
+
+        // Settings content (collapsed by default)
+        html += '<div id="vr-settings-content" style="display:' + (settingsExpanded ? 'block' : 'none') + ';background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,0.08)">';
 
         // Weekly hours
         html += '<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:2px solid #e0e0e0">';
@@ -468,8 +476,8 @@
         html += '<span style="font-size:16px">RAMNNNN-NNNN</span> <span style="color:#666;font-size:14px">(0h, som AFD)</span>';
         html += '</label>';
 
-        html += '</div>';
-        html += '</div>';
+        html += '</div>'; // End special day types
+        html += '</div>'; // End vr-settings-content
 
         // Month cards grid
         html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
@@ -498,10 +506,13 @@
             var diffColor = diffMinutes >= 0 ? '#34C759' : '#FF3B30';
 
             var cardId = 'vr-month-card-' + mKey.replace(/[^a-z0-9]/gi, '');
-            html += '<div id="' + cardId + '" style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.08);cursor:pointer;transition:box-shadow 0.2s" ontouchstart="VR.toggleMonthExpand(\'' + cardId + '\', \'' + mKey + '\')" onclick="VR.toggleMonthExpand(\'' + cardId + '\', \'' + mKey + '\')">';
+            html += '<div id="' + cardId + '" style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.08)">';
 
-            // Month header
-            html += '<div style="font-size:28px;font-weight:700;color:#333;margin-bottom:16px;text-align:center;pointer-events:none">' + monthNames[stats.month] + '</div>';
+            // Month header with plus icon
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+            html += '<div style="font-size:28px;font-weight:700;color:#333">' + monthNames[stats.month] + '</div>';
+            html += '<div id="vr-expand-' + cardId + '" ontouchstart="VR.toggleMonthExpand(\'' + cardId + '\', \'' + mKey + '\'); event.stopPropagation(); return false;" onclick="VR.toggleMonthExpand(\'' + cardId + '\', \'' + mKey + '\'); event.stopPropagation();" style="font-size:36px;font-weight:bold;color:#007AFF;cursor:pointer;padding:0 8px;user-select:none;line-height:1">+</div>';
+            html += '</div>';
 
             // Stats grid
             html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
@@ -634,16 +645,36 @@
         }, 300);
     };
 
+    // ===== TOGGLE SETTINGS =====
+    VR.toggleSettings = function() {
+        var content = document.getElementById('vr-settings-content');
+        var toggle = document.getElementById('vr-settings-toggle');
+        if (!content || !toggle) return;
+
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            toggle.textContent = '▲';
+            localStorage.setItem('VR_settingsExpanded', 'true');
+        } else {
+            content.style.display = 'none';
+            toggle.textContent = '▼';
+            localStorage.setItem('VR_settingsExpanded', 'false');
+        }
+    };
+
     // ===== TOGGLE MONTH EXPAND =====
     VR.toggleMonthExpand = function(cardId, monthKey) {
         var detailsId = 'vr-details-' + monthKey.replace(/[^a-z0-9]/gi, '');
+        var expandBtn = document.getElementById('vr-expand-' + cardId);
         var detailsEl = document.getElementById(detailsId);
-        if (!detailsEl) return;
+        if (!detailsEl || !expandBtn) return;
 
         if (detailsEl.style.display === 'none') {
             detailsEl.style.display = 'block';
+            expandBtn.textContent = '−'; // Minus sign
         } else {
             detailsEl.style.display = 'none';
+            expandBtn.textContent = '+';
         }
     };
 
