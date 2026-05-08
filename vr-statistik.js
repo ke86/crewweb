@@ -413,9 +413,9 @@
             html += '<div style="font-size:32px;font-weight:700;color:' + diffColor + '">' + diffStr + '</div>';
             html += '</div>';
 
-            // Detaljer button
+            // Detaljer button with data attribute
             html += '<div style="margin-top:12px;text-align:center">';
-            html += '<button onclick="VR.showMonthDetails(\'' + mKey + '\')" style="background:#007AFF;color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:18px;font-weight:600;cursor:pointer;width:100%">📊 Detaljer</button>';
+            html += '<button class="vr-month-details-btn" data-month="' + mKey + '" style="background:#007AFF;color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:18px;font-weight:600;cursor:pointer;width:100%">📊 Detaljer</button>';
             html += '</div>';
 
             html += '</div>';
@@ -439,6 +439,17 @@
         setTimeout(function() {
             VR.hideLoader();
             VR.showView('', '', html);
+
+            // Attach event listeners to detail buttons
+            setTimeout(function() {
+                var btns = document.querySelectorAll('.vr-month-details-btn');
+                for (var b = 0; b < btns.length; b++) {
+                    btns[b].addEventListener('click', function() {
+                        var monthKey = this.getAttribute('data-month');
+                        VR.showMonthDetails(monthKey);
+                    });
+                }
+            }, 100);
         }, 300);
     };
 
