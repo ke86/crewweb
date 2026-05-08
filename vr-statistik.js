@@ -233,11 +233,42 @@
         return (negative ? '-' : '+') + result;
     };
 
-    // Multiply time: arbetsdagar × 7:36
-    // 7:36 = 7 hours 36 minutes = 456 minutes
+    // ===== SETTINGS HELPERS =====
+    VR.getWeeklyHours = function() {
+        return parseInt(localStorage.getItem('VR_weeklyHours') || '38', 10);
+    };
+
+    VR.setWeeklyHours = function(hours) {
+        localStorage.setItem('VR_weeklyHours', hours);
+        VR.doStatistik(); // Reload statistics
+    };
+
+    VR.getSpecialDaySettings = function() {
+        return {
+            countVAB: localStorage.getItem('VR_countVAB') === 'true',
+            countSjuk: localStorage.getItem('VR_countSjuk') === 'true',
+            countKarensdag: localStorage.getItem('VR_countKarensdag') === 'true',
+            countForaldraledighet: localStorage.getItem('VR_countForaldraledighet') === 'true',
+            countRAM: localStorage.getItem('VR_countRAM') !== 'false' // default true
+        };
+    };
+
+    VR.toggleSpecialDay = function(key, enabled) {
+        localStorage.setItem('VR_' + key, enabled.toString());
+        VR.doStatistik(); // Reload statistics
+    };
+
+    // Calculate normtid using selected weekly hours
     VR.calculateNormtid = function(arbetsdagar) {
-        var normPerDay = 7 * 60 + 36; // 456 minutes
+        var weeklyHours = VR.getWeeklyHours();
+        var normPerDay = (weeklyHours / 5) * 60; // Convert to minutes per day
         return arbetsdagar * normPerDay;
+    };
+
+    // Get normtid per day in minutes
+    VR.getNormPerDay = function() {
+        var weeklyHours = VR.getWeeklyHours();
+        return (weeklyHours / 5) * 60;
     };
 
     // ===== RENDER STATISTIK =====
@@ -286,28 +317,58 @@
             // Check if work day (not free) or special cases
             var psU = (mainEntry.ps || '').toUpperCase();
             var cdU = (mainEntry.cd || '').toUpperCase();
+            var psRaw = mainEntry.ps || '';
+            var cdRaw = mainEntry.cd || '';
 
-            // Special cases
+            // Get settings
+            var settings = VR.getSpecialDaySettings();
+            var normPerDay = VR.getNormPerDay();
+
+            // Identify special day types (always active)
             var isAFD = psU.indexOf('AFD') > -1 || cdU.indexOf('AFD') > -1;
             var isSemesterBetald = psU.indexOf('SEMESTER BETALD') > -1 || cdU.indexOf('SEMESTER BETALD') > -1;
+
+            // Configurable special day types
+            var isVAB = psU.indexOf('VÅRD AV SJUKT BARN') > -1 || psU.indexOf('VAB') > -1 || cdU.indexOf('VAB') > -1;
+            var isSjuk = psU === 'SJUK' || cdU === 'SJUK' || psU.indexOf('SJUKFRÅNVARO') > -1;
+            var isKarensdag = psU.indexOf('KARENSDAG') > -1 || cdU.indexOf('KARENSDAG') > -1;
+            var isForaldraledighet = (psU.indexOf('FÖRÄLDRALEDIGHET') > -1 || cdU.indexOf('FÖRÄLDRALEDIGHET') > -1) &&
+                                     (psU.match(/1-5|1 - 5/) || cdU.match(/1-5|1 - 5/));
+            var isRAM = /RAM\d{4,}-\d{4,}/.test(psRaw) || /RAM\d{4,}-\d{4,}/.test(cdRaw);
 
             // Regular free day checks
             var isFPV = psU === 'FV' || psU === 'FP2' || psU === 'FP-V' ||
                         psU.indexOf('FP-V') > -1 || psU.indexOf('FP2') > -1;
             var isFree = (cdU === 'FRIDAG') || (psU === 'FRIDAG') || isFPV;
 
-            // Handle work days with priority: special cases → normal work days
+            // Handle work days with priority: hardcoded special → configurable special → normal work days
             if (isAFD) {
-                // AFD: counts as work day, 0 hours
                 monthlyStats[monthKey].arbetsdagar++;
                 monthlyStats[monthKey].days.push({ date: dateKey, type: 'AFD', minutes: 0 });
             } else if (isSemesterBetald) {
-                // Semester Betald: counts as work day, exactly 7:36 (456 min)
                 monthlyStats[monthKey].arbetsdagar++;
-                monthlyStats[monthKey].arbetadTidMinutes += 456;
-                monthlyStats[monthKey].days.push({ date: dateKey, type: 'Semester Betald', minutes: 456 });
+                monthlyStats[monthKey].arbetadTidMinutes += normPerDay;
+                monthlyStats[monthKey].days.push({ date: dateKey, type: 'Semester Betald', minutes: normPerDay });
+            } else if (isRAM && settings.countRAM) {
+                monthlyStats[monthKey].arbetsdagar++;
+                monthlyStats[monthKey].days.push({ date: dateKey, type: 'RAM', minutes: 0 });
+            } else if (isVAB && settings.countVAB) {
+                monthlyStats[monthKey].arbetsdagar++;
+                monthlyStats[monthKey].arbetadTidMinutes += normPerDay;
+                monthlyStats[monthKey].days.push({ date: dateKey, type: 'Vård av sjukt barn', minutes: normPerDay });
+            } else if (isSjuk && settings.countSjuk) {
+                monthlyStats[monthKey].arbetsdagar++;
+                monthlyStats[monthKey].arbetadTidMinutes += normPerDay;
+                monthlyStats[monthKey].days.push({ date: dateKey, type: 'Sjuk', minutes: normPerDay });
+            } else if (isKarensdag && settings.countKarensdag) {
+                monthlyStats[monthKey].arbetsdagar++;
+                monthlyStats[monthKey].arbetadTidMinutes += normPerDay;
+                monthlyStats[monthKey].days.push({ date: dateKey, type: 'Karensdag', minutes: normPerDay });
+            } else if (isForaldraledighet && settings.countForaldraledighet) {
+                monthlyStats[monthKey].arbetsdagar++;
+                monthlyStats[monthKey].arbetadTidMinutes += normPerDay;
+                monthlyStats[monthKey].days.push({ date: dateKey, type: 'Föräldraledighet', minutes: normPerDay });
             } else if (!isFree && mainEntry.pt) {
-                // Normal work day with paid time
                 var ptMin = VR.parseTimeToMinutes(mainEntry.pt);
                 monthlyStats[monthKey].arbetsdagar++;
                 monthlyStats[monthKey].arbetadTidMinutes += ptMin;
@@ -351,7 +412,70 @@
         var monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
                           'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
 
-        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+        var settings = VR.getSpecialDaySettings();
+        var weeklyHours = VR.getWeeklyHours();
+        var normPerDay = VR.getNormPerDay();
+        var normH = Math.floor(normPerDay / 60);
+        var normM = normPerDay % 60;
+        var normStr = normH + ':' + ('0' + normM).slice(-2);
+
+        var html = '';
+
+        // Settings UI at top
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,0.08)">';
+        html += '<div style="font-size:24px;font-weight:700;color:#333;margin-bottom:16px">⚙️ Inställningar</div>';
+
+        // Weekly hours
+        html += '<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:2px solid #e0e0e0">';
+        html += '<div style="font-size:18px;font-weight:600;color:#333;margin-bottom:8px">Normtid (veckoarbetstid):</div>';
+        html += '<select onchange="VR.setWeeklyHours(this.value)" style="width:100%;padding:12px;font-size:16px;border-radius:8px;border:2px solid #007AFF;background:#fff">';
+        html += '<option value="32"' + (weeklyHours === 32 ? ' selected' : '') + '>32h/vecka (6:24/dag)</option>';
+        html += '<option value="33"' + (weeklyHours === 33 ? ' selected' : '') + '>33h/vecka (6:36/dag)</option>';
+        html += '<option value="34"' + (weeklyHours === 34 ? ' selected' : '') + '>34h/vecka (6:48/dag)</option>';
+        html += '<option value="36"' + (weeklyHours === 36 ? ' selected' : '') + '>36h/vecka (7:12/dag)</option>';
+        html += '<option value="38"' + (weeklyHours === 38 ? ' selected' : '') + '>38h/vecka (7:36/dag)</option>';
+        html += '<option value="40"' + (weeklyHours === 40 ? ' selected' : '') + '>40h/vecka (8:00/dag)</option>';
+        html += '</select>';
+        html += '<div style="font-size:14px;color:#666;margin-top:8px">Aktuell normtid: <strong>' + normStr + '</strong> per arbetsdag</div>';
+        html += '</div>';
+
+        // Special day types
+        html += '<div>';
+        html += '<div style="font-size:18px;font-weight:600;color:#333;margin-bottom:12px">Räkna som arbetsdag:</div>';
+
+        html += '<label style="display:block;padding:12px;margin-bottom:8px;background:#f5f5f5;border-radius:8px;cursor:pointer;user-select:none">';
+        html += '<input type="checkbox"' + (settings.countVAB ? ' checked' : '') + ' onchange="VR.toggleSpecialDay(\'countVAB\', this.checked)" style="margin-right:8px"> ';
+        html += '<span style="font-size:16px">Vård av sjukt barn</span> <span style="color:#666;font-size:14px">(' + normStr + ')</span>';
+        html += '</label>';
+
+        html += '<label style="display:block;padding:12px;margin-bottom:8px;background:#f5f5f5;border-radius:8px;cursor:pointer;user-select:none">';
+        html += '<input type="checkbox"' + (settings.countSjuk ? ' checked' : '') + ' onchange="VR.toggleSpecialDay(\'countSjuk\', this.checked)" style="margin-right:8px"> ';
+        html += '<span style="font-size:16px">Sjuk</span> <span style="color:#666;font-size:14px">(' + normStr + ')</span>';
+        html += '</label>';
+
+        html += '<label style="display:block;padding:12px;margin-bottom:8px;background:#f5f5f5;border-radius:8px;cursor:pointer;user-select:none">';
+        html += '<input type="checkbox"' + (settings.countKarensdag ? ' checked' : '') + ' onchange="VR.toggleSpecialDay(\'countKarensdag\', this.checked)" style="margin-right:8px"> ';
+        html += '<span style="font-size:16px">Karensdag</span> <span style="color:#666;font-size:14px">(' + normStr + ')</span>';
+        html += '</label>';
+
+        html += '<label style="display:block;padding:12px;margin-bottom:8px;background:#f5f5f5;border-radius:8px;cursor:pointer;user-select:none">';
+        html += '<input type="checkbox"' + (settings.countForaldraledighet ? ' checked' : '') + ' onchange="VR.toggleSpecialDay(\'countForaldraledighet\', this.checked)" style="margin-right:8px"> ';
+        html += '<span style="font-size:16px">Föräldraledighet 1-5 dagar</span> <span style="color:#666;font-size:14px">(' + normStr + ')</span>';
+        html += '</label>';
+
+        html += '<label style="display:block;padding:12px;background:#f5f5f5;border-radius:8px;cursor:pointer;user-select:none">';
+        html += '<input type="checkbox"' + (settings.countRAM ? ' checked' : '') + ' onchange="VR.toggleSpecialDay(\'countRAM\', this.checked)" style="margin-right:8px"> ';
+        html += '<span style="font-size:16px">RAMNNNN-NNNN</span> <span style="color:#666;font-size:14px">(0h, som AFD)</span>';
+        html += '</label>';
+
+        html += '</div>';
+        html += '</div>';
+
+        // Month cards grid
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+
+        // Store monthlyStats globally for expandable cards
+        VR.currentMonthlyStats = monthlyStats;
 
         for (var m = 0; m < sortedMonths.length; m++) {
             var mKey = sortedMonths[m];
@@ -373,10 +497,11 @@
             var diffStr = VR.formatMinutesToTime(displayDiff);
             var diffColor = diffMinutes >= 0 ? '#34C759' : '#FF3B30';
 
-            html += '<div style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.08)">';
+            var cardId = 'vr-month-card-' + mKey.replace(/[^a-z0-9]/gi, '');
+            html += '<div id="' + cardId + '" style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.08);cursor:pointer;transition:box-shadow 0.2s" ontouchstart="VR.toggleMonthExpand(\'' + cardId + '\', \'' + mKey + '\')" onclick="VR.toggleMonthExpand(\'' + cardId + '\', \'' + mKey + '\')">';
 
             // Month header
-            html += '<div style="font-size:28px;font-weight:700;color:#333;margin-bottom:16px;text-align:center">' + monthNames[stats.month] + '</div>';
+            html += '<div style="font-size:28px;font-weight:700;color:#333;margin-bottom:16px;text-align:center;pointer-events:none">' + monthNames[stats.month] + '</div>';
 
             // Stats grid
             html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
@@ -408,17 +533,84 @@
             html += '</div>';
 
             // +/- row (inverted: positive diff shows green, negative shows red)
-            html += '<div style="background:' + (diffMinutes >= 0 ? '#F0FDF4' : '#FEF2F2') + ';border-radius:12px;padding:14px;text-align:center;margin-top:12px">';
+            html += '<div style="background:' + (diffMinutes >= 0 ? '#F0FDF4' : '#FEF2F2') + ';border-radius:12px;padding:14px;text-align:center;margin-top:12px;pointer-events:none">';
             html += '<div style="font-size:20px;color:#666">+/-</div>';
             html += '<div style="font-size:32px;font-weight:700;color:' + diffColor + '">' + diffStr + '</div>';
             html += '</div>';
 
-            // Detaljer button - use touchstart for mobile + onclick for desktop
-            html += '<div style="margin-top:12px;text-align:center">';
-            html += '<button ontouchstart="window.VR.showMonthDetails(\'' + mKey + '\'); return false;" onclick="window.VR.showMonthDetails(\'' + mKey + '\'); return false;" style="background:#007AFF;color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:18px;font-weight:600;cursor:pointer;width:100%;-webkit-tap-highlight-color:rgba(0,122,255,0.3)">📊 Detaljer</button>';
+            // Expandable details section (hidden by default)
+            var detailsId = 'vr-details-' + mKey.replace(/[^a-z0-9]/gi, '');
+            html += '<div id="' + detailsId + '" style="display:none;margin-top:16px;padding-top:16px;border-top:2px solid #e0e0e0;pointer-events:none">';
+
+            // Count by type for breakdown
+            var typeCounts = {};
+            var typeMinutes = {};
+            for (var d = 0; d < stats.days.length; d++) {
+                var day = stats.days[d];
+                typeCounts[day.type] = (typeCounts[day.type] || 0) + 1;
+                typeMinutes[day.type] = (typeMinutes[day.type] || 0) + day.minutes;
+            }
+
+            // Category breakdown
+            html += '<div style="margin-bottom:16px">';
+            html += '<div style="font-size:18px;font-weight:700;color:#333;margin-bottom:10px">📋 Uppdelning</div>';
+            for (var type in typeCounts) {
+                if (typeCounts[type] > 0) {
+                    var typeH = Math.floor(typeMinutes[type] / 60);
+                    var typeM = typeMinutes[type] % 60;
+                    var typeStr = typeH + 'h' + (typeM > 0 ? ' ' + typeM + 'm' : '');
+                    var typeColor = type === 'AFD' || type === 'RAM' ? '#9B59B6' :
+                                   (type === 'Semester Betald' ? '#34C759' :
+                                   (type === 'Arbetsdag' ? '#007AFF' : '#FF9500'));
+
+                    html += '<div style="display:flex;justify-content:space-between;padding:8px;background:#f8f8f8;border-radius:8px;margin-bottom:6px">';
+                    html += '<div style="font-size:14px;color:#666">' + type + '</div>';
+                    html += '<div style="font-size:15px;font-weight:600;color:' + typeColor + '">' + typeCounts[type] + ' (' + typeStr + ')</div>';
+                    html += '</div>';
+                }
+            }
             html += '</div>';
 
+            // Calculation breakdown
+            var normH2 = Math.floor(normtidMinutes / 60);
+            var normM2 = normtidMinutes % 60;
+            var normStr2 = normH2 + 'h' + (normM2 > 0 ? ' ' + normM2 + 'm' : '');
+
+            html += '<div style="margin-bottom:16px">';
+            html += '<div style="font-size:18px;font-weight:700;color:#333;margin-bottom:10px">⚙️ Beräkning</div>';
+            html += '<div style="font-size:14px;color:#666;margin-bottom:4px">Arbetsdagar: <strong>' + stats.arbetsdagar + '</strong></div>';
+            html += '<div style="font-size:14px;color:#666;margin-bottom:4px">Normtid: ' + stats.arbetsdagar + ' × ' + normStr + ' = <strong>' + normStr2 + '</strong></div>';
+            html += '<div style="font-size:14px;color:#666;margin-bottom:4px">Arbetad tid: <strong>' + arbetadStr + '</strong></div>';
+            html += '<div style="font-size:16px;font-weight:700;color:' + diffColor + ';margin-top:8px">Skillnad: ' + diffStr + '</div>';
             html += '</div>';
+
+            // Day-by-day list
+            html += '<div>';
+            html += '<div style="font-size:18px;font-weight:700;color:#333;margin-bottom:10px">📅 Dag för dag</div>';
+            var sortedDays = stats.days.slice().sort(function(a, b) { return a.date.localeCompare(b.date); });
+            for (var dd = 0; dd < Math.min(sortedDays.length, 10); dd++) {
+                var dayInfo = sortedDays[dd];
+                var dayH = Math.floor(dayInfo.minutes / 60);
+                var dayM = dayInfo.minutes % 60;
+                var dayStr = dayH + 'h' + (dayM > 0 ? ' ' + dayM + 'm' : '');
+                var dayColor = dayInfo.type === 'AFD' || dayInfo.type === 'RAM' ? '#9B59B6' :
+                              (dayInfo.type === 'Semester Betald' ? '#34C759' :
+                              (dayInfo.type === 'Arbetsdag' ? '#007AFF' : '#FF9500'));
+
+                html += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0">';
+                html += '<div style="flex:1"><div style="font-size:13px;color:#333;font-weight:600">' + dayInfo.date + '</div>';
+                html += '<div style="font-size:12px;color:' + dayColor + '">' + dayInfo.type + '</div></div>';
+                html += '<div style="font-size:14px;font-weight:700;color:#333">' + dayStr + '</div>';
+                html += '</div>';
+            }
+            if (sortedDays.length > 10) {
+                html += '<div style="font-size:14px;color:#999;margin-top:8px;text-align:center">... och ' + (sortedDays.length - 10) + ' dagar till</div>';
+            }
+            html += '</div>';
+
+            html += '</div>'; // End details section
+
+            html += '</div>'; // End card
         }
 
         // Store monthlyStats globally for details view
@@ -442,114 +634,17 @@
         }, 300);
     };
 
-    // ===== SHOW MONTH DETAILS =====
-    VR.showMonthDetails = function(monthKey) {
-        var stats = VR.currentMonthlyStats[monthKey];
-        if (!stats) return;
+    // ===== TOGGLE MONTH EXPAND =====
+    VR.toggleMonthExpand = function(cardId, monthKey) {
+        var detailsId = 'vr-details-' + monthKey.replace(/[^a-z0-9]/gi, '');
+        var detailsEl = document.getElementById(detailsId);
+        if (!detailsEl) return;
 
-        var monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
-                          'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
-        var monthName = monthNames[stats.month] + ' ' + stats.year;
-
-        // Calculate stats
-        var normtidMinutes = VR.calculateNormtid(stats.arbetsdagar);
-        var diffMinutes = normtidMinutes - stats.arbetadTidMinutes;
-
-        // Count by type
-        var typeCounts = { 'Arbetsdag': 0, 'AFD': 0, 'Semester Betald': 0 };
-        var typeMinutes = { 'Arbetsdag': 0, 'AFD': 0, 'Semester Betald': 0 };
-        for (var i = 0; i < stats.days.length; i++) {
-            var day = stats.days[i];
-            typeCounts[day.type] = (typeCounts[day.type] || 0) + 1;
-            typeMinutes[day.type] = (typeMinutes[day.type] || 0) + day.minutes;
+        if (detailsEl.style.display === 'none') {
+            detailsEl.style.display = 'block';
+        } else {
+            detailsEl.style.display = 'none';
         }
-
-        // Build HTML - use ID for easier removal
-        var modalId = 'vr-month-detail-' + monthKey.replace(/[^a-z0-9]/gi, '');
-        var html = '<div id="' + modalId + '" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px" ontouchstart="if(event.target===this) this.remove()" onclick="if(event.target===this) this.remove()">';
-        html += '<div style="background:#f8f8f8;border-radius:27px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 10px 40px rgba(0,0,0,0.3)" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation()">';
-
-        // Header with close button
-        html += '<div style="background:#fff;border-radius:27px 27px 0 0;padding:24px;position:sticky;top:0;z-index:1;box-shadow:0 2px 10px rgba(0,0,0,0.05)">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:center">';
-        html += '<div style="font-size:28px;font-weight:700;color:#333">📊 ' + monthName + '</div>';
-        html += '<div ontouchstart="document.getElementById(\'' + modalId + '\').remove(); return false;" onclick="document.getElementById(\'' + modalId + '\').remove(); return false;" style="font-size:32px;cursor:pointer;color:#999;line-height:1;padding:8px;-webkit-tap-highlight-color:rgba(0,0,0,0.1)" title="Stäng">×</div>';
-        html += '</div></div>';
-
-        html += '<div style="padding:24px">';
-
-        // Category breakdown
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.05)">';
-        html += '<div style="font-size:22px;font-weight:700;color:#333;margin-bottom:16px">📋 Uppdelning</div>';
-
-        for (var type in typeCounts) {
-            if (typeCounts[type] > 0) {
-                var typeH = Math.floor(typeMinutes[type] / 60);
-                var typeM = typeMinutes[type] % 60;
-                var typeStr = typeH + 'h' + (typeM > 0 ? ' ' + typeM + 'm' : '');
-                var typeColor = type === 'AFD' ? '#9B59B6' : (type === 'Semester Betald' ? '#34C759' : '#007AFF');
-
-                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#f5f5f5;border-radius:12px;margin-bottom:8px">';
-                html += '<div style="font-size:18px;color:#666">' + type + '</div>';
-                html += '<div style="font-size:20px;font-weight:600;color:' + typeColor + '">' + typeCounts[type] + ' (' + typeStr + ')</div>';
-                html += '</div>';
-            }
-        }
-        html += '</div>';
-
-        // Calculation
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.05)">';
-        html += '<div style="font-size:22px;font-weight:700;color:#333;margin-bottom:16px">⚙️ Beräkning</div>';
-
-        var normH = Math.floor(normtidMinutes / 60);
-        var normM = normtidMinutes % 60;
-        var normStr = normH + 'h' + (normM > 0 ? ' ' + normM + 'm' : '');
-
-        var arbH = Math.floor(stats.arbetadTidMinutes / 60);
-        var arbM = stats.arbetadTidMinutes % 60;
-        var arbStr = arbH + 'h' + (arbM > 0 ? ' ' + arbM + 'm' : '');
-
-        var displayDiff = -diffMinutes;
-        var diffStr = VR.formatMinutesToTime(displayDiff);
-        var diffColor = diffMinutes >= 0 ? '#34C759' : '#FF3B30';
-
-        html += '<div style="font-size:16px;color:#666;margin-bottom:8px">• Arbetsdagar: <strong>' + stats.arbetsdagar + '</strong></div>';
-        html += '<div style="font-size:16px;color:#666;margin-bottom:8px">• Normtid: ' + stats.arbetsdagar + ' × 7:36 = <strong>' + normStr + '</strong></div>';
-        html += '<div style="font-size:16px;color:#666;margin-bottom:8px">• Arbetad tid: <strong>' + arbStr + '</strong></div>';
-        html += '<div style="font-size:18px;font-weight:700;color:' + diffColor + ';margin-top:12px">Skillnad: ' + diffStr + '</div>';
-        html += '</div>';
-
-        // Day-by-day list
-        html += '<div style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05)">';
-        html += '<div style="font-size:22px;font-weight:700;color:#333;margin-bottom:16px">📅 Dag för dag</div>';
-
-        var sortedDays = stats.days.slice().sort(function(a, b) {
-            return a.date.localeCompare(b.date);
-        });
-
-        for (var d = 0; d < sortedDays.length; d++) {
-            var day = sortedDays[d];
-            var dayH = Math.floor(day.minutes / 60);
-            var dayM = day.minutes % 60;
-            var dayStr = dayH + 'h' + (dayM > 0 ? ' ' + dayM + 'm' : '');
-            var dayColor = day.type === 'AFD' ? '#9B59B6' : (day.type === 'Semester Betald' ? '#34C759' : '#007AFF');
-
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #f0f0f0">';
-            html += '<div style="flex:1">';
-            html += '<div style="font-size:16px;color:#333;font-weight:600">' + day.date + '</div>';
-            html += '<div style="font-size:14px;color:' + dayColor + '">' + day.type + '</div>';
-            html += '</div>';
-            html += '<div style="font-size:18px;font-weight:700;color:#333">' + dayStr + '</div>';
-            html += '</div>';
-        }
-
-        html += '</div>';
-
-        html += '</div>'; // padding
-        html += '</div>'; // modal content
-        html += '</div>'; // overlay
-
-        document.body.insertAdjacentHTML('beforeend', html);
     };
 
     console.log('VR: Statistik loaded');
