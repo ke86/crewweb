@@ -413,9 +413,9 @@
             html += '<div style="font-size:32px;font-weight:700;color:' + diffColor + '">' + diffStr + '</div>';
             html += '</div>';
 
-            // Detaljer button with data attribute
+            // Detaljer button - use touchstart for mobile + onclick for desktop
             html += '<div style="margin-top:12px;text-align:center">';
-            html += '<button class="vr-month-details-btn" data-month="' + mKey + '" style="background:#007AFF;color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:18px;font-weight:600;cursor:pointer;width:100%">📊 Detaljer</button>';
+            html += '<button ontouchstart="window.VR.showMonthDetails(\'' + mKey + '\'); return false;" onclick="window.VR.showMonthDetails(\'' + mKey + '\'); return false;" style="background:#007AFF;color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:18px;font-weight:600;cursor:pointer;width:100%;-webkit-tap-highlight-color:rgba(0,122,255,0.3)">📊 Detaljer</button>';
             html += '</div>';
 
             html += '</div>';
@@ -439,17 +439,6 @@
         setTimeout(function() {
             VR.hideLoader();
             VR.showView('', '', html);
-
-            // Attach event listeners to detail buttons
-            setTimeout(function() {
-                var btns = document.querySelectorAll('.vr-month-details-btn');
-                for (var b = 0; b < btns.length; b++) {
-                    btns[b].addEventListener('click', function() {
-                        var monthKey = this.getAttribute('data-month');
-                        VR.showMonthDetails(monthKey);
-                    });
-                }
-            }, 100);
         }, 300);
     };
 
@@ -475,15 +464,16 @@
             typeMinutes[day.type] = (typeMinutes[day.type] || 0) + day.minutes;
         }
 
-        // Build HTML
-        var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px" onclick="if(event.target===this) this.remove()">';
-        html += '<div style="background:#f8f8f8;border-radius:27px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3)" onclick="event.stopPropagation()">';
+        // Build HTML - use ID for easier removal
+        var modalId = 'vr-month-detail-' + monthKey.replace(/[^a-z0-9]/gi, '');
+        var html = '<div id="' + modalId + '" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px" ontouchstart="if(event.target===this) this.remove()" onclick="if(event.target===this) this.remove()">';
+        html += '<div style="background:#f8f8f8;border-radius:27px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 10px 40px rgba(0,0,0,0.3)" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation()">';
 
-        // Header
+        // Header with close button
         html += '<div style="background:#fff;border-radius:27px 27px 0 0;padding:24px;position:sticky;top:0;z-index:1;box-shadow:0 2px 10px rgba(0,0,0,0.05)">';
         html += '<div style="display:flex;justify-content:space-between;align-items:center">';
         html += '<div style="font-size:28px;font-weight:700;color:#333">📊 ' + monthName + '</div>';
-        html += '<div onclick="this.closest(\'.fixed\').remove()" style="font-size:32px;cursor:pointer;color:#999;line-height:1;padding:0 8px" title="Stäng">×</div>';
+        html += '<div ontouchstart="document.getElementById(\'' + modalId + '\').remove(); return false;" onclick="document.getElementById(\'' + modalId + '\').remove(); return false;" style="font-size:32px;cursor:pointer;color:#999;line-height:1;padding:8px;-webkit-tap-highlight-color:rgba(0,0,0,0.1)" title="Stäng">×</div>';
         html += '</div></div>';
 
         html += '<div style="padding:24px">';
