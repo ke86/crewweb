@@ -599,7 +599,7 @@
             html += '<div>';
             html += '<div style="font-size:18px;font-weight:700;color:#333;margin-bottom:10px">📅 Dag för dag</div>';
             var sortedDays = stats.days.slice().sort(function(a, b) { return a.date.localeCompare(b.date); });
-            for (var dd = 0; dd < Math.min(sortedDays.length, 10); dd++) {
+            for (var dd = 0; dd < sortedDays.length; dd++) {
                 var dayInfo = sortedDays[dd];
                 var dayH = Math.floor(dayInfo.minutes / 60);
                 var dayM = dayInfo.minutes % 60;
@@ -613,9 +613,6 @@
                 html += '<div style="font-size:12px;color:' + dayColor + '">' + dayInfo.type + '</div></div>';
                 html += '<div style="font-size:14px;font-weight:700;color:#333">' + dayStr + '</div>';
                 html += '</div>';
-            }
-            if (sortedDays.length > 10) {
-                html += '<div style="font-size:14px;color:#999;margin-top:8px;text-align:center">... och ' + (sortedDays.length - 10) + ' dagar till</div>';
             }
             html += '</div>';
 
