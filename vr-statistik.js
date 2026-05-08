@@ -268,7 +268,8 @@
                     arbetsdagar: 0,
                     arbetadTidMinutes: 0,
                     fp: 0,
-                    fpv: 0
+                    fpv: 0,
+                    days: []
                 };
             }
 
@@ -282,17 +283,35 @@
             }
             if (!mainEntry) mainEntry = dayEntries[0];
 
-            // Check if work day (not free)
+            // Check if work day (not free) or special cases
             var psU = (mainEntry.ps || '').toUpperCase();
+            var cdU = (mainEntry.cd || '').toUpperCase();
+
+            // Special cases
+            var isAFD = psU.indexOf('AFD') > -1 || cdU.indexOf('AFD') > -1;
+            var isSemesterBetald = psU.indexOf('SEMESTER BETALD') > -1 || cdU.indexOf('SEMESTER BETALD') > -1;
+
+            // Regular free day checks
             var isFPV = psU === 'FV' || psU === 'FP2' || psU === 'FP-V' ||
                         psU.indexOf('FP-V') > -1 || psU.indexOf('FP2') > -1;
-            var isFree = (mainEntry.cd && mainEntry.cd.toUpperCase() === 'FRIDAG') ||
-                         (mainEntry.ps && mainEntry.ps.toUpperCase() === 'FRIDAG') || isFPV;
+            var isFree = (cdU === 'FRIDAG') || (psU === 'FRIDAG') || isFPV;
 
-            if (!isFree && mainEntry.pt) {
-                // Work day with paid time
+            // Handle work days with priority: special cases → normal work days
+            if (isAFD) {
+                // AFD: counts as work day, 0 hours
                 monthlyStats[monthKey].arbetsdagar++;
-                monthlyStats[monthKey].arbetadTidMinutes += VR.parseTimeToMinutes(mainEntry.pt);
+                monthlyStats[monthKey].days.push({ date: dateKey, type: 'AFD', minutes: 0 });
+            } else if (isSemesterBetald) {
+                // Semester Betald: counts as work day, exactly 7:36 (456 min)
+                monthlyStats[monthKey].arbetsdagar++;
+                monthlyStats[monthKey].arbetadTidMinutes += 456;
+                monthlyStats[monthKey].days.push({ date: dateKey, type: 'Semester Betald', minutes: 456 });
+            } else if (!isFree && mainEntry.pt) {
+                // Normal work day with paid time
+                var ptMin = VR.parseTimeToMinutes(mainEntry.pt);
+                monthlyStats[monthKey].arbetsdagar++;
+                monthlyStats[monthKey].arbetadTidMinutes += ptMin;
+                monthlyStats[monthKey].days.push({ date: dateKey, type: 'Arbetsdag', minutes: ptMin });
             }
         }
 
@@ -313,7 +332,8 @@
                     arbetsdagar: 0,
                     arbetadTidMinutes: 0,
                     fp: 0,
-                    fpv: 0
+                    fpv: 0,
+                    days: []
                 };
             }
 
@@ -393,8 +413,16 @@
             html += '<div style="font-size:32px;font-weight:700;color:' + diffColor + '">' + diffStr + '</div>';
             html += '</div>';
 
+            // Detaljer button
+            html += '<div style="margin-top:12px;text-align:center">';
+            html += '<button onclick="VR.showMonthDetails(\'' + mKey + '\')" style="background:#007AFF;color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:18px;font-weight:600;cursor:pointer;width:100%">📊 Detaljer</button>';
+            html += '</div>';
+
             html += '</div>';
         }
+
+        // Store monthlyStats globally for details view
+        VR.currentMonthlyStats = monthlyStats;
 
         html += '</div>';
 
@@ -412,6 +440,115 @@
             VR.hideLoader();
             VR.showView('', '', html);
         }, 300);
+    };
+
+    // ===== SHOW MONTH DETAILS =====
+    VR.showMonthDetails = function(monthKey) {
+        var stats = VR.currentMonthlyStats[monthKey];
+        if (!stats) return;
+
+        var monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
+                          'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
+        var monthName = monthNames[stats.month] + ' ' + stats.year;
+
+        // Calculate stats
+        var normtidMinutes = VR.calculateNormtid(stats.arbetsdagar);
+        var diffMinutes = normtidMinutes - stats.arbetadTidMinutes;
+
+        // Count by type
+        var typeCounts = { 'Arbetsdag': 0, 'AFD': 0, 'Semester Betald': 0 };
+        var typeMinutes = { 'Arbetsdag': 0, 'AFD': 0, 'Semester Betald': 0 };
+        for (var i = 0; i < stats.days.length; i++) {
+            var day = stats.days[i];
+            typeCounts[day.type] = (typeCounts[day.type] || 0) + 1;
+            typeMinutes[day.type] = (typeMinutes[day.type] || 0) + day.minutes;
+        }
+
+        // Build HTML
+        var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px" onclick="if(event.target===this) this.remove()">';
+        html += '<div style="background:#f8f8f8;border-radius:27px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3)" onclick="event.stopPropagation()">';
+
+        // Header
+        html += '<div style="background:#fff;border-radius:27px 27px 0 0;padding:24px;position:sticky;top:0;z-index:1;box-shadow:0 2px 10px rgba(0,0,0,0.05)">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+        html += '<div style="font-size:28px;font-weight:700;color:#333">📊 ' + monthName + '</div>';
+        html += '<div onclick="this.closest(\'.fixed\').remove()" style="font-size:32px;cursor:pointer;color:#999;line-height:1;padding:0 8px" title="Stäng">×</div>';
+        html += '</div></div>';
+
+        html += '<div style="padding:24px">';
+
+        // Category breakdown
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.05)">';
+        html += '<div style="font-size:22px;font-weight:700;color:#333;margin-bottom:16px">📋 Uppdelning</div>';
+
+        for (var type in typeCounts) {
+            if (typeCounts[type] > 0) {
+                var typeH = Math.floor(typeMinutes[type] / 60);
+                var typeM = typeMinutes[type] % 60;
+                var typeStr = typeH + 'h' + (typeM > 0 ? ' ' + typeM + 'm' : '');
+                var typeColor = type === 'AFD' ? '#9B59B6' : (type === 'Semester Betald' ? '#34C759' : '#007AFF');
+
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#f5f5f5;border-radius:12px;margin-bottom:8px">';
+                html += '<div style="font-size:18px;color:#666">' + type + '</div>';
+                html += '<div style="font-size:20px;font-weight:600;color:' + typeColor + '">' + typeCounts[type] + ' (' + typeStr + ')</div>';
+                html += '</div>';
+            }
+        }
+        html += '</div>';
+
+        // Calculation
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.05)">';
+        html += '<div style="font-size:22px;font-weight:700;color:#333;margin-bottom:16px">⚙️ Beräkning</div>';
+
+        var normH = Math.floor(normtidMinutes / 60);
+        var normM = normtidMinutes % 60;
+        var normStr = normH + 'h' + (normM > 0 ? ' ' + normM + 'm' : '');
+
+        var arbH = Math.floor(stats.arbetadTidMinutes / 60);
+        var arbM = stats.arbetadTidMinutes % 60;
+        var arbStr = arbH + 'h' + (arbM > 0 ? ' ' + arbM + 'm' : '');
+
+        var displayDiff = -diffMinutes;
+        var diffStr = VR.formatMinutesToTime(displayDiff);
+        var diffColor = diffMinutes >= 0 ? '#34C759' : '#FF3B30';
+
+        html += '<div style="font-size:16px;color:#666;margin-bottom:8px">• Arbetsdagar: <strong>' + stats.arbetsdagar + '</strong></div>';
+        html += '<div style="font-size:16px;color:#666;margin-bottom:8px">• Normtid: ' + stats.arbetsdagar + ' × 7:36 = <strong>' + normStr + '</strong></div>';
+        html += '<div style="font-size:16px;color:#666;margin-bottom:8px">• Arbetad tid: <strong>' + arbStr + '</strong></div>';
+        html += '<div style="font-size:18px;font-weight:700;color:' + diffColor + ';margin-top:12px">Skillnad: ' + diffStr + '</div>';
+        html += '</div>';
+
+        // Day-by-day list
+        html += '<div style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05)">';
+        html += '<div style="font-size:22px;font-weight:700;color:#333;margin-bottom:16px">📅 Dag för dag</div>';
+
+        var sortedDays = stats.days.slice().sort(function(a, b) {
+            return a.date.localeCompare(b.date);
+        });
+
+        for (var d = 0; d < sortedDays.length; d++) {
+            var day = sortedDays[d];
+            var dayH = Math.floor(day.minutes / 60);
+            var dayM = day.minutes % 60;
+            var dayStr = dayH + 'h' + (dayM > 0 ? ' ' + dayM + 'm' : '');
+            var dayColor = day.type === 'AFD' ? '#9B59B6' : (day.type === 'Semester Betald' ? '#34C759' : '#007AFF');
+
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #f0f0f0">';
+            html += '<div style="flex:1">';
+            html += '<div style="font-size:16px;color:#333;font-weight:600">' + day.date + '</div>';
+            html += '<div style="font-size:14px;color:' + dayColor + '">' + day.type + '</div>';
+            html += '</div>';
+            html += '<div style="font-size:18px;font-weight:700;color:#333">' + dayStr + '</div>';
+            html += '</div>';
+        }
+
+        html += '</div>';
+
+        html += '</div>'; // padding
+        html += '</div>'; // modal content
+        html += '</div>'; // overlay
+
+        document.body.insertAdjacentHTML('beforeend', html);
     };
 
     console.log('VR: Statistik loaded');
