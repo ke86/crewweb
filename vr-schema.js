@@ -124,6 +124,7 @@
         var prevRowCount = document.querySelectorAll('#workdays table tr').length;
         var stableCount = 0;
         var lastRowCount = 0;
+        var dataChanged = false;
 
         console.log('VR: waitForSchemaData - initial row count:', prevRowCount);
 
@@ -135,21 +136,41 @@
             var rows = document.querySelectorAll('#workdays table tr');
             var rowCount = rows.length;
 
-            console.log('VR: waitForSchemaData attempt', n, '- rows:', rowCount);
+            console.log('VR: waitForSchemaData attempt', n, '- rows:', rowCount, '(prev:', prevRowCount, ')');
+
+            // Detect if data has changed from original (new fetch arrived)
+            if (rowCount !== prevRowCount) {
+                dataChanged = true;
+            }
+
+            // Also check if first of month is present in table
+            var now = new Date();
+            var firstOfMonth = '1-' + ('0' + (now.getMonth() + 1)).slice(-2) + '-' + now.getFullYear();
+            var hasFirstOfMonth = false;
+            for (var r = 0; r < rows.length; r++) {
+                var cells = rows[r].querySelectorAll('td');
+                if (cells.length >= 3) {
+                    var cellText = (cells[2] ? cells[2].textContent.trim() : '');
+                    if (cellText === firstOfMonth) {
+                        hasFirstOfMonth = true;
+                        break;
+                    }
+                }
+            }
 
             // Wait for row count to stabilize (same count for 3 checks)
             if (rowCount === lastRowCount && rowCount > 10) {
                 stableCount++;
-                console.log('VR: Row count stable for', stableCount, 'checks');
+                console.log('VR: Row count stable for', stableCount, 'checks, dataChanged:', dataChanged, 'hasFirstOfMonth:', hasFirstOfMonth);
             } else {
                 stableCount = 0;
             }
             lastRowCount = rowCount;
 
-            // Proceed if we have stable data or timeout
-            if (stableCount >= 3 || n > 50) {
+            // Proceed when: data has changed AND stabilized, OR first of month is found AND stabilized, OR timeout
+            if ((stableCount >= 3 && (dataChanged || hasFirstOfMonth)) || n > 60) {
                 VR.stopTimer();
-                console.log('VR: Proceeding with', rowCount, 'rows after', n, 'attempts');
+                console.log('VR: Proceeding with', rowCount, 'rows after', n, 'attempts. dataChanged:', dataChanged, 'hasFirstOfMonth:', hasFirstOfMonth);
                 VR.updateLoader(95, 'Bygger vy...');
                 setTimeout(VR.renderSchema, 500);
             }

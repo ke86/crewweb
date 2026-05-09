@@ -328,6 +328,13 @@
             var isAFD = psU.indexOf('AFD') > -1 || cdU.indexOf('AFD') > -1;
             var isSemesterBetald = psU.indexOf('SEMESTER BETALD') > -1 || cdU.indexOf('SEMESTER BETALD') > -1;
 
+            // Overtime detection (Förseningsövertid komp/pengar)
+            var isForsingsovertid = cdU.indexOf('FÖRSENINGSÖVERTID') > -1 || cdU.indexOf('FÖRESNINGÖVERTID') > -1 ||
+                                    psU.indexOf('FÖRSENINGSÖVERTID') > -1 || psU.indexOf('FÖRESNINGÖVERTID') > -1;
+            var overtidPtMin = VR.parseTimeToMinutes(mainEntry.pt);
+            var isOvertidArbetsdag = isForsingsovertid && overtidPtMin === 0;
+            var isOvertidLedigDag = isForsingsovertid && overtidPtMin > 0;
+
             // Configurable special day types
             var isVAB = psU.indexOf('VÅRD AV SJUKT BARN') > -1 || psU.indexOf('VAB') > -1 || cdU.indexOf('VAB') > -1;
             var isSjuk = psU === 'SJUK' || cdU === 'SJUK' || psU.indexOf('SJUKFRÅNVARO') > -1;
@@ -341,8 +348,14 @@
                         psU.indexOf('FP-V') > -1 || psU.indexOf('FP2') > -1;
             var isFree = (cdU === 'FRIDAG') || (psU === 'FRIDAG') || isFPV;
 
-            // Handle work days with priority: hardcoded special → configurable special → normal work days
-            if (isAFD) {
+            // Handle work days with priority: overtime → hardcoded special → configurable special → normal work days
+            if (isOvertidArbetsdag) {
+                // Övertid på arbetsdag (pt=0) - ignorera, arbetsdagen räknas redan i annan rad
+                continue;
+            } else if (isOvertidLedigDag) {
+                // Övertid på ledig dag (pt>0) - visa i detaljer men räknas INTE som arbetstid
+                monthlyStats[monthKey].days.push({ date: dateKey, type: 'Övertid (ledig dag)', minutes: 0 });
+            } else if (isAFD) {
                 monthlyStats[monthKey].arbetsdagar++;
                 monthlyStats[monthKey].days.push({ date: dateKey, type: 'AFD', minutes: 0 });
             } else if (isSemesterBetald) {
