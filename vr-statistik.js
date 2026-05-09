@@ -328,12 +328,17 @@
             var isAFD = psU.indexOf('AFD') > -1 || cdU.indexOf('AFD') > -1;
             var isSemesterBetald = psU.indexOf('SEMESTER BETALD') > -1 || cdU.indexOf('SEMESTER BETALD') > -1;
 
-            // Overtime detection (Förseningsövertid komp/pengar)
+            // Förseningsövertid - ignoreras helt på statistiksidan
             var isForsingsovertid = cdU.indexOf('FÖRSENINGSÖVERTID') > -1 || cdU.indexOf('FÖRESNINGÖVERTID') > -1 ||
                                     psU.indexOf('FÖRSENINGSÖVERTID') > -1 || psU.indexOf('FÖRESNINGÖVERTID') > -1;
+
+            // Övertid komp / Övertid pengar - det riktiga övertidsregelverket
+            // Matchar "Övertid komp" eller "Övertid pengar" men INTE "Förseningsövertid"
+            var isOvertid = !isForsingsovertid &&
+                            (cdU.indexOf('ÖVERTID') > -1 || psU.indexOf('ÖVERTID') > -1);
             var overtidPtMin = VR.parseTimeToMinutes(mainEntry.pt);
-            var isOvertidArbetsdag = isForsingsovertid && overtidPtMin === 0;
-            var isOvertidLedigDag = isForsingsovertid && overtidPtMin > 0;
+            var isOvertidArbetsdag = isOvertid && overtidPtMin === 0;
+            var isOvertidLedigDag = isOvertid && overtidPtMin > 0;
 
             // Configurable special day types
             var isVAB = psU.indexOf('VÅRD AV SJUKT BARN') > -1 || psU.indexOf('VAB') > -1 || cdU.indexOf('VAB') > -1;
@@ -348,9 +353,12 @@
                         psU.indexOf('FP-V') > -1 || psU.indexOf('FP2') > -1;
             var isFree = (cdU === 'FRIDAG') || (psU === 'FRIDAG') || isFPV;
 
-            // Handle work days with priority: overtime → hardcoded special → configurable special → normal work days
-            if (isOvertidArbetsdag) {
-                // Övertid på arbetsdag (pt=0) - ignorera, arbetsdagen räknas redan i annan rad
+            // Handle work days with priority: skip → overtime → hardcoded special → configurable special → normal work days
+            if (isForsingsovertid) {
+                // Förseningsövertid - ignoreras helt på statistiksidan
+                continue;
+            } else if (isOvertidArbetsdag) {
+                // Övertid komp/pengar på arbetsdag (pt=0) - ignorera, arbetsdagen räknas redan i annan rad
                 continue;
             } else if (isOvertidLedigDag) {
                 // Övertid på ledig dag (pt>0) - visa i detaljer men räknas INTE som arbetstid
