@@ -162,10 +162,10 @@
         VR.schemaYear = now.getFullYear();
         VR.schemaMonth = now.getMonth();
 
-        // Load from 14 Dec 2025 to end of current year
-        // Current month is displayed (1st to last day)
-        var startDate = new Date(2025, 11, 14); // 14 Dec 2025
-        var endDate = new Date(now.getFullYear(), 11, 31); // Dec 31 this year
+        // Fetch from 14 Dec 2025 to end of current month (historical data for fast browsing)
+        // Display current month initially (VR.schemaMonth is set above)
+        var startDate = new Date(2025, 11, 14); // 14 Dec 2025 (for historical data)
+        var endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
 
         var d1 = startDate.getDate() + '-' + ('0' + (startDate.getMonth() + 1)).slice(-2) + '-' + startDate.getFullYear();
         var d2 = endDate.getDate() + '-' + ('0' + (endDate.getMonth() + 1)).slice(-2) + '-' + endDate.getFullYear();
